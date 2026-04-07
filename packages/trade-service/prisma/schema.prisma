@@ -2,7 +2,8 @@
 // Bounded Context: Trading — Schema: trading
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {

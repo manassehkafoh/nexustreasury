@@ -2,7 +2,8 @@
 // Bounded Context: ALM — Schema: alm
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
