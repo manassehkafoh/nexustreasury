@@ -26,7 +26,7 @@ export class Container {
       ],
     });
 
-    this.prisma.$on('error', (e) => {
+    this.prisma.$on('error', (e: { message: string; target: string }) => {
       logger.error({ msg: e.message, target: e.target }, 'Prisma error');
     });
 

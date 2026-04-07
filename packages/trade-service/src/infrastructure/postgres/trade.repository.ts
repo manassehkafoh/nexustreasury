@@ -26,7 +26,7 @@ export class PrismaTradeRepository implements TradeRepository {
       where: { bookId, tenantId },
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async save(trade: Trade): Promise<void> {
@@ -50,7 +50,7 @@ export class PrismaTradeRepository implements TradeRepository {
     const events = trade.pullDomainEvents();
     if (events.length === 0) return;
     await this.prisma.tradeEvent.createMany({
-      data: events.map((e) => ({
+      data: events.map((e: import('@nexustreasury/domain').DomainEvent) => ({
         tradeId:    trade.id,
         tenantId:   trade.tenantId,
         eventType:  e.eventType,
