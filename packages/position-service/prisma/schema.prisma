@@ -1,0 +1,53 @@
+// NexusTreasury — Position Service Prisma Schema
+// Bounded Context: Position — Schema: position (event-sourced)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["position"]
+}
+
+model Position {
+  id              String    @id @db.Uuid
+  tenantId        String    @map("tenant_id") @db.Uuid
+  instrumentId    String    @map("instrument_id") @db.Uuid
+  bookId          String    @map("book_id") @db.Uuid
+  currency        String    @db.Char(3)
+  netQuantity     Decimal   @map("net_quantity") @db.Decimal(24, 6)
+  averageCostAmount Decimal @map("average_cost_amount") @db.Decimal(20, 6)
+  mtmValueAmount  Decimal   @map("mtm_value_amount") @db.Decimal(20, 6)
+  unrealisedPnlAmount Decimal @map("unrealised_pnl_amount") @db.Decimal(20, 6)
+  openDate        DateTime  @map("open_date") @db.Date
+  version         Int       @default(0)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  events          PositionEvent[]
+
+  @@index([tenantId, bookId])
+  @@index([tenantId, instrumentId])
+  @@map("positions")
+  @@schema("position")
+}
+
+model PositionEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  positionId  String   @map("position_id") @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  eventType   String   @map("event_type")
+  eventId     String   @unique @map("event_id") @db.Uuid
+  payload     Json
+  occurredAt  DateTime @map("occurred_at")
+  sequence    Int
+
+  position    Position @relation(fields: [positionId], references: [id])
+
+  @@index([positionId, sequence])
+  @@index([tenantId, eventType])
+  @@map("position_events")
+  @@schema("position")
+}

@@ -1,0 +1,318 @@
+openapi: '3.0.3'
+info:
+  title: NexusTreasury Trade Service API
+  description: |
+    Real-time trade booking, amendment, and cancellation for the NexusTreasury platform.
+    All operations require Bearer JWT authentication.
+    Pre-deal limit checks are enforced on all booking requests.
+  version: 1.0.0
+  contact:
+    name: NexusTreasury Engineering
+    email: engineering@nexustreasury.com
+
+servers:
+  - url: https://api.nexustreasury.com/api/v1
+    description: Production
+  - url: https://api.staging.nexustreasury.com/api/v1
+    description: Staging
+  - url: http://localhost:4001/api/v1
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: trades
+    description: Trade lifecycle — book, amend, cancel, settle
+  - name: health
+    description: Kubernetes health probes
+
+paths:
+  /trades:
+    post:
+      tags: [trades]
+      summary: Book a new trade
+      description: |
+        Creates a new trade after passing pre-deal limit checks via risk-service (P99 < 5ms).
+        The trade is persisted to PostgreSQL and a `TradeBookedEvent` is published to Kafka.
+        P99 end-to-end booking latency target: < 100ms.
+      operationId: bookTrade
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookTradeRequest'
+            example:
+              assetClass: FX
+              direction: BUY
+              counterpartyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+              instrumentId: "7a1b2c3d-4e5f-6789-abcd-ef0123456789"
+              bookId: "1234abcd-ab12-1234-1234-123412341234"
+              traderId: "abcd1234-1234-abcd-abcd-abcd12341234"
+              notionalAmount: 12500000
+              notionalCurrency: USD
+              price: 1.0842
+              tradeDate: "2026-04-07"
+              valueDate: "2026-04-09"
+      responses:
+        '201':
+          description: Trade booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookTradeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/PreDealFailed'
+
+  /trades/{tradeId}:
+    get:
+      tags: [trades]
+      summary: Get trade by ID
+      operationId: getTradeById
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Trade details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [trades]
+      summary: Amend a trade
+      operationId: amendTrade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AmendTradeRequest'
+      responses:
+        '200':
+          description: Trade amended
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Trade cannot be amended in its current status
+
+    delete:
+      tags: [trades]
+      summary: Cancel a trade
+      operationId: cancelTrade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelTradeRequest'
+      responses:
+        '200':
+          description: Trade cancelled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Settled trades cannot be cancelled
+
+  /health/live:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+
+  /health/ready:
+    get:
+      tags: [health]
+      summary: Readiness probe
+      security: []
+      responses:
+        '200':
+          description: Service is ready to accept traffic
+        '503':
+          description: One or more dependencies unreachable
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    BookTradeRequest:
+      type: object
+      required: [assetClass, direction, counterpartyId, instrumentId, bookId, traderId,
+                 notionalAmount, notionalCurrency, price, tradeDate, valueDate]
+      properties:
+        assetClass:
+          type: string
+          enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE,
+                 EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE]
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        counterpartyId:
+          type: string
+          format: uuid
+        instrumentId:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+          format: uuid
+        traderId:
+          type: string
+          format: uuid
+        notionalAmount:
+          type: number
+          minimum: 0.01
+        notionalCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        price:
+          type: number
+          minimum: 0
+        tradeDate:
+          type: string
+          format: date
+        valueDate:
+          type: string
+          format: date
+        maturityDate:
+          type: string
+          format: date
+
+    BookTradeResponse:
+      type: object
+      properties:
+        tradeId:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          example: FX-20260407-A3B2C1
+        status:
+          type: string
+
+    TradeDetail:
+      type: object
+      properties:
+        tradeId:
+          type: string
+        reference:
+          type: string
+        assetClass:
+          type: string
+        direction:
+          type: string
+        status:
+          type: string
+        notionalAmount:
+          type: number
+        notionalCurrency:
+          type: string
+        price:
+          type: number
+        tradeDate:
+          type: string
+        valueDate:
+          type: string
+
+    AmendTradeRequest:
+      type: object
+      required: [newNotionalAmount, newNotionalCurrency, newPrice]
+      properties:
+        newNotionalAmount:
+          type: number
+          minimum: 0.01
+        newNotionalCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        newPrice:
+          type: number
+          minimum: 0
+
+    CancelTradeRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Trade not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Request body validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PreDealFailed:
+      description: Pre-deal limit check failed — trade not booked
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

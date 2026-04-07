@@ -1,0 +1,49 @@
+// NexusTreasury — Risk Service Prisma Schema
+// Bounded Context: Risk — Schema: risk
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["risk"]
+}
+
+model Limit {
+  id               String   @id @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  limitType        String   @map("limit_type")
+  level            String
+  entityId         String   @map("entity_id")
+  limitAmount      Decimal  @map("limit_amount") @db.Decimal(20, 6)
+  limitCurrency    String   @map("limit_currency") @db.Char(3)
+  utilisedAmount   Decimal  @map("utilised_amount") @db.Decimal(20, 6) @default(0)
+  warningThreshold Decimal  @map("warning_threshold") @db.Decimal(5, 2)
+  inBreach         Boolean  @map("in_breach") @default(false)
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, entityId])
+  @@index([tenantId, inBreach])
+  @@map("limits")
+  @@schema("risk")
+}
+
+model VaRSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  bookId      String?  @map("book_id") @db.Uuid
+  varAmount   Decimal  @map("var_amount") @db.Decimal(20, 6)
+  currency    String   @db.Char(3)
+  confidence  Decimal  @db.Decimal(5, 4)
+  horizon     Int      // days
+  method      String   // HISTORICAL | PARAMETRIC | MONTE_CARLO
+  calculatedAt DateTime @map("calculated_at")
+
+  @@index([tenantId, bookId, calculatedAt])
+  @@map("var_snapshots")
+  @@schema("risk")
+}

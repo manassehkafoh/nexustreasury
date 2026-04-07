@@ -1,0 +1,33 @@
+// NexusTreasury — ALM Service Prisma Schema
+// Bounded Context: ALM — Schema: alm
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["alm"]
+}
+
+model LiquidityGapReport {
+  id          String   @id @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  asOfDate    DateTime @map("as_of_date") @db.Date
+  scenario    String
+  currency    String   @db.Char(3)
+  lcrRatio    Decimal  @map("lcr_ratio") @db.Decimal(8, 4)
+  nsfrRatio   Decimal  @map("nsfr_ratio") @db.Decimal(8, 4)
+  isLcrBreached  Boolean @map("is_lcr_breached") @default(false)
+  isNsfrBreached Boolean @map("is_nsfr_breached") @default(false)
+  bucketsJson Json     @map("buckets_json")
+  lcrJson     Json     @map("lcr_json")
+  nsfrJson    Json     @map("nsfr_json")
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  @@index([tenantId, asOfDate, scenario])
+  @@index([tenantId, isLcrBreached])
+  @@map("liquidity_gap_reports")
+  @@schema("alm")
+}
