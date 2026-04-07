@@ -62,7 +62,7 @@ export class LiquidityGapReportGeneratedEvent extends DomainEvent {
 export class LCRBreachEvent extends DomainEvent {
   constructor(
     public readonly lcr: LCRComponents,
-    public readonly tenantId: TenantId,
+    tenantId: TenantId,
   ) {
     super('nexus.alm.lcr.breach', randomUUID(), tenantId);
   }

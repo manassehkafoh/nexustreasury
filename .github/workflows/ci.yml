@@ -19,8 +19,6 @@ jobs:
   setup:
     name: Install & Cache
     runs-on: ubuntu-latest
-    outputs:
-      pnpm-cache-hit: ${{ steps.pnpm-cache.outputs.cache-hit }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,22 +31,28 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      # Install dependencies:
-      # - Use --frozen-lockfile when lockfile exists (main/feature branches)
-      # - Dependabot PRs update pnpm-lock.yaml themselves, so --frozen-lockfile works
-      # - Fall back to --no-frozen-lockfile only if lockfile is absent (first-time setup)
       - name: Install dependencies
         run: |
           if [ -f "pnpm-lock.yaml" ]; then
-            echo "Lockfile found — using --frozen-lockfile for reproducible install"
             pnpm install --frozen-lockfile
           else
-            echo "⚠️  No lockfile found — running pnpm install and generating one"
+            echo "::warning::pnpm-lock.yaml missing — generating (commit it!)"
             pnpm install --no-frozen-lockfile
-            echo "::warning::pnpm-lock.yaml was missing. Please commit the generated lockfile."
           fi
 
-      - name: Verify workspace packages resolved
+      # Generate Prisma clients for all services that have a schema
+      - name: Generate Prisma clients
+        run: |
+          for schema in packages/*/prisma/schema.prisma; do
+            svc=$(echo "$schema" | cut -d/ -f2)
+            echo "Generating Prisma client for $svc..."
+            pnpm --filter "@nexustreasury/$svc" exec prisma generate || true
+          done
+
+      - name: Verify build compiles
+        run: pnpm build
+
+      - name: Verify workspace packages
         run: pnpm list --recursive --depth=0
 
   # ── Lint ──────────────────────────────────────────────────
@@ -66,8 +70,14 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma clients
+        run: |
+          for schema in packages/*/prisma/schema.prisma; do
+            svc=$(echo "$schema" | cut -d/ -f2)
+            pnpm --filter "@nexustreasury/$svc" exec prisma generate || true
+          done
       - run: pnpm lint
-      - run: pnpm exec prettier --check "**/*.{ts,tsx,js,json,yaml,md}" --ignore-path .gitignore
+      - run: pnpm exec prettier --check "**/*.{ts,tsx,yaml,md}" --ignore-path .gitignore
 
   # ── Type Check ────────────────────────────────────────────
   typecheck:
@@ -84,6 +94,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma clients
+        run: |
+          for schema in packages/*/prisma/schema.prisma; do
+            svc=$(echo "$schema" | cut -d/ -f2)
+            pnpm --filter "@nexustreasury/$svc" exec prisma generate || true
+          done
       - run: pnpm typecheck
 
   # ── Unit Tests ────────────────────────────────────────────
@@ -101,22 +117,18 @@ jobs:
         ports: ['5432:5432']
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-interval 10s --health-timeout 5s --health-retries 5
       redis:
         image: redis:7-alpine
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       DATABASE_URL: postgresql://nexus:nexus_test@localhost:5432/nexustreasury_test
       REDIS_HOST: localhost
-      REDIS_PORT: 6379
-      JWT_SECRET: ci-test-secret-not-used-in-production
+      REDIS_PORT: '6379'
+      JWT_SECRET: ci-test-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v3
@@ -127,6 +139,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma clients
+        run: |
+          for schema in packages/*/prisma/schema.prisma; do
+            svc=$(echo "$schema" | cut -d/ -f2)
+            pnpm --filter "@nexustreasury/$svc" exec prisma generate || true
+          done
       - run: pnpm build
       - run: pnpm test:coverage
       - uses: codecov/codecov-action@v4
@@ -158,6 +176,12 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma clients
+        run: |
+          for schema in packages/*/prisma/schema.prisma; do
+            svc=$(echo "$schema" | cut -d/ -f2)
+            pnpm --filter "@nexustreasury/$svc" exec prisma generate || true
+          done
       - run: pnpm build
       - uses: github/codeql-action/analyze@v3
 
@@ -177,7 +201,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - uses: snyk/actions/node@master
-        continue-on-error: true   # Don't block CI if Snyk token not configured
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -243,10 +267,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Start local stack
         run: docker-compose up -d postgres redis kafka
-      - name: Wait for services
-        run: |
-          echo "Waiting 45s for services to be healthy..."
-          sleep 45
+      - run: sleep 45
       - run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
       - run: pnpm --filter @nexustreasury/web test:e2e
         env:

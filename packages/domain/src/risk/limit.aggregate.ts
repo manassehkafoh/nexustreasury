@@ -121,7 +121,7 @@ export class Limit {
    * Pre-deal check — synchronous gRPC gate. Target P99 < 5ms.
    */
   checkPreDeal(request: PreDealCheckRequest): PreDealCheckResponse {
-    const start = performance.now();
+    const start = Date.now();
     const projected = this._utilisedAmount.add(request.requestedExposure);
     const projectedPct = (projected.toNumber() / this.limitAmount.toNumber()) * 100;
     const headroom = this.limitAmount.subtract(this._utilisedAmount);
@@ -140,7 +140,7 @@ export class Limit {
       headroom,
       failureReasons: failures,
       checkedAt: new Date(),
-      responseTimeMs: performance.now() - start,
+      responseTimeMs: Date.now() - start,
     };
   }
 

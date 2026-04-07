@@ -16,7 +16,9 @@
     "kafkajs": "^2.2.4",
     "@prisma/client": "^5.9.0",
     "pino": "^8.18.0",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "@fastify/jwt": "^8.0.0",
+    "@fastify/helmet": "^11.0.0"
   },
   "devDependencies": {
     "tsx": "^4.7.0",

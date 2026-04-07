@@ -36,6 +36,12 @@ importers:
 
   packages/alm-service:
     dependencies:
+      '@fastify/helmet':
+        specifier: ^11.0.0
+        version: 11.1.1
+      '@fastify/jwt':
+        specifier: ^8.0.0
+        version: 8.0.1
       '@nexustreasury/domain':
         specifier: workspace:*
         version: link:../domain
@@ -64,6 +70,12 @@ importers:
 
   packages/bo-service:
     dependencies:
+      '@fastify/helmet':
+        specifier: ^11.0.0
+        version: 11.1.1
+      '@fastify/jwt':
+        specifier: ^8.0.0
+        version: 8.0.1
       '@nexustreasury/domain':
         specifier: workspace:*
         version: link:../domain
@@ -92,6 +104,9 @@ importers:
 
   packages/domain:
     devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.39
       '@vitest/coverage-v8':
         specifier: ^1.0.0
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.39))
@@ -157,6 +172,12 @@ importers:
 
   packages/risk-service:
     dependencies:
+      '@fastify/helmet':
+        specifier: ^11.0.0
+        version: 11.1.1
+      '@fastify/jwt':
+        specifier: ^8.0.0
+        version: 8.0.1
       '@nexustreasury/domain':
         specifier: workspace:*
         version: link:../domain
@@ -224,6 +245,9 @@ importers:
       fastify:
         specifier: ^4.26.0
         version: 4.29.1
+      fastify-plugin:
+        specifier: ^4.5.1
+        version: 4.5.1
       ioredis:
         specifier: ^5.3.2
         version: 5.10.1

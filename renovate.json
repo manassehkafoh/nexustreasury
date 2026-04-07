@@ -1,6 +1,10 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "security:openssf-scorecard"],
+  "extends": [
+    "config:recommended",
+    "security:openssf-scorecard",
+    "helpers:pinGitHubActionDigests"
+  ],
   "prConcurrentLimit": 10,
   "prHourlyLimit": 4,
   "automerge": true,
@@ -9,34 +13,81 @@
   "packageRules": [
     {
       "description": "Auto-merge security patches immediately",
-      "matchUpdateTypes": ["patch"],
-      "matchCategories": ["security"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "matchCategories": [
+        "security"
+      ],
       "automerge": true,
       "automergeType": "pr",
       "minimumReleaseAge": "0 days"
     },
     {
       "description": "Auto-merge minor updates after 3 days",
-      "matchUpdateTypes": ["minor"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "automerge": true,
       "minimumReleaseAge": "3 days"
     },
     {
       "description": "Require review for major updates",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "automerge": false,
-      "reviewers": ["manassehkafoh"],
-      "labels": ["major-update", "requires-review"]
+      "reviewers": [
+        "manassehkafoh"
+      ],
+      "labels": [
+        "major-update",
+        "requires-review"
+      ]
     },
     {
       "description": "Pin Docker base images to digest",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "pinDigests": true
+    },
+    {
+      "description": "Auto-merge GitHub Actions minor/patch updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "automerge": true,
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Require review for GitHub Actions major updates",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "automerge": false,
+      "reviewers": [
+        "manassehkafoh"
+      ],
+      "labels": [
+        "github-actions-major",
+        "requires-review"
+      ]
     }
   ],
   "vulnerabilityAlerts": {
     "enabled": true,
-    "labels": ["security", "critical"],
+    "labels": [
+      "security",
+      "critical"
+    ],
     "automerge": true,
     "minimumReleaseAge": "0 days"
   },

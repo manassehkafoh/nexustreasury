@@ -98,7 +98,7 @@ export interface TradeProps {
   price: number;
   tradeDate: BusinessDate;
   valueDate: BusinessDate;
-  maturityDate?: BusinessDate;
+  maturityDate?: BusinessDate | undefined;
   preDealCheck?: PreDealCheckResult;
   createdAt: Date;
   updatedAt: Date;
@@ -123,7 +123,7 @@ export class Trade {
     price: number;
     tradeDate: BusinessDate;
     valueDate: BusinessDate;
-    maturityDate?: BusinessDate;
+    maturityDate?: BusinessDate | undefined;
     preDealCheck: PreDealCheckResult;
   }): Trade {
     // Invariant: pre-deal check must pass before booking

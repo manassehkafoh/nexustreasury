@@ -1,22 +1,30 @@
-# NexusTreasury uses Renovate Bot (renovate.json) for all dependency management.
-# Dependabot is disabled to avoid duplicate PRs — Renovate handles:
-#  - Security patches (auto-merged within 24h)
-#  - Minor/patch updates (auto-merged after 3 days)
-#  - Major upgrades (require manual review)
-#  - Docker base image digest pinning
-#  - SOC 2 CC6.8 evidence generation
+# NexusTreasury uses Renovate Bot (renovate.json) for ALL dependency management.
+# Dependabot is fully disabled here to prevent duplicate PRs.
+#
+# Renovate handles:
+#   - npm/pnpm packages  (open-pull-requests-limit: 0 below)
+#   - GitHub Actions     (ecosystems added to renovate.json)
+#   - Docker base images (pinDigests: true)
+#   - Security patches auto-merged within 24h (SOC 2 CC6.8)
+#
+# If you need emergency Dependabot security alerts, re-enable via GitHub Security settings.
 
 version: 2
 updates:
-  # Keep GitHub Actions up to date (Renovate doesn't cover these by default)
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    labels: ["github-actions", "dependencies"]
-    # Disable npm/pnpm — handled entirely by Renovate
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 0   # Disable npm Dependabot PRs — Renovate handles this
+    open-pull-requests-limit: 0   # DISABLED — Renovate handles npm
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0   # DISABLED — Renovate handles GitHub Actions
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor", "version-update:semver-patch"]

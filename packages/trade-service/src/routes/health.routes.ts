@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { Pool } from 'pg';
+import { PrismaClient } from '@prisma/client';
 import { Kafka } from 'kafkajs';
-import { createClient } from 'redis';
+import Redis from 'ioredis';
 import { logger } from '../infrastructure/logger.js';
 
 interface HealthStatus {
@@ -12,23 +12,19 @@ interface HealthStatus {
 
 interface ReadinessResponse {
   status: 'ready' | 'not-ready';
-  checks: {
-    db:    HealthStatus;
-    kafka: HealthStatus;
-    redis: HealthStatus;
-  };
+  checks: { db: HealthStatus; kafka: HealthStatus; redis: HealthStatus };
   timestamp: string;
 }
 
 async function checkPostgres(): Promise<HealthStatus> {
   const start = Date.now();
-  const pool = new Pool({ connectionString: process.env['DATABASE_URL'], max: 1, connectionTimeoutMillis: 3000 });
+  const prisma = new PrismaClient({ datasources: { db: { url: process.env['DATABASE_URL'] } } });
   try {
-    await pool.query('SELECT 1');
-    await pool.end();
+    await prisma.$queryRaw`SELECT 1`;
+    await prisma.$disconnect();
     return { status: 'ok', latencyMs: Date.now() - start };
   } catch (err) {
-    await pool.end().catch(() => undefined);
+    await prisma.$disconnect().catch(() => undefined);
     const msg = err instanceof Error ? err.message : String(err);
     logger.warn({ err }, 'Health check: PostgreSQL unreachable');
     return { status: 'down', latencyMs: Date.now() - start, error: msg };
@@ -58,17 +54,20 @@ async function checkKafka(): Promise<HealthStatus> {
 
 async function checkRedis(): Promise<HealthStatus> {
   const start = Date.now();
-  const client = createClient({
-    url: `redis://${process.env['REDIS_HOST'] ?? 'localhost'}:${process.env['REDIS_PORT'] ?? '6379'}`,
-    socket: { connectTimeout: 3000 },
+  const client = new Redis({
+    host: process.env['REDIS_HOST'] ?? 'localhost',
+    port: Number(process.env['REDIS_PORT'] ?? 6379),
+    connectTimeout: 3000,
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
   });
   try {
     await client.connect();
     await client.ping();
-    await client.disconnect();
+    await client.quit();
     return { status: 'ok', latencyMs: Date.now() - start };
   } catch (err) {
-    await client.disconnect().catch(() => undefined);
+    await client.quit().catch(() => undefined);
     const msg = err instanceof Error ? err.message : String(err);
     logger.warn({ err }, 'Health check: Redis unreachable');
     return { status: 'down', latencyMs: Date.now() - start, error: msg };
@@ -84,7 +83,7 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
     timestamp: new Date().toISOString(),
   }));
 
-  /** Readiness — can the pod accept traffic? Real dependency checks. */
+  /** Readiness — real dependency checks. Kubernetes stops routing on 503. */
   app.get('/ready', async (_req, reply) => {
     const [db, kafka, redis] = await Promise.all([
       checkPostgres(),
@@ -93,19 +92,17 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
     ]);
 
     const allReady = db.status === 'ok' && kafka.status === 'ok' && redis.status === 'ok';
-
     const response: ReadinessResponse = {
-      status: allReady ? 'ready' : 'not-ready',
-      checks: { db, kafka, redis },
+      status:    allReady ? 'ready' : 'not-ready',
+      checks:    { db, kafka, redis },
       timestamp: new Date().toISOString(),
     };
-
     return reply.status(allReady ? 200 : 503).send(response);
   });
 
-  /** Startup — for Kubernetes startupProbe */
+  /** Startup probe */
   app.get('/startup', async () => ({
-    status: 'started',
+    status:  'started',
     version: process.env['npm_package_version'] ?? '1.0.0',
   }));
 }
