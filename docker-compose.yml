@@ -318,3 +318,38 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
     depends_on: [postgres, kafka]
     networks: [nexus-net]
+
+  bo-service:
+    build:
+      context: .
+      dockerfile: packages/bo-service/Dockerfile
+    container_name: nexus-bo-service
+    ports: ["4005:4005"]
+    environment:
+      NODE_ENV: development
+      PORT: 4005
+      DATABASE_URL: postgresql://nexus:nexus_dev_secret@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks: [nexus-net]
+
+  market-data-service:
+    build:
+      context: .
+      dockerfile: packages/market-data-service/Dockerfile
+    container_name: nexus-market-data-service
+    ports: ["4006:4006"]
+    environment:
+      NODE_ENV: development
+      PORT: 4006
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks: [nexus-net]

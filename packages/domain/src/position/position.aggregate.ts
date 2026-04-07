@@ -19,6 +19,16 @@ export class PositionRevaluedEvent extends DomainEvent {
   }
 }
 
+export class PositionDomainError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'PositionDomainError';
+  }
+}
+
 /**
  * Event-sourced Position aggregate.
  * Rebuilt by replaying domain events — enables point-in-time queries.
@@ -32,16 +42,16 @@ export class Position {
   private readonly _domainEvents: DomainEvent[] = [];
 
   private constructor(
-    public readonly id: PositionId,
+    private readonly _id: PositionId,           // FIX BUG-001: private backing field
     public readonly tenantId: TenantId,
     public readonly instrumentId: InstrumentId,
     public readonly bookId: BookId,
     public readonly currency: string,
     public readonly openDate: BusinessDate,
   ) {
-    this._averageCost    = Money.of(0, currency);
-    this._mtmValue       = Money.of(0, currency);
-    this._unrealisedPnl  = Money.of(0, currency);
+    this._averageCost   = Money.of(0, currency);
+    this._mtmValue      = Money.of(0, currency);
+    this._unrealisedPnl = Money.of(0, currency);
   }
 
   static create(params: {
@@ -70,7 +80,6 @@ export class Position {
     const newTotal = this._netQuantity + qty;
 
     if (this._netQuantity === 0 || Math.sign(qty) === Math.sign(this._netQuantity)) {
-      // Adding to existing position — recalculate weighted average cost
       const newCost =
         (this._averageCost.toNumber() * this._netQuantity + event.trade.price * qty) /
         newTotal;
@@ -84,8 +93,8 @@ export class Position {
 
   applyCancelledTrade(event: TradeCancelledEvent): void {
     const qty = event.trade.direction === 'BUY'
-      ? -event.trade.notional.toNumber()   // reverse the BUY
-      : event.trade.notional.toNumber();    // reverse the SELL
+      ? -event.trade.notional.toNumber()
+      : event.trade.notional.toNumber();
 
     this._netQuantity += qty;
     this._version++;
@@ -93,24 +102,26 @@ export class Position {
   }
 
   revalue(currentMarketPrice: number): void {
+    if (this._netQuantity === 0) return;                 // FIX HIGH-009: guard flat position
+
     const previousMtm = this._mtmValue;
     const newMtm = Money.of(this._netQuantity * currentMarketPrice, this.currency);
     const costBasis = Money.of(this._netQuantity * this._averageCost.toNumber(), this.currency);
 
-    this._mtmValue = newMtm;
+    this._mtmValue      = newMtm;
     this._unrealisedPnl = newMtm.subtract(costBasis);
     this._version++;
-
     this._domainEvents.push(new PositionRevaluedEvent(this, previousMtm));
   }
 
-  get id(): PositionId                   { return this.id; }
-  get netQuantity(): number              { return this._netQuantity; }
-  get averageCost(): Money               { return this._averageCost; }
-  get mtmValue(): Money                  { return this._mtmValue; }
-  get unrealisedPnl(): Money             { return this._unrealisedPnl; }
-  get version(): number                  { return this._version; }
-  get isFlat(): boolean                  { return this._netQuantity === 0; }
+  // FIX BUG-001: getter returns private backing field — no more circular reference
+  get id(): PositionId              { return this._id; }
+  get netQuantity(): number         { return this._netQuantity; }
+  get averageCost(): Money          { return this._averageCost; }
+  get mtmValue(): Money             { return this._mtmValue; }
+  get unrealisedPnl(): Money        { return this._unrealisedPnl; }
+  get version(): number             { return this._version; }
+  get isFlat(): boolean             { return this._netQuantity === 0; }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this._domainEvents];

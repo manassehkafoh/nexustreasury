@@ -14,16 +14,22 @@ const PORT = Number(process.env['PORT'] ?? 4001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 
 export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
+  // FIX BUG-002: Fail fast — never fall back to a predictable literal secret
+  const jwtSecret = process.env['JWT_SECRET'];
+  if (!jwtSecret) {
+    throw new Error(
+      'JWT_SECRET environment variable is required. ' +
+      'Set it via Vault agent injection or your .env file.',
+    );
+  }
+
   const app = Fastify({
-    logger: false, // Pino managed externally
+    logger: false,
     trustProxy: true,
     requestIdHeader: 'x-request-id',
   });
 
-  // ── Security ───────────────────────────────────────────
-  await app.register(helmet, {
-    contentSecurityPolicy: false, // API only, not serving HTML
-  });
+  await app.register(helmet, { contentSecurityPolicy: false });
 
   await app.register(rateLimit, {
     max: 1000,
@@ -35,11 +41,10 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
   });
 
   await app.register(jwt, {
-    secret: process.env['JWT_SECRET'] ?? 'dev-secret-change-in-production',
+    secret: jwtSecret,
     sign: { expiresIn: '15m' },
   });
 
-  // ── OpenAPI Docs ───────────────────────────────────────
   await app.register(swagger, {
     openapi: {
       info: {
@@ -64,22 +69,14 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
     uiConfig: { docExpansion: 'list' },
   });
 
-  // ── Routes ─────────────────────────────────────────────
   await app.register(healthRoutes, { prefix: '/health' });
-  await app.register(tradeRoutes, { prefix: '/api/v1/trades' });
+  await app.register(tradeRoutes,  { prefix: '/api/v1/trades' });
 
-  // ── Error Handler ──────────────────────────────────────
   app.setErrorHandler((error, request, reply) => {
     logger.error({ err: error, reqId: request.id }, 'Unhandled error');
-
     if (error.validation) {
-      return reply.status(400).send({
-        error: 'VALIDATION_ERROR',
-        message: error.message,
-        statusCode: 400,
-      });
+      return reply.status(400).send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
     }
-
     const statusCode = error.statusCode ?? 500;
     return reply.status(statusCode).send({
       error: error.code ?? 'INTERNAL_ERROR',
@@ -93,10 +90,8 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
 
 async function main(): Promise<void> {
   registerTelemetry('trade-service');
-
   const kafkaProducer = new KafkaProducer();
   await kafkaProducer.connect();
-
   const app = await buildServer();
 
   try {
@@ -115,10 +110,7 @@ async function main(): Promise<void> {
   };
 
   process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
+  process.on('SIGINT',  shutdown);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch((err) => { console.error(err); process.exit(1); });

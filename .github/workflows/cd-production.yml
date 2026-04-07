@@ -1,5 +1,11 @@
 name: CD — Deploy to Production
 
+permissions:
+  contents: write
+  packages: write
+  deployments: write
+  id-token: write
+
 on:
   workflow_dispatch:
     inputs:

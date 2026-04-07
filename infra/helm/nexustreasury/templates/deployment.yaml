@@ -1,0 +1,155 @@
+{{- range $svcName, $svc := .Values.services }}
+{{- if $svc.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $svcName }}
+  namespace: nexus-prod
+  labels:
+    app: {{ $svcName }}
+    app.kubernetes.io/part-of: nexustreasury
+    helm.sh/chart: {{ $.Chart.Name }}-{{ $.Chart.Version }}
+spec:
+  replicas: {{ $svc.replicaCount | default 2 }}
+  selector:
+    matchLabels:
+      app: {{ $svcName }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{ $svcName }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: {{ $svcName }}
+    spec:
+      serviceAccountName: {{ $svcName }}
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: {{ $svcName }}
+      containers:
+        - name: {{ $svcName }}
+          image: "{{ $.Values.global.imageRegistry }}/{{ $svcName }}:{{ $.Values.global.imageTag }}"
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: {{ $svc.port }}
+            - name: metrics
+              containerPort: 9090
+          env:
+            - name: NODE_ENV
+              value: {{ $.Values.global.environment }}
+            - name: PORT
+              value: {{ $svc.port | quote }}
+            - name: KAFKA_BROKERS
+              value: {{ $.Values.global.kafka.brokers }}
+            - name: OTEL_SERVICE_NAME
+              value: {{ $svcName }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ $.Values.global.otel.endpoint }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.global.logLevel }}
+          resources:
+            requests:
+              cpu:    {{ $svc.resources.requests.cpu }}
+              memory: {{ $svc.resources.requests.memory }}
+            limits:
+              cpu:    {{ $svc.resources.limits.cpu }}
+              memory: {{ $svc.resources.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: {{ $svc.port }}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: {{ $svc.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  namespace: nexus-prod
+spec:
+  selector:
+    app: {{ $svcName }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: {{ $svc.port }}
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $svcName }}
+  namespace: nexus-prod
+  annotations:
+    vault.hashicorp.com/role: {{ $svcName }}
+{{- if and $svc.autoscaling $svc.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $svcName }}-hpa
+  namespace: nexus-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $svcName }}
+  minReplicas: {{ $svc.autoscaling.minReplicas | default 2 }}
+  maxReplicas: {{ $svc.autoscaling.maxReplicas | default 10 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.autoscaling.targetCPUUtilizationPercentage | default 70 }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+{{- end }}
+{{- end }}
+{{- end }}

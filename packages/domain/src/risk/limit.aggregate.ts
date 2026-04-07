@@ -17,6 +17,17 @@ export enum LimitLevel {
   COUNTERPARTY = 'COUNTERPARTY',
 }
 
+// FIX HIGH-009: Domain error class for Limit context
+export class LimitDomainError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'LimitDomainError';
+  }
+}
+
 export class LimitBreachedEvent extends DomainEvent {
   constructor(
     public readonly limit: Limit,
@@ -68,9 +79,9 @@ export class Limit {
     public readonly limitType: LimitType,
     public readonly level: LimitLevel,
     public readonly limitAmount: Money,
-    public readonly warningThreshold: Percentage,  // e.g. 80% triggers warning
-    public readonly hardLimit: Percentage,          // e.g. 100% hard block
-    private readonly _entityId: string,            // counterpartyId or bookId
+    public readonly warningThreshold: Percentage,
+    public readonly hardLimit: Percentage,
+    private readonly _entityId: string,
   ) {
     this._utilisedAmount = Money.of(0, limitAmount.currency);
   }
@@ -83,6 +94,17 @@ export class Limit {
     warningThreshold: Percentage;
     entityId: string;
   }): Limit {
+    // FIX HIGH-009: Invariant — limit amount must be positive
+    if (params.limitAmount.toNumber() <= 0) {
+      throw new LimitDomainError('INVALID_LIMIT_AMOUNT', 'Limit amount must be positive');
+    }
+    if (params.warningThreshold.value >= 100) {
+      throw new LimitDomainError(
+        'INVALID_WARNING_THRESHOLD',
+        'Warning threshold must be below 100%',
+      );
+    }
+
     return new Limit(
       LimitId(randomUUID()),
       params.tenantId,
@@ -96,7 +118,7 @@ export class Limit {
   }
 
   /**
-   * Pre-deal check — synchronous gRPC call gate. Target P99 < 5ms.
+   * Pre-deal check — synchronous gRPC gate. Target P99 < 5ms.
    */
   checkPreDeal(request: PreDealCheckRequest): PreDealCheckResponse {
     const start = performance.now();
@@ -123,6 +145,11 @@ export class Limit {
   }
 
   utilise(amount: Money): void {
+    // FIX HIGH-009: Invariant — cannot utilise a negative amount
+    if (amount.toNumber() <= 0) {
+      throw new LimitDomainError('INVALID_UTILISATION', 'Utilisation amount must be positive');
+    }
+
     this._utilisedAmount = this._utilisedAmount.add(amount);
     const utilisationPct = (this._utilisedAmount.toNumber() / this.limitAmount.toNumber()) * 100;
 
@@ -136,9 +163,15 @@ export class Limit {
   }
 
   release(amount: Money): void {
-    const released = this._utilisedAmount.subtract(amount);
-    this._utilisedAmount = Money.of(Math.max(0, released.toNumber()), amount.currency);
+    // FIX HIGH-009: Invariant — cannot release more than utilised
+    if (amount.toNumber() > this._utilisedAmount.toNumber()) {
+      throw new LimitDomainError(
+        'OVER_RELEASE',
+        `Cannot release ${amount.toString()} — only ${this._utilisedAmount.toString()} is utilised`,
+      );
+    }
 
+    this._utilisedAmount = this._utilisedAmount.subtract(amount);
     const wasInBreach = this._inBreach;
     this._inBreach = this.utilisationPct > this.hardLimit.value;
 
@@ -148,13 +181,10 @@ export class Limit {
     this._version++;
   }
 
-  get utilisationPct(): number {
-    return (this._utilisedAmount.toNumber() / this.limitAmount.toNumber()) * 100;
-  }
-
-  get utilisedAmount(): Money   { return this._utilisedAmount; }
-  get inBreach(): boolean       { return this._inBreach; }
-  get version(): number         { return this._version; }
+  get utilisationPct(): number   { return (this._utilisedAmount.toNumber() / this.limitAmount.toNumber()) * 100; }
+  get utilisedAmount(): Money    { return this._utilisedAmount; }
+  get inBreach(): boolean        { return this._inBreach; }
+  get version(): number          { return this._version; }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this._domainEvents];

@@ -172,3 +172,18 @@ export class LiquidityGapReport {
     return events;
   }
 }
+
+// FIX LOW-002: Repository interface for LiquidityGapReport persistence
+export interface LiquidityGapReportRepository {
+  findById(id: string, tenantId: TenantId): Promise<LiquidityGapReport | null>;
+  findLatestByScenario(
+    scenario: ALMScenario,
+    tenantId: TenantId,
+  ): Promise<LiquidityGapReport | null>;
+  findByDateRange(
+    from: BusinessDate,
+    to: BusinessDate,
+    tenantId: TenantId,
+  ): Promise<LiquidityGapReport[]>;
+  save(report: LiquidityGapReport): Promise<void>;
+}
