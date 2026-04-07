@@ -1,0 +1,176 @@
+openapi: '3.0.3'
+info:
+  title: NexusTreasury ALM Service API
+  description: |
+    Asset-Liability Management — LCR/NSFR calculation, liquidity gap reporting,
+    and IRRBB analytics. All calculations conform to Basel III/IV standards
+    (BCBS 238, BCBS 295).
+  version: 1.0.0
+servers:
+  - url: http://localhost:4004/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: alm
+    description: ALM analytics and regulatory reporting
+paths:
+  /alm/liquidity-gap:
+    post:
+      tags: [alm]
+      summary: Generate liquidity gap report
+      operationId: generateLiquidityGap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LiquidityGapRequest'
+      responses:
+        '200':
+          description: Liquidity gap report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiquidityGapResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /alm/lcr:
+    get:
+      tags: [alm]
+      summary: Get latest LCR snapshot
+      operationId: getLCR
+      responses:
+        '200':
+          description: Current LCR ratio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatioSnapshot'
+  /alm/nsfr:
+    get:
+      tags: [alm]
+      summary: Get latest NSFR snapshot
+      operationId: getNSFR
+      responses:
+        '200':
+          description: Current NSFR ratio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatioSnapshot'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LiquidityGapRequest:
+      type: object
+      required: [scenario, currency, cashFlows, lcr, nsfr]
+      properties:
+        scenario:
+          type: string
+          enum: [CONTRACTUAL, STRESSED_30D, STRESSED_90D, IDIOSYNCRATIC, MARKET_WIDE]
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        asOfDate:
+          type: string
+          format: date
+        cashFlows:
+          type: array
+          items:
+            type: object
+            required: [bucket, inflowAmount, outflowAmount]
+            properties:
+              bucket:
+                type: string
+                enum: [OVERNIGHT, ONE_WEEK, TWO_WEEKS, ONE_MONTH, THREE_MONTHS,
+                       SIX_MONTHS, ONE_YEAR, TWO_TO_FIVE_YEARS, OVER_FIVE_YEARS]
+              inflowAmount:
+                type: number
+              outflowAmount:
+                type: number
+        lcr:
+          type: object
+          required: [hqlaLevel1, hqlaLevel2A, hqlaLevel2B, netCashOutflows30d]
+          properties:
+            hqlaLevel1:
+              type: number
+              description: Unencumbered Level 1 HQLA (cash, CB reserves, govvies)
+            hqlaLevel2A:
+              type: number
+              description: Level 2A HQLA (agency, covered bonds) — 15% haircut
+            hqlaLevel2B:
+              type: number
+              description: Level 2B HQLA (corp bonds, equities) — 25-50% haircut
+            netCashOutflows30d:
+              type: number
+              description: Net stress cash outflows over 30-day horizon
+        nsfr:
+          type: object
+          required: [availableStableFunding, requiredStableFunding]
+          properties:
+            availableStableFunding:
+              type: number
+            requiredStableFunding:
+              type: number
+    LiquidityGapResponse:
+      type: object
+      properties:
+        reportId:
+          type: string
+        asOfDate:
+          type: string
+        scenario:
+          type: string
+        lcr:
+          type: object
+          properties:
+            ratio:
+              type: number
+            isCompliant:
+              type: boolean
+            totalHQLA:
+              type: number
+            netOutflows:
+              type: number
+        nsfr:
+          type: object
+          properties:
+            ratio:
+              type: number
+            isCompliant:
+              type: boolean
+        buckets:
+          type: array
+          items:
+            type: object
+            properties:
+              bucket:
+                type: string
+              inflows:
+                type: number
+              outflows:
+                type: number
+              gap:
+                type: number
+              cumulativeGap:
+                type: number
+        generatedAt:
+          type: string
+    RatioSnapshot:
+      type: object
+      properties:
+        ratio:
+          type: number
+        isCompliant:
+          type: boolean
+        asOf:
+          type: string
+  responses:
+    Unauthorized:
+      description: Invalid or missing JWT

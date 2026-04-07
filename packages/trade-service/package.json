@@ -32,7 +32,8 @@
     "@opentelemetry/exporter-trace-otlp-grpc": "^0.214.0",
     "@opentelemetry/resources": "^2.6.1",
     "@opentelemetry/semantic-conventions": "^1.40.0",
-    "fastify-plugin": "^4.5.1"
+    "fastify-plugin": "^4.5.1",
+    "@fastify/websocket": "^8.3.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^1.0.0",

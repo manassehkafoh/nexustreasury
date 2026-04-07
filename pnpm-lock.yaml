@@ -197,6 +197,9 @@ importers:
         specifier: ^3.22.0
         version: 3.25.76
     devDependencies:
+      prisma:
+        specifier: ^5.9.0
+        version: 5.22.0
       tsx:
         specifier: ^4.7.0
         version: 4.21.0
@@ -221,6 +224,9 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^3.0.0
         version: 3.1.0
+      '@fastify/websocket':
+        specifier: ^8.3.0
+        version: 8.3.1
       '@nexustreasury/domain':
         specifier: workspace:*
         version: link:../domain
@@ -789,6 +795,9 @@ packages:
 
   '@fastify/swagger@8.15.0':
     resolution: {integrity: sha512-zy+HEEKFqPMS2sFUsQU5X0MHplhKJvWeohBwTCkBAJA/GDYGLGUWQaETEhptiqxK7Hs0fQB9B4MDb3pbwIiCwA==}
+
+  '@fastify/websocket@8.3.1':
+    resolution: {integrity: sha512-hsQYHHJme/kvP3ZS4v/WMUznPBVeeQHHwAoMy1LiN6m/HuPfbdXq1MBJ4Nt8qX1YI+eVbog4MnOsU7MTozkwYA==}
 
   '@grpc/grpc-js@1.14.3':
     resolution: {integrity: sha512-Iq8QQQ/7X3Sac15oB6p0FmUg/klxQvXLeileoqrTRGJYLV+/9tubbr9ipz0GKHjmXVsgFPo/+W+2cA8eNcR+XA==}
@@ -3708,6 +3717,14 @@ snapshots:
       yaml: 2.8.3
     transitivePeerDependencies:
       - supports-color
+
+  '@fastify/websocket@8.3.1':
+    dependencies:
+      fastify-plugin: 4.5.1
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
 
   '@grpc/grpc-js@1.14.3':
     dependencies:

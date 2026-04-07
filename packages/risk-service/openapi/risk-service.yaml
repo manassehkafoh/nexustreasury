@@ -1,0 +1,111 @@
+openapi: '3.0.3'
+info:
+  title: NexusTreasury Risk Service API
+  description: |
+    Real-time pre-deal limit checking, limit management, and Value-at-Risk.
+    Pre-deal checks are synchronous and target P99 < 5ms.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4003/api/v1
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: risk
+    description: Risk management operations
+paths:
+  /risk/pre-deal-check:
+    post:
+      tags: [risk]
+      summary: Pre-deal limit check
+      description: |
+        Synchronous gate before trade booking. Checks all applicable counterparty limits.
+        Returns approved=false with failure reasons if any limit would be exceeded.
+        Target: P99 < 5ms.
+      operationId: preDealCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreDealCheckRequest'
+      responses:
+        '200':
+          description: Trade approved — within limits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreDealCheckResponse'
+        '422':
+          description: Trade rejected — limit breached
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreDealCheckResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /risk/limits:
+    get:
+      tags: [risk]
+      summary: List limits in breach
+      operationId: getLimits
+      responses:
+        '200':
+          description: Current limits and breach status
+  /risk/var:
+    get:
+      tags: [risk]
+      summary: Current Value-at-Risk
+      operationId: getVaR
+      parameters:
+        - name: bookId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: VaR snapshot
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PreDealCheckRequest:
+      type: object
+      required: [counterpartyId, requestedAmount, requestedCurrency]
+      properties:
+        counterpartyId:
+          type: string
+          format: uuid
+        requestedAmount:
+          type: number
+          minimum: 0.01
+        requestedCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+    PreDealCheckResponse:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        utilisationPct:
+          type: number
+        headroomAmount:
+          type: number
+        currency:
+          type: string
+        failureReasons:
+          type: array
+          items:
+            type: string
+        checkedAt:
+          type: string
+        responseTimeMs:
+          type: number
+  responses:
+    Unauthorized:
+      description: Invalid or missing JWT

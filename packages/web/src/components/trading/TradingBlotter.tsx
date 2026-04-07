@@ -1,98 +1,177 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-interface BlotterRow {
-  id: string;
-  reference: string;
+export interface BlotterRow {
+  tradeId:    string;
+  reference:  string;
   assetClass: string;
-  direction: 'BUY' | 'SELL';
-  notional: number;
-  currency: string;
-  price: number;
-  status: string;
-  pnl: number;
+  direction:  'BUY' | 'SELL';
   counterparty: string;
-  bookedAt: string;
+  instrument: string;
+  notional:   number;
+  currency:   string;
+  price:      number;
+  status:     string;
+  tradeDate:  string;
+  valueDate:  string;
+  bookedAt:   string;
 }
 
-const ASSET_CLASS_COLORS: Record<string, string> = {
-  FX:                         'text-yellow-400',
-  FIXED_INCOME:               'text-blue-400',
-  MONEY_MARKET:               'text-teal-400',
-  INTEREST_RATE_DERIVATIVE:   'text-purple-400',
-  REPO:                       'text-orange-400',
-};
+type WSStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
-export function TradingBlotter(): JSX.Element {
-  const [trades, setTrades] = useState<BlotterRow[]>([]);
-  const [isLive, setIsLive] = useState(true);
+const TRADE_SERVICE_WS =
+  process.env['NEXT_PUBLIC_TRADE_SERVICE_WS'] ?? 'ws://localhost:4001/api/v1/trades/stream';
+const MAX_BLOTTER_ROWS = 200;
+const RECONNECT_MS     = [1_000, 2_000, 5_000, 10_000]; // exponential back-off steps
 
-  // TODO: Replace with real WebSocket subscription
-  useEffect(() => {
-    const mockTrades: BlotterRow[] = [
-      { id: '1', reference: 'FX-0407-A3B2',  assetClass: 'FX',             direction: 'BUY',  notional: 12500000, currency: 'USD', price: 1.0842, status: 'CONFIRMED', pnl: 14250,  counterparty: 'Republic Bank Group',  bookedAt: '09:14:32' },
-      { id: '2', reference: 'FI-0407-C9D3',  assetClass: 'FIXED_INCOME',   direction: 'BUY',  notional: 5000000,  currency: 'USD', price: 98.25,  status: 'CONFIRMED', pnl: 8100,   counterparty: 'CIBC FirstCaribbean',  bookedAt: '09:22:11' },
-      { id: '3', reference: 'MM-0407-F1A4',  assetClass: 'MONEY_MARKET',   direction: 'SELL', notional: 25000000, currency: 'TTD', price: 100.00, status: 'CONFIRMED', pnl: -2300,  counterparty: 'Scotiabank TT',        bookedAt: '09:45:07' },
-      { id: '4', reference: 'IRD-0407-B8C3', assetClass: 'INTEREST_RATE_DERIVATIVE', direction: 'BUY', notional: 30000000, currency: 'USD', price: 4.25, status: 'CONFIRMED', pnl: 45000, counterparty: 'National Bank TT', bookedAt: '10:02:44' },
-      { id: '5', reference: 'REPO-0407-E2F', assetClass: 'REPO',           direction: 'SELL', notional: 8500000,  currency: 'USD', price: 5.10,  status: 'CONFIRMED', pnl: 3200,   counterparty: 'Republic Bank Group',  bookedAt: '10:18:55' },
-    ];
-    setTrades(mockTrades);
+export function TradingBlotter() {
+  const [trades,    setTrades]    = useState<BlotterRow[]>([]);
+  const [status,    setStatus]    = useState<WSStatus>('disconnected');
+  const [lastError, setLastError] = useState<string | null>(null);
+
+  const wsRef         = useRef<WebSocket | null>(null);
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef    = useRef(true);
+
+  const connect = useCallback(() => {
+    if (!mountedRef.current) return;
+    const token = sessionStorage.getItem('nexus_jwt') ?? '';
+    const url   = `${TRADE_SERVICE_WS}?token=${encodeURIComponent(token)}`;
+
+    setStatus(retryCountRef.current === 0 ? 'connecting' : 'reconnecting');
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      if (!mountedRef.current) { ws.close(); return; }
+      retryCountRef.current = 0;
+      setStatus('connected');
+      setLastError(null);
+    };
+
+    ws.onmessage = (evt: MessageEvent) => {
+      try {
+        const payload = JSON.parse(evt.data as string) as BlotterRow | BlotterRow[];
+        const incoming = Array.isArray(payload) ? payload : [payload];
+        setTrades(prev =>
+          [...incoming, ...prev].slice(0, MAX_BLOTTER_ROWS)
+        );
+      } catch { /* malformed frame — skip */ }
+    };
+
+    ws.onerror = () => setLastError('WebSocket error');
+
+    ws.onclose = (evt) => {
+      if (!mountedRef.current) return;
+      setStatus('disconnected');
+      // Reconnect with back-off unless intentionally closed (code 1000)
+      if (evt.code !== 1000) {
+        const delay = RECONNECT_MS[Math.min(retryCountRef.current, RECONNECT_MS.length - 1)] ?? 10_000;
+        retryCountRef.current++;
+        retryTimerRef.current = setTimeout(connect, delay);
+      }
+    };
   }, []);
 
-  const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
+  useEffect(() => {
+    mountedRef.current = true;
+    connect();
+    return () => {
+      mountedRef.current = false;
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      wsRef.current?.close(1000, 'Component unmounted');
+    };
+  }, [connect]);
+
+  const statusColor: Record<WSStatus, string> = {
+    connected:    'text-emerald-400',
+    connecting:   'text-yellow-400',
+    reconnecting: 'text-yellow-500',
+    disconnected: 'text-red-400',
+  };
+  const statusDot: Record<WSStatus, string> = {
+    connected:    'bg-emerald-400',
+    connecting:   'bg-yellow-400 animate-pulse',
+    reconnecting: 'bg-yellow-500 animate-pulse',
+    disconnected: 'bg-red-500',
+  };
 
   return (
-    <div className="bg-[#071827] border border-white/[0.065] rounded-xl overflow-hidden">
+    <div className="bg-[#071827] border border-[#243558] rounded-xl overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.065] bg-[#0C2038]">
-        <div className="flex items-center gap-3">
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest">Live Trade Blotter</h2>
-          {isLive && (
-            <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] font-semibold text-green-400">LIVE</span>
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-gray-500">{trades.length} trades today</span>
-          <span className={`text-sm font-bold ${totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            Total P&L: {totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString()}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-[#243558]">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold tracking-widest text-[#D4A843] uppercase">
+            Live Trading Blotter
           </span>
+          <span className="text-[#6882A8] text-xs">
+            ({trades.length} trades)
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {lastError && (
+            <span className="text-xs text-red-400 mr-2">{lastError}</span>
+          )}
+          <span className={`text-xs font-mono ${statusColor[status]}`}>
+            {status.toUpperCase()}
+          </span>
+          <div className={`w-2 h-2 rounded-full ${statusDot[status]}`} />
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-white/[0.04]">
-              {['Reference', 'Asset', 'Dir', 'Notional', 'Price', 'Counterparty', 'Status', 'P&L', 'Time'].map(h => (
-                <th key={h} className="px-4 py-2.5 text-left text-[9px] font-semibold text-gray-600 uppercase tracking-widest">{h}</th>
+            <tr className="text-[#6882A8] uppercase tracking-wider border-b border-[#243558]">
+              {['Reference','Asset','Dir','Counterparty','Instrument','Notional','Price','Status','Value Date'].map(h => (
+                <th key={h} className="px-3 py-2 text-left font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {trades.map((trade, i) => (
-              <tr key={trade.id} className={`border-b border-white/[0.03] hover:bg-white/[0.02] transition-colors ${i === 0 ? 'bg-teal-500/[0.03]' : ''}`}>
-                <td className="px-4 py-3 text-[10px] font-mono text-gray-400">{trade.reference}</td>
-                <td className={`px-4 py-3 text-[10px] font-semibold ${ASSET_CLASS_COLORS[trade.assetClass] ?? 'text-gray-300'}`}>
-                  {trade.assetClass === 'FIXED_INCOME' ? 'FI' : trade.assetClass === 'MONEY_MARKET' ? 'MM' : trade.assetClass === 'INTEREST_RATE_DERIVATIVE' ? 'IRD' : trade.assetClass}
+            {trades.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-10 text-center text-[#6882A8]">
+                  {status === 'connected'
+                    ? 'Waiting for trades…'
+                    : status === 'disconnected'
+                      ? 'Stream disconnected — reconnecting…'
+                      : 'Connecting to trade stream…'}
                 </td>
-                <td className={`px-4 py-3 text-[10px] font-semibold ${trade.direction === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>{trade.direction}</td>
-                <td className="px-4 py-3 text-xs text-white">{trade.currency} {(trade.notional / 1_000_000).toFixed(1)}M</td>
-                <td className="px-4 py-3 text-xs text-gray-300">{trade.price.toFixed(4)}</td>
-                <td className="px-4 py-3 text-xs text-gray-400">{trade.counterparty}</td>
-                <td className="px-4 py-3">
-                  <span className="text-[9px] bg-green-400/10 text-green-400 px-2 py-0.5 rounded-full font-medium">{trade.status}</span>
-                </td>
-                <td className={`px-4 py-3 text-xs font-semibold ${trade.pnl >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {trade.pnl >= 0 ? '+' : ''}${trade.pnl.toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-[10px] font-mono text-gray-500">{trade.bookedAt}</td>
               </tr>
-            ))}
+            ) : (
+              trades.map((t) => (
+                <tr key={t.tradeId}
+                  className="border-b border-[#0d2035] hover:bg-[#0C2038] transition-colors">
+                  <td className="px-3 py-2 font-mono text-[#D4A843] whitespace-nowrap">{t.reference}</td>
+                  <td className="px-3 py-2 text-[#EAF0FF]">{t.assetClass}</td>
+                  <td className={`px-3 py-2 font-semibold ${t.direction === 'BUY' ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {t.direction}
+                  </td>
+                  <td className="px-3 py-2 text-[#EAF0FF] whitespace-nowrap">{t.counterparty}</td>
+                  <td className="px-3 py-2 text-[#EAF0FF] whitespace-nowrap">{t.instrument}</td>
+                  <td className="px-3 py-2 font-mono text-right text-[#EAF0FF]">
+                    {new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(t.notional)}
+                    <span className="text-[#6882A8] ml-1">{t.currency}</span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-right text-[#EAF0FF]">
+                    {t.price.toFixed(4)}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${
+                      t.status === 'SETTLED'   ? 'bg-emerald-900 text-emerald-300' :
+                      t.status === 'CANCELLED' ? 'bg-red-900 text-red-300' :
+                      'bg-yellow-900 text-yellow-300'}`}>
+                      {t.status}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2 font-mono text-[#6882A8] whitespace-nowrap">{t.valueDate}</td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
