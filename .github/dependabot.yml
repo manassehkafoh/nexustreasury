@@ -1,0 +1,22 @@
+# NexusTreasury uses Renovate Bot (renovate.json) for all dependency management.
+# Dependabot is disabled to avoid duplicate PRs — Renovate handles:
+#  - Security patches (auto-merged within 24h)
+#  - Minor/patch updates (auto-merged after 3 days)
+#  - Major upgrades (require manual review)
+#  - Docker base image digest pinning
+#  - SOC 2 CC6.8 evidence generation
+
+version: 2
+updates:
+  # Keep GitHub Actions up to date (Renovate doesn't cover these by default)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["github-actions", "dependencies"]
+    # Disable npm/pnpm — handled entirely by Renovate
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 0   # Disable npm Dependabot PRs — Renovate handles this
