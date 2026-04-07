@@ -15,12 +15,12 @@ export class PrismaPositionRepository implements PositionRepository {
 
   async findByBook(bookId: BookId, tenantId: TenantId): Promise<Position[]> {
     const rows = await this.prisma.position.findMany({ where: { bookId, tenantId } });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async findByInstrument(instrumentId: InstrumentId, tenantId: TenantId): Promise<Position[]> {
     const rows = await this.prisma.position.findMany({ where: { instrumentId, tenantId } });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async save(position: Position): Promise<void> {

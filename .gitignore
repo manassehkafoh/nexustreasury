@@ -48,3 +48,7 @@ infra/helm/**/*-values-prod.yaml
 *.pem
 *.key
 *.crt
+
+# TypeScript build info (generated, not source)
+**/*.tsbuildinfo
+packages/web/next-env.d.ts

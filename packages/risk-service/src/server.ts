@@ -6,11 +6,12 @@ import { riskRoutes } from './routes/risk.routes.js';
 import { PrismaLimitRepository } from './infrastructure/postgres/limit.repository.js';
 
 const PORT = Number(process.env['PORT'] ?? 4003);
-const log = (msg: string, data?: object): void =>
+const log = (msg: string, data?: object): void => {
   process.stdout.write(JSON.stringify({
     level: 'info', service: 'risk-service', msg,
     time: new Date().toISOString(), ...data,
-  }) + '\n');
+  }) + '\n')
+};
 
 async function main(): Promise<void> {
   const jwtSecret = process.env['JWT_SECRET'];

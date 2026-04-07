@@ -25,7 +25,7 @@ const TRADE_SERVICE_WS =
 const MAX_BLOTTER_ROWS = 200;
 const RECONNECT_MS     = [1_000, 2_000, 5_000, 10_000]; // exponential back-off steps
 
-export function TradingBlotter() {
+export function TradingBlotter(): JSX.Element {
   const [trades,    setTrades]    = useState<BlotterRow[]>([]);
   const [status,    setStatus]    = useState<WSStatus>('disconnected');
   const [lastError, setLastError] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export function TradingBlotter() {
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef    = useRef(true);
 
-  const connect = useCallback(() => {
+  const connect = useCallback((): void => {
     if (!mountedRef.current) return;
     const token = sessionStorage.getItem('nexus_jwt') ?? '';
     const url   = `${TRADE_SERVICE_WS}?token=${encodeURIComponent(token)}`;
@@ -44,26 +44,26 @@ export function TradingBlotter() {
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
-    ws.onopen = () => {
+    ws.onopen = (): void => {
       if (!mountedRef.current) { ws.close(); return; }
       retryCountRef.current = 0;
       setStatus('connected');
       setLastError(null);
     };
 
-    ws.onmessage = (evt: MessageEvent) => {
+    ws.onmessage = (evt: MessageEvent): void => {
       try {
         const payload = JSON.parse(evt.data as string) as BlotterRow | BlotterRow[];
         const incoming = Array.isArray(payload) ? payload : [payload];
-        setTrades(prev =>
+        setTrades((prev: BlotterRow[]) =>
           [...incoming, ...prev].slice(0, MAX_BLOTTER_ROWS)
         );
       } catch { /* malformed frame — skip */ }
     };
 
-    ws.onerror = () => setLastError('WebSocket error');
+    ws.onerror = (): void => { setLastError('WebSocket error'); };
 
-    ws.onclose = (evt) => {
+    ws.onclose = (evt: CloseEvent): void => {
       if (!mountedRef.current) return;
       setStatus('disconnected');
       // Reconnect with back-off unless intentionally closed (code 1000)
@@ -75,7 +75,7 @@ export function TradingBlotter() {
     };
   }, []);
 
-  useEffect(() => {
+  useEffect((): (() => void) => {
     mountedRef.current = true;
     connect();
     return () => {

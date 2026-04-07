@@ -4,9 +4,9 @@ import { healthRoutes } from './routes/health.routes.js';
 import { boRoutes } from './routes/bo.routes.js';
 
 const PORT = Number(process.env['PORT'] ?? 4005);
-const log = (msg: string): void => process.stdout.write(JSON.stringify({
+const log = (msg: string): void => { process.stdout.write(JSON.stringify({
   level: 'info', service: 'bo-service', msg, time: new Date().toISOString(),
-}) + '\n');
+}) + '\n') };
 
 async function main(): Promise<void> {
   const jwtSecret = process.env['JWT_SECRET'];

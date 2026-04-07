@@ -9,10 +9,11 @@ import {
 } from '@nexustreasury/domain';
 
 const PORT = Number(process.env['PORT'] ?? 4002);
-const log = (level: string, msg: string, data?: object): void =>
+const log = (level: string, msg: string, data?: object): void => {
   process.stdout.write(JSON.stringify({
     level, service: 'position-service', msg, time: new Date().toISOString(), ...data,
-  }) + '\n');
+  }) + '\n')
+};
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient();

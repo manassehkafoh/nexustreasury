@@ -4,9 +4,9 @@ import { healthRoutes } from './routes/health.routes.js';
 import { almRoutes } from './routes/alm.routes.js';
 
 const PORT = Number(process.env['PORT'] ?? 4004);
-const log = (msg: string): void => process.stdout.write(JSON.stringify({
+const log = (msg: string): void => { process.stdout.write(JSON.stringify({
   level: 'info', service: 'alm-service', msg, time: new Date().toISOString(),
-}) + '\n');
+}) + '\n') };
 
 async function main(): Promise<void> {
   const jwtSecret = process.env['JWT_SECRET'];

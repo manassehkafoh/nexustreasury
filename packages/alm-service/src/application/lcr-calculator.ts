@@ -55,14 +55,10 @@ export class LCRCalculator {
         totalHQLA:           Money.of(0, params.currency), // calculated by aggregate
         netCashOutflows30d:  Money.of(params.lcr.netCashOutflows30d, params.currency),
         minimumRequired:     100,
-        isCompliant:         false, // calculated by aggregate
-        lcrRatio:            0,     // calculated by aggregate
       },
       nsfrComponents: {
         availableStableFunding: Money.of(params.nsfr.availableStableFunding, params.currency),
         requiredStableFunding:  Money.of(params.nsfr.requiredStableFunding,  params.currency),
-        nsfrRatio:              0,    // calculated by aggregate
-        isCompliant:            false,// calculated by aggregate
       },
     });
   }

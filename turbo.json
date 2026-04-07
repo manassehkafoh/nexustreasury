@@ -51,6 +51,66 @@
     },
     "db:seed": {
       "cache": false
+    },
+    "@nexustreasury/domain#build": {
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/position-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/trade-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/risk-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/alm-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/bo-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
+    },
+    "@nexustreasury/market-data-service#build": {
+      "dependsOn": [
+        "@nexustreasury/domain#build"
+      ],
+      "outputs": [
+        "dist/**"
+      ],
+      "cache": true
     }
   }
 }

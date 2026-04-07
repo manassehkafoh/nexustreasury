@@ -5,11 +5,12 @@ import { MockRateAdapter } from './application/rate-publisher.js';
 import type { MarketRate } from './application/rate-publisher.js';
 
 const PORT = Number(process.env['PORT'] ?? 4006);
-const log = (msg: string, data?: object): void =>
+const log = (msg: string, data?: object): void => {
   process.stdout.write(JSON.stringify({
     level: 'info', service: 'market-data-service', msg,
     time: new Date().toISOString(), ...data,
-  }) + '\n');
+  }) + '\n')
+};
 
 const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDGHS', 'USDNGN', 'EURGBP', 'XAUUSD'];
 const RATE_TOPIC  = 'nexus.marketdata.rates';

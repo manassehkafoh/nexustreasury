@@ -16,21 +16,21 @@ export class PrismaLimitRepository implements LimitRepository {
     const rows = await this.prisma.limit.findMany({
       where: { entityId: counterpartyId, tenantId },
     });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async findByBook(bookId: BookId, tenantId: TenantId): Promise<Limit[]> {
     const rows = await this.prisma.limit.findMany({
       where: { entityId: bookId, tenantId, level: LimitLevel.BOOK },
     });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async findAllInBreach(tenantId: TenantId): Promise<Limit[]> {
     const rows = await this.prisma.limit.findMany({
       where: { tenantId, inBreach: true },
     });
-    return rows.map((r) => this.toDomain(r));
+    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
   }
 
   async save(limit: Limit): Promise<void> {
