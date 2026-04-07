@@ -63,7 +63,7 @@ jobs:
           format: sarif
           output: ${{ matrix.service }}-trivy.sarif
           severity: CRITICAL,HIGH
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: ${{ matrix.service }}-trivy.sarif
           category: trivy-${{ matrix.service }}
