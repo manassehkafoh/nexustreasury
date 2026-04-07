@@ -1,0 +1,298 @@
+{
+  "info": {
+    "_postman_id": "nexustreasury-v1",
+    "name": "NexusTreasury API Collection",
+    "description": "Complete API collection for NexusTreasury — Trade Service, ALM Service, Risk Service, Back Office Service.\n\nBase URL: {{baseUrl}}\nAuth: Bearer {{jwtToken}}\n\n## Setup\n1. Set `baseUrl` variable to your environment (e.g. http://localhost:4001)\n2. Call POST /auth/token to get a JWT and set `jwtToken`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwtToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl",         "value": "http://localhost:4001", "type": "string" },
+    { "key": "almBaseUrl",      "value": "http://localhost:4004", "type": "string" },
+    { "key": "riskBaseUrl",     "value": "http://localhost:4003", "type": "string" },
+    { "key": "boBaseUrl",       "value": "http://localhost:4005", "type": "string" },
+    { "key": "jwtToken",        "value": "", "type": "string" },
+    { "key": "lastTradeId",     "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Trade Service — Liveness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health/live",
+            "description": "Kubernetes liveness probe — is the process alive?"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Service is ok', () => pm.expect(pm.response.json().status).to.eq('ok'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Trade Service — Readiness",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": "{{baseUrl}}/health/ready",
+            "description": "Readiness probe — checks PostgreSQL, Kafka, Redis connectivity. Returns 503 if any dep is down."
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200 or 503', () => [200, 503].includes(pm.response.code));",
+              "pm.test('Has checks object', () => { const b = pm.response.json(); pm.expect(b).to.have.property('checks'); });"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Trade Service",
+      "item": [
+        {
+          "name": "Book Trade — FX Spot",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/trades",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetClass\": \"FX\",\n  \"direction\": \"BUY\",\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"instrumentId\": \"7a1b2c3d-4e5f-6789-abcd-ef0123456789\",\n  \"bookId\": \"1234abcd-ab12-1234-1234-123412341234\",\n  \"traderId\": \"abcd1234-1234-abcd-abcd-abcd12341234\",\n  \"notionalAmount\": 12500000,\n  \"notionalCurrency\": \"USD\",\n  \"price\": 1.0842,\n  \"tradeDate\": \"2026-04-07\",\n  \"valueDate\": \"2026-04-09\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Has tradeId', () => pm.expect(pm.response.json()).to.have.property('tradeId'));",
+              "pm.test('Reference starts with FX-', () => pm.expect(pm.response.json().reference).to.match(/^FX-/));",
+              "pm.environment.set('lastTradeId', pm.response.json().tradeId);"
+            ]}
+          }]
+        },
+        {
+          "name": "Book Trade — Fixed Income",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/trades",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetClass\": \"FIXED_INCOME\",\n  \"direction\": \"BUY\",\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"instrumentId\": \"7a1b2c3d-4e5f-6789-abcd-ef0123456789\",\n  \"bookId\": \"1234abcd-ab12-1234-1234-123412341234\",\n  \"traderId\": \"abcd1234-1234-abcd-abcd-abcd12341234\",\n  \"notionalAmount\": 5000000,\n  \"notionalCurrency\": \"USD\",\n  \"price\": 98.25,\n  \"tradeDate\": \"2026-04-07\",\n  \"valueDate\": \"2026-04-09\",\n  \"maturityDate\": \"2031-04-07\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Get Trade by ID",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('TradeId matches', () => pm.expect(pm.response.json().tradeId).to.eq(pm.environment.get('lastTradeId')));"
+            ]}
+          }]
+        },
+        {
+          "name": "Amend Trade",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newNotionalAmount\": 15000000,\n  \"newNotionalCurrency\": \"USD\",\n  \"newPrice\": 1.0855\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Cancel Trade",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"reason\": \"Dealer error — wrong counterparty\" }",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Book Trade — Validation Error (zero notional)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/trades",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"assetClass\": \"FX\", \"direction\": \"BUY\", \"notionalAmount\": 0 }",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "ALM Service",
+      "item": [
+        {
+          "name": "Get LCR",
+          "request": {
+            "method": "GET",
+            "url": "{{almBaseUrl}}/api/v1/alm/lcr"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has lcrRatio', () => pm.expect(pm.response.json()).to.have.property('lcrRatio'));",
+              "pm.test('LCR above 100%', () => pm.expect(pm.response.json().lcrRatio).to.be.above(100));"
+            ]}
+          }]
+        },
+        {
+          "name": "Get NSFR",
+          "request": {
+            "method": "GET",
+            "url": "{{almBaseUrl}}/api/v1/alm/nsfr"
+          }
+        },
+        {
+          "name": "Generate Liquidity Gap Report",
+          "request": {
+            "method": "POST",
+            "url": "{{almBaseUrl}}/api/v1/alm/liquidity-gap",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scenario\": \"CONTRACTUAL\",\n  \"currency\": \"USD\",\n  \"cashFlows\": [\n    { \"bucket\": \"OVERNIGHT\",   \"inflowAmount\": 850000000, \"outflowAmount\": 200000000 },\n    { \"bucket\": \"ONE_WEEK\",    \"inflowAmount\": 300000000, \"outflowAmount\": 400000000 },\n    { \"bucket\": \"ONE_MONTH\",   \"inflowAmount\": 200000000, \"outflowAmount\": 600000000 },\n    { \"bucket\": \"THREE_MONTH\", \"inflowAmount\": 400000000, \"outflowAmount\": 350000000 },\n    { \"bucket\": \"SIX_MONTH\",   \"inflowAmount\": 250000000, \"outflowAmount\": 300000000 },\n    { \"bucket\": \"ONE_YEAR\",    \"inflowAmount\": 180000000, \"outflowAmount\": 150000000 }\n  ],\n  \"lcr\": {\n    \"hqlaLevel1\": 1200000000,\n    \"hqlaLevel2A\": 200000000,\n    \"hqlaLevel2B\": 50000000,\n    \"netCashOutflows30d\": 1000000000\n  },\n  \"nsfr\": {\n    \"availableStableFunding\": 2000000000,\n    \"requiredStableFunding\": 1700000000\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('LCR is compliant', () => pm.expect(pm.response.json().lcr.isCompliant).to.be.true);",
+              "pm.test('Has buckets array', () => pm.expect(pm.response.json().buckets).to.be.an('array'));",
+              "pm.test('Bucket count matches input', () => pm.expect(pm.response.json().buckets.length).to.eq(6));"
+            ]}
+          }]
+        }
+      ]
+    },
+    {
+      "name": "Risk Service",
+      "item": [
+        {
+          "name": "Pre-Deal Check — Approved",
+          "request": {
+            "method": "POST",
+            "url": "{{riskBaseUrl}}/api/v1/risk/pre-deal-check",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"requestedAmount\": 5000000,\n  \"requestedCurrency\": \"USD\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Check has approved field', () => pm.expect(pm.response.json()).to.have.property('approved'));",
+              "pm.test('Response time < 50ms', () => pm.expect(pm.response.json().responseTimeMs).to.be.below(50));"
+            ]}
+          }]
+        },
+        {
+          "name": "Get VaR",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{riskBaseUrl}}/api/v1/risk/var?bookId=1234abcd-ab12-1234-1234-123412341234",
+              "host": ["{{riskBaseUrl}}"],
+              "path": ["api", "v1", "risk", "var"],
+              "query": [{ "key": "bookId", "value": "1234abcd-ab12-1234-1234-123412341234" }]
+            }
+          }
+        },
+        {
+          "name": "Get Limits",
+          "request": {
+            "method": "GET",
+            "url": "{{riskBaseUrl}}/api/v1/risk/limits"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Back Office Service",
+      "item": [
+        {
+          "name": "Submit SWIFT MT300 Confirmation",
+          "request": {
+            "method": "POST",
+            "url": "{{boBaseUrl}}/api/v1/bo/swift/inbound",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageId\": \"MSG-2026040700001\",\n  \"messageType\": \"MT300\",\n  \"senderBIC\": \"BARCLONDON\",\n  \"receiverBIC\": \"NEXUSGB2L\",\n  \"content\": \":20:FX-0407-A3B2\\n:32A:260409USD12500000\\n:33B:EUR11535000\\n:57A:BARCLONDON\\n:58A:NEXUSGB2L\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has match status', () => pm.expect(pm.response.json()).to.have.property('status'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Get Exceptions Queue",
+          "request": {
+            "method": "GET",
+            "url": "{{boBaseUrl}}/api/v1/bo/exceptions"
+          }
+        },
+        {
+          "name": "Get Settlement Ladder",
+          "request": {
+            "method": "GET",
+            "url": "{{boBaseUrl}}/api/v1/bo/settlement-ladder"
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has ladder array', () => pm.expect(pm.response.json().ladder).to.be.an('array'));"
+            ]}
+          }]
+        }
+      ]
+    }
+  ]
+}

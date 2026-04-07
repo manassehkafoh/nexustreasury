@@ -1,0 +1,142 @@
+global:
+  imageRegistry: ghcr.io/manassehkafoh/nexustreasury
+  imageTag: staging
+  imagePullPolicy: Always
+  logLevel: debug
+  environment: staging
+
+  kafka:
+    brokers: "kafka.nexus-data:9092"
+  postgres:
+    host: postgres.nexus-data
+    port: 5432
+    database: nexustreasury_staging
+  redis:
+    host: redis.nexus-data
+    port: 6379
+  vault:
+    addr: http://vault.nexus-platform:8200
+  otel:
+    endpoint: http://otel-collector.nexus-observability:4317
+
+services:
+  trade-service:
+    enabled: true
+    replicaCount: 1
+    port: 4001
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  position-service:
+    enabled: true
+    replicaCount: 1
+    port: 4002
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  risk-service:
+    enabled: true
+    replicaCount: 1
+    port: 4003
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  alm-service:
+    enabled: true
+    replicaCount: 1
+    port: 4004
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  bo-service:
+    enabled: true
+    replicaCount: 1
+    port: 4005
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  market-data-service:
+    enabled: true
+    replicaCount: 1
+    port: 4006
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+  web:
+    enabled: true
+    replicaCount: 1
+    port: 3000
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    autoscaling:
+      enabled: false
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: staging.nexustreasury.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+    - host: api.staging.nexustreasury.com
+      paths:
+        - path: /api/v1/trades
+          service: trade-service
+        - path: /api/v1/risk
+          service: risk-service
+        - path: /api/v1/alm
+          service: alm-service
+        - path: /api/v1/bo
+          service: bo-service
+  tls:
+    - secretName: nexustreasury-staging-tls
+      hosts: [staging.nexustreasury.com, api.staging.nexustreasury.com]

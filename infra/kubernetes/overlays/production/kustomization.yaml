@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: nexus-prod
+
+resources:
+  - ../../base
+
+# Production uses Helm values — this overlay is for direct kubectl apply
+# Standard deployment uses: helm upgrade --install nexustreasury ./infra/helm/nexustreasury
+
+images:
+  - name: ghcr.io/manassehkafoh/nexustreasury/trade-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/position-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/risk-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/alm-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/bo-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/web
+    newTag: latest
