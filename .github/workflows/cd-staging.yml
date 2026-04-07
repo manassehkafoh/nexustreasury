@@ -47,7 +47,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix=,format=short
             type=raw,value=staging
-      - uses: docker/build-push-action@v5
+      - uses: docker/build-push-action@v7
         with:
           context: .
           file: packages/${{ matrix.service }}/Dockerfile
