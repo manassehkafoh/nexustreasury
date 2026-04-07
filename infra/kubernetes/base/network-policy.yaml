@@ -1,0 +1,71 @@
+# Default deny-all policy for nexus-prod namespace (Zero Trust)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: nexus-prod
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow trade-service to receive from ingress and emit to kafka/postgres
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: trade-service-policy
+  namespace: nexus-prod
+spec:
+  podSelector:
+    matchLabels:
+      app: trade-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nexus-ingress
+      ports:
+        - protocol: TCP
+          port: 4001
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nexus-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nexus-data
+      ports:
+        - protocol: TCP
+          port: 5432    # PostgreSQL
+        - protocol: TCP
+          port: 6379    # Redis
+        - protocol: TCP
+          port: 9092    # Kafka
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nexus-platform
+      ports:
+        - protocol: TCP
+          port: 8200    # Vault
+        - protocol: TCP
+          port: 8080    # Keycloak
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: nexus-observability
+      ports:
+        - protocol: TCP
+          port: 4317    # OTLP gRPC
+    - ports:
+        - protocol: UDP
+          port: 53      # DNS

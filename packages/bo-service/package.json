@@ -1,0 +1,25 @@
+{
+  "name": "@nexustreasury/bo-service",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@nexustreasury/domain": "workspace:*",
+    "fastify": "^4.26.0",
+    "kafkajs": "^2.2.4",
+    "@prisma/client": "^5.9.0",
+    "pino": "^8.18.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "vitest": "^1.0.0"
+  }
+}

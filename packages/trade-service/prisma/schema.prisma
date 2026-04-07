@@ -1,0 +1,57 @@
+// NexusTreasury — Trade Service Prisma Schema
+// Bounded Context: Trading — Schema: trading
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["trading"]
+}
+
+model Trade {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  reference        String    @unique
+  assetClass       String    @map("asset_class")
+  direction        String
+  status           String    @default("PENDING_VALIDATION")
+  counterpartyId   String    @map("counterparty_id") @db.Uuid
+  instrumentId     String    @map("instrument_id") @db.Uuid
+  bookId           String    @map("book_id") @db.Uuid
+  traderId         String    @map("trader_id") @db.Uuid
+  notionalAmount   Decimal   @map("notional_amount") @db.Decimal(20, 6)
+  notionalCurrency String    @map("notional_currency") @db.Char(3)
+  price            Decimal   @db.Decimal(20, 10)
+  tradeDate        DateTime  @map("trade_date") @db.Date
+  valueDate        DateTime  @map("value_date") @db.Date
+  maturityDate     DateTime? @map("maturity_date") @db.Date
+  preDealCheckJson Json?     @map("pre_deal_check")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
+
+  @@index([tenantId, bookId])
+  @@index([tenantId, counterpartyId])
+  @@index([tenantId, status])
+  @@map("trades")
+  @@schema("trading")
+}
+
+model TradeEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  tradeId     String    @map("trade_id") @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  eventType   String    @map("event_type")
+  eventId     String    @unique @map("event_id") @db.Uuid
+  payload     Json
+  occurredAt  DateTime  @map("occurred_at")
+  publishedAt DateTime? @map("published_at")
+
+  @@index([tradeId])
+  @@index([tenantId, eventType])
+  @@map("trade_events")
+  @@schema("trading")
+}

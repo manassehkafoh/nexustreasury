@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-prod
+  labels:
+    app.kubernetes.io/part-of: nexustreasury
+    cilium.io/policy: enforced
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-data
+  labels:
+    app.kubernetes.io/part-of: nexustreasury
+    cilium.io/policy: enforced
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-platform
+  labels:
+    app.kubernetes.io/part-of: nexustreasury
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-observability
+  labels:
+    app.kubernetes.io/part-of: nexustreasury
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-security
+  labels:
+    app.kubernetes.io/part-of: nexustreasury
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-ingress

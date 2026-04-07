@@ -1,0 +1,320 @@
+version: '3.9'
+
+# ─────────────────────────────────────────────────────────────
+#  NexusTreasury — Full Local Development Stack
+#  Usage: pnpm docker:up
+# ─────────────────────────────────────────────────────────────
+
+networks:
+  nexus-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  kafka_data:
+  zookeeper_data:
+  vault_data:
+  elasticsearch_data:
+  grafana_data:
+  prometheus_data:
+
+services:
+
+  # ── PostgreSQL (TimescaleDB) ────────────────────────────────
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: nexus-postgres
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_dev_secret
+      POSTGRES_DB: nexustreasury
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexustreasury"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [nexus-net]
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass nexus_redis_secret
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "nexus_redis_secret", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [nexus-net]
+
+  # ── Zookeeper ───────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    container_name: nexus-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [nexus-net]
+
+  # ── Apache Kafka ────────────────────────────────────────────
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: nexus-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks: [nexus-net]
+
+  # ── Kafka Schema Registry ───────────────────────────────────
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    container_name: nexus-schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+    networks: [nexus-net]
+
+  # ── Kafka UI ────────────────────────────────────────────────
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: nexus-kafka-ui
+    depends_on: [kafka]
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: nexus-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+    networks: [nexus-net]
+
+  # ── HashiCorp Vault ─────────────────────────────────────────
+  vault:
+    image: hashicorp/vault:1.16
+    container_name: nexus-vault
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: nexus-vault-dev-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add: [IPC_LOCK]
+    volumes:
+      - vault_data:/vault/data
+    command: server -dev
+    networks: [nexus-net]
+
+  # ── Keycloak (Identity Provider) ───────────────────────────
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: nexus-keycloak
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: nexus_keycloak_admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: nexus
+      KC_DB_PASSWORD: nexus_dev_secret
+    ports:
+      - "8443:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: start-dev
+    networks: [nexus-net]
+
+  # ── Prometheus ──────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: nexus-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks: [nexus-net]
+
+  # ── Grafana ─────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: nexus-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: nexus_grafana_admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on: [prometheus]
+    networks: [nexus-net]
+
+  # ── Elasticsearch ───────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: nexus-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -q '\"status\":\"green\"\\|\"status\":\"yellow\"'"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    networks: [nexus-net]
+
+  # ── Kibana ──────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    container_name: nexus-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks: [nexus-net]
+
+  # ── Jaeger (Distributed Tracing) ────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: nexus-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks: [nexus-net]
+
+  # ── Microservices ───────────────────────────────────────────
+  trade-service:
+    build:
+      context: .
+      dockerfile: packages/trade-service/Dockerfile
+    container_name: nexus-trade-service
+    ports:
+      - "4001:4001"
+    environment:
+      NODE_ENV: development
+      PORT: 4001
+      DATABASE_URL: postgresql://nexus:nexus_dev_secret@postgres:5432/nexustreasury
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BROKERS: kafka:29092
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: nexus-vault-dev-token
+      JWT_SECRET: nexus_jwt_dev_secret_change_in_prod
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: trade-service
+      LOG_LEVEL: info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4001/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [nexus-net]
+
+  position-service:
+    build:
+      context: .
+      dockerfile: packages/position-service/Dockerfile
+    container_name: nexus-position-service
+    ports: ["4002:4002"]
+    environment:
+      NODE_ENV: development
+      PORT: 4002
+      DATABASE_URL: postgresql://nexus:nexus_dev_secret@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on: [postgres, kafka]
+    networks: [nexus-net]
+
+  risk-service:
+    build:
+      context: .
+      dockerfile: packages/risk-service/Dockerfile
+    container_name: nexus-risk-service
+    ports: ["4003:4003"]
+    environment:
+      NODE_ENV: development
+      PORT: 4003
+      DATABASE_URL: postgresql://nexus:nexus_dev_secret@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on: [postgres, kafka]
+    networks: [nexus-net]
+
+  alm-service:
+    build:
+      context: .
+      dockerfile: packages/alm-service/Dockerfile
+    container_name: nexus-alm-service
+    ports: ["4004:4004"]
+    environment:
+      NODE_ENV: development
+      PORT: 4004
+      DATABASE_URL: postgresql://nexus:nexus_dev_secret@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on: [postgres, kafka]
+    networks: [nexus-net]

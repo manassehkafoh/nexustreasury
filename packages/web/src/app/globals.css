@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #030C1B;
+  --bg-secondary: #071827;
+  --accent-gold: #D4A843;
+  --accent-teal: #00C896;
+  --accent-blue: #3D8BF0;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg-primary);
+  color: #EAF0FF;
+  font-family: 'DM Sans', system-ui, sans-serif;
+}

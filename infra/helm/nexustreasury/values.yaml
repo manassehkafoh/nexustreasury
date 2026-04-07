@@ -1,0 +1,156 @@
+global:
+  imageRegistry: ghcr.io/manassehkafoh/nexustreasury
+  imageTag: latest
+  imagePullPolicy: Always
+  logLevel: info
+  environment: production
+
+  kafka:
+    brokers: "kafka.nexus-data:9092"
+
+  postgres:
+    host: postgres.nexus-data
+    port: 5432
+    database: nexustreasury
+
+  redis:
+    host: redis.nexus-data
+    port: 6379
+
+  vault:
+    addr: http://vault.nexus-platform:8200
+
+  keycloak:
+    url: http://keycloak.nexus-platform:8080
+
+  otel:
+    endpoint: http://otel-collector.nexus-observability:4317
+
+services:
+  trade-service:
+    enabled: true
+    replicaCount: 3
+    port: 4001
+    resources:
+      requests:
+        cpu: 250m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+
+  position-service:
+    enabled: true
+    replicaCount: 3
+    port: 4002
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 15
+
+  risk-service:
+    enabled: true
+    replicaCount: 3
+    port: 4003
+    resources:
+      requests:
+        cpu: 500m
+        memory: 512Mi
+      limits:
+        cpu: 2000m
+        memory: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+
+  alm-service:
+    enabled: true
+    replicaCount: 2
+    port: 4004
+    resources:
+      requests:
+        cpu: 300m
+        memory: 384Mi
+      limits:
+        cpu: 1200m
+        memory: 768Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+
+  bo-service:
+    enabled: true
+    replicaCount: 2
+    port: 4005
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+
+  market-data-service:
+    enabled: true
+    replicaCount: 2
+    port: 4006
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+
+  web:
+    enabled: true
+    replicaCount: 2
+    port: 3000
+    resources:
+      requests:
+        cpu: 200m
+        memory: 256Mi
+      limits:
+        cpu: 800m
+        memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: nexustreasury.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web
+    - host: api.nexustreasury.com
+      paths:
+        - path: /api/v1/trades
+          service: trade-service
+        - path: /api/v1/positions
+          service: position-service
+        - path: /api/v1/risk
+          service: risk-service
+        - path: /api/v1/alm
+          service: alm-service
+  tls:
+    - secretName: nexustreasury-tls
+      hosts: [nexustreasury.com, api.nexustreasury.com]

@@ -1,0 +1,85 @@
+name: CD — Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/nexustreasury
+
+jobs:
+  publish-images:
+    name: Publish Docker Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - trade-service
+          - position-service
+          - risk-service
+          - alm-service
+          - bo-service
+          - market-data-service
+          - web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=,format=short
+            type=raw,value=staging
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: packages/${{ matrix.service }}/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging (ArgoCD GitOps)
+    needs: publish-images
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_TOKEN }}
+      - name: Update Helm values with new image tags
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          for svc in trade-service position-service risk-service alm-service bo-service market-data-service web; do
+            sed -i "s|tag: .*|tag: $SHORT_SHA|g" infra/helm/nexustreasury/values-staging.yaml
+          done
+      - name: Commit & push GitOps update
+        run: |
+          git config user.name "nexustreasury-bot"
+          git config user.email "bot@nexustreasury.com"
+          git add infra/helm/nexustreasury/values-staging.yaml
+          git commit -m "chore(gitops): deploy ${{ github.sha }} to staging [skip ci]"
+          git push
+      - name: Wait for ArgoCD sync
+        run: |
+          echo "ArgoCD will sync automatically via GitOps. Monitor at https://argocd.staging.nexustreasury.com"
+      - name: Smoke tests
+        run: |
+          sleep 60
+          curl -f https://api.staging.nexustreasury.com/health/live || exit 1
+          echo "✅ Staging smoke test passed"

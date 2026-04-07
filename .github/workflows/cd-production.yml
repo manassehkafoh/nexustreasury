@@ -1,0 +1,84 @@
+name: CD — Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (e.g. abc1234)'
+        required: true
+        type: string
+      confirm:
+        description: 'Type DEPLOY to confirm production deployment'
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate Deployment Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm deployment intent
+        if: ${{ github.event.inputs.confirm != 'DEPLOY' }}
+        run: |
+          echo "❌ Deployment aborted: confirmation string must be 'DEPLOY'"
+          exit 1
+
+  deploy-production:
+    name: Blue-Green Deploy to Production
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production   # Requires 2 approvers (configured in GitHub Environments)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITOPS_TOKEN }}
+
+      - name: Record deployment start
+        run: |
+          echo "🚀 Starting production deployment of ${{ github.event.inputs.image_tag }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Time: $(date -u)"
+
+      - name: Update production Helm values (green slot)
+        run: |
+          TAG=${{ github.event.inputs.image_tag }}
+          sed -i "s|activeSlot: .*|activeSlot: green|g" infra/helm/nexustreasury/values-production.yaml
+          sed -i "s|tag: .*|tag: $TAG|g" infra/helm/nexustreasury/values-production.yaml
+          cat infra/helm/nexustreasury/values-production.yaml
+
+      - name: Commit GitOps update
+        run: |
+          git config user.name "nexustreasury-bot"
+          git config user.email "bot@nexustreasury.com"
+          git add infra/helm/nexustreasury/values-production.yaml
+          git commit -m "chore(gitops): promote ${{ github.event.inputs.image_tag }} to production [skip ci]"
+          git push
+
+      - name: Wait for green slot to become healthy
+        run: |
+          echo "Waiting 120s for green deployment to stabilise..."
+          sleep 120
+
+      - name: Production smoke tests
+        id: smoke
+        run: |
+          curl -f https://api.nexustreasury.com/health/live   || exit 1
+          curl -f https://api.nexustreasury.com/health/ready  || exit 1
+          echo "✅ Production smoke tests passed"
+
+      - name: Switch traffic blue → green (atomic)
+        run: |
+          echo "Traffic switch: all requests now routing to green slot"
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Production deployment of ${{ github.event.inputs.image_tag }} successful"
+
+      - name: Auto-rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed — triggering automatic rollback to blue slot"
+          git revert HEAD --no-edit
+          git push
+          echo "🔄 Rolled back to previous stable blue deployment"

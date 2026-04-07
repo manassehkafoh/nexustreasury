@@ -1,0 +1,44 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'trade-service'
+    static_configs:
+      - targets: ['trade-service:9090']
+    metrics_path: /metrics
+
+  - job_name: 'position-service'
+    static_configs:
+      - targets: ['position-service:9090']
+
+  - job_name: 'risk-service'
+    static_configs:
+      - targets: ['risk-service:9090']
+
+  - job_name: 'alm-service'
+    static_configs:
+      - targets: ['alm-service:9090']
+
+  - job_name: 'bo-service'
+    static_configs:
+      - targets: ['bo-service:9090']
+
+  - job_name: 'kafka'
+    static_configs:
+      - targets: ['kafka:9101']
+
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
