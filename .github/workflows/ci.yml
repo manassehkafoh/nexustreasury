@@ -268,8 +268,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
-      - name: Build web application (required for pnpm start)
-        run: pnpm --filter @nexustreasury/domain build && pnpm --filter @nexustreasury/web build
+      - name: Build web application (standalone output for Playwright)
+        run: |
+          pnpm --filter @nexustreasury/domain build
+          pnpm --filter @nexustreasury/web build
+          # Copy static assets next to standalone server (required by Next.js standalone)
+          cp -r packages/web/.next/static packages/web/.next/standalone/.next/static
+          cp -r packages/web/public packages/web/.next/standalone/public
       - name: Install Playwright browsers
         run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
       - name: Run E2E tests
