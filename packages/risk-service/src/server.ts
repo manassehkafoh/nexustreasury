@@ -7,10 +7,15 @@ import { PrismaLimitRepository } from './infrastructure/postgres/limit.repositor
 
 const PORT = Number(process.env['PORT'] ?? 4003);
 const log = (msg: string, data?: object): void => {
-  process.stdout.write(JSON.stringify({
-    level: 'info', service: 'risk-service', msg,
-    time: new Date().toISOString(), ...data,
-  }) + '\n')
+  process.stdout.write(
+    JSON.stringify({
+      level: 'info',
+      service: 'risk-service',
+      msg,
+      time: new Date().toISOString(),
+      ...data,
+    }) + '\n',
+  );
 };
 
 async function main(): Promise<void> {
@@ -33,13 +38,15 @@ async function main(): Promise<void> {
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);
-  process.on('SIGINT',  shutdown);
+  process.on('SIGINT', shutdown);
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   log('Risk service ready', { port: PORT });
 }
 
 main().catch((err: unknown) => {
-  process.stderr.write(JSON.stringify({ level: 'fatal', service: 'risk-service', err: String(err) }) + '\n');
+  process.stderr.write(
+    JSON.stringify({ level: 'fatal', service: 'risk-service', err: String(err) }) + '\n',
+  );
   process.exit(1);
 });

@@ -6,12 +6,12 @@ import jwt from '@fastify/jwt';
 vi.mock('../container.js', () => ({
   Container: {
     get: vi.fn(() => ({
-      connect:         vi.fn().mockResolvedValue(undefined),
-      disconnect:      vi.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
       tradeRepository: {
-        findById:    vi.fn().mockResolvedValue(null),
-        save:        vi.fn().mockResolvedValue(undefined),
-        update:      vi.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(null),
+        save: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
         findByBookId: vi.fn().mockResolvedValue([]),
       },
       bookTradeCommand: {
@@ -63,13 +63,17 @@ function makeToken(app: ReturnType<typeof Fastify>, tenantId = 'tenant-001') {
 }
 
 const VALID_BODY = {
-  assetClass: 'FX', direction: 'BUY',
+  assetClass: 'FX',
+  direction: 'BUY',
   counterpartyId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
-  instrumentId:   '7a1b2c3d-4e5f-6789-abcd-ef0123456789',
-  bookId:         '1234abcd-ab12-1234-1234-123412341234',
-  traderId:       'abcd1234-1234-abcd-abcd-abcd12341234',
-  notionalAmount: 1_000_000, notionalCurrency: 'USD',
-  price: 1.0842, tradeDate: '2026-04-07', valueDate: '2026-04-09',
+  instrumentId: '7a1b2c3d-4e5f-6789-abcd-ef0123456789',
+  bookId: '1234abcd-ab12-1234-1234-123412341234',
+  traderId: 'abcd1234-1234-abcd-abcd-abcd12341234',
+  notionalAmount: 1_000_000,
+  notionalCurrency: 'USD',
+  price: 1.0842,
+  tradeDate: '2026-04-07',
+  valueDate: '2026-04-09',
 };
 
 describe('Trade Routes — HTTP layer', () => {
@@ -81,7 +85,9 @@ describe('Trade Routes — HTTP layer', () => {
     token = makeToken(app);
   });
 
-  afterAll(async () => { await app.close(); });
+  afterAll(async () => {
+    await app.close();
+  });
 
   describe('POST /api/v1/trades', () => {
     it('returns 401 without JWT', async () => {
@@ -91,7 +97,8 @@ describe('Trade Routes — HTTP layer', () => {
 
     it('returns 201 with valid payload', async () => {
       const res = await app.inject({
-        method: 'POST', url: '/api/v1/trades',
+        method: 'POST',
+        url: '/api/v1/trades',
         headers: { authorization: `Bearer ${token}` },
         payload: VALID_BODY,
       });
@@ -103,7 +110,8 @@ describe('Trade Routes — HTTP layer', () => {
 
     it('returns 400 with invalid assetClass', async () => {
       const res = await app.inject({
-        method: 'POST', url: '/api/v1/trades',
+        method: 'POST',
+        url: '/api/v1/trades',
         headers: { authorization: `Bearer ${token}` },
         payload: { ...VALID_BODY, assetClass: 'INVALID_CLASS' },
       });
@@ -112,7 +120,8 @@ describe('Trade Routes — HTTP layer', () => {
 
     it('returns 400 with negative notional', async () => {
       const res = await app.inject({
-        method: 'POST', url: '/api/v1/trades',
+        method: 'POST',
+        url: '/api/v1/trades',
         headers: { authorization: `Bearer ${token}` },
         payload: { ...VALID_BODY, notionalAmount: -500 },
       });
@@ -128,7 +137,8 @@ describe('Trade Routes — HTTP layer', () => {
 
     it('returns 200 for existing trade', async () => {
       const res = await app.inject({
-        method: 'GET', url: '/api/v1/trades/trade-uuid-001',
+        method: 'GET',
+        url: '/api/v1/trades/trade-uuid-001',
         headers: { authorization: `Bearer ${token}` },
       });
       expect(res.statusCode).toBe(200);

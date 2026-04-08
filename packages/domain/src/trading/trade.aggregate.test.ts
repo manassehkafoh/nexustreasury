@@ -1,24 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import {
-  Trade, AssetClass, TradeDirection, TradeStatus,
+  Trade,
+  AssetClass,
+  TradeDirection,
+  TradeStatus,
   TradeDomainError,
 } from './trade.aggregate.js';
 import {
-  TenantId, CounterpartyId, InstrumentId, BookId, TraderId, Money, BusinessDate,
+  TenantId,
+  CounterpartyId,
+  InstrumentId,
+  BookId,
+  TraderId,
+  Money,
+  BusinessDate,
 } from '../shared/value-objects.js';
 
 const validBookParams = {
-  tenantId:       TenantId('tenant-001'),
-  assetClass:     AssetClass.FX,
-  direction:      TradeDirection.BUY,
+  tenantId: TenantId('tenant-001'),
+  assetClass: AssetClass.FX,
+  direction: TradeDirection.BUY,
   counterpartyId: CounterpartyId('cpty-001'),
-  instrumentId:   InstrumentId('instr-001'),
-  bookId:         BookId('book-001'),
-  traderId:       TraderId('trader-001'),
-  notional:       Money.of(1_000_000, 'USD'),
-  price:          1.0842,
-  tradeDate:      BusinessDate.today(),
-  valueDate:      BusinessDate.today().addDays(2),
+  instrumentId: InstrumentId('instr-001'),
+  bookId: BookId('book-001'),
+  traderId: TraderId('trader-001'),
+  notional: Money.of(1_000_000, 'USD'),
+  price: 1.0842,
+  tradeDate: BusinessDate.today(),
+  valueDate: BusinessDate.today().addDays(2),
   preDealCheck: {
     approved: true,
     limitUtilisationPct: 45,
@@ -53,9 +62,9 @@ describe('Trade Aggregate', () => {
     });
 
     it('throws when notional is zero', () => {
-      expect(() =>
-        Trade.book({ ...validBookParams, notional: Money.of(0, 'USD') }),
-      ).toThrow(TradeDomainError);
+      expect(() => Trade.book({ ...validBookParams, notional: Money.of(0, 'USD') })).toThrow(
+        TradeDomainError,
+      );
     });
 
     it('publishes TradeBookedEvent after booking', () => {
@@ -79,7 +88,8 @@ describe('Trade Aggregate', () => {
     it('throws when cancelling settled trade', () => {
       const trade = Trade.book(validBookParams);
       // Force to confirmed+settled via casting
-      (trade as unknown as { _props: { status: TradeStatus } })._props.status = TradeStatus.VALIDATED;
+      (trade as unknown as { _props: { status: TradeStatus } })._props.status =
+        TradeStatus.VALIDATED;
       trade.confirm();
       trade.settle();
       expect(() => trade.cancel('too late')).toThrow(TradeDomainError);

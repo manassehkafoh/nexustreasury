@@ -1,19 +1,26 @@
 import { randomUUID } from 'crypto';
 import { DomainEvent } from '../shared/domain-event.js';
-import { LimitId, CounterpartyId, BookId, TenantId, Money, Percentage } from '../shared/value-objects.js';
+import {
+  LimitId,
+  CounterpartyId,
+  BookId,
+  TenantId,
+  Money,
+  Percentage,
+} from '../shared/value-objects.js';
 
 export enum LimitType {
   COUNTERPARTY_CREDIT = 'COUNTERPARTY_CREDIT',
-  MARKET_VAR          = 'MARKET_VAR',
-  CONCENTRATION       = 'CONCENTRATION',
-  SETTLEMENT          = 'SETTLEMENT',
-  ISSUER              = 'ISSUER',
+  MARKET_VAR = 'MARKET_VAR',
+  CONCENTRATION = 'CONCENTRATION',
+  SETTLEMENT = 'SETTLEMENT',
+  ISSUER = 'ISSUER',
 }
 
 export enum LimitLevel {
   LEGAL_ENTITY = 'LEGAL_ENTITY',
-  BOOK         = 'BOOK',
-  TRADER       = 'TRADER',
+  BOOK = 'BOOK',
+  TRADER = 'TRADER',
   COUNTERPARTY = 'COUNTERPARTY',
 }
 
@@ -39,13 +46,19 @@ export class LimitBreachedEvent extends DomainEvent {
 }
 
 export class LimitUtilisedEvent extends DomainEvent {
-  constructor(public readonly limit: Limit, tenantId: TenantId) {
+  constructor(
+    public readonly limit: Limit,
+    tenantId: TenantId,
+  ) {
     super('nexus.risk.limit.utilised', limit.id, tenantId);
   }
 }
 
 export class LimitResolvedEvent extends DomainEvent {
-  constructor(public readonly limit: Limit, tenantId: TenantId) {
+  constructor(
+    public readonly limit: Limit,
+    tenantId: TenantId,
+  ) {
     super('nexus.risk.limit.resolved', limit.id, tenantId);
   }
 }
@@ -181,10 +194,18 @@ export class Limit {
     this._version++;
   }
 
-  get utilisationPct(): number   { return (this._utilisedAmount.toNumber() / this.limitAmount.toNumber()) * 100; }
-  get utilisedAmount(): Money    { return this._utilisedAmount; }
-  get inBreach(): boolean        { return this._inBreach; }
-  get version(): number          { return this._version; }
+  get utilisationPct(): number {
+    return (this._utilisedAmount.toNumber() / this.limitAmount.toNumber()) * 100;
+  }
+  get utilisedAmount(): Money {
+    return this._utilisedAmount;
+  }
+  get inBreach(): boolean {
+    return this._inBreach;
+  }
+  get version(): number {
+    return this._version;
+  }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this._domainEvents];

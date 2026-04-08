@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PreDealCheckHandler } from './pre-deal-check.handler.js';
 import {
-  Limit, LimitType, LimitLevel,
-  TenantId, CounterpartyId, Money, Percentage,
+  Limit,
+  LimitType,
+  LimitLevel,
+  TenantId,
+  CounterpartyId,
+  Money,
+  Percentage,
 } from '@nexustreasury/domain';
 
-const tenantId    = TenantId('tenant-001');
+const tenantId = TenantId('tenant-001');
 const counterpartyId = CounterpartyId('cpty-001');
-const usd50m      = Money.of(50_000_000, 'USD');
+const usd50m = Money.of(50_000_000, 'USD');
 
 function makeLimit(utilised = 0): Limit {
   const limit = Limit.create({
@@ -25,11 +30,11 @@ function makeLimit(utilised = 0): Limit {
 
 const makeRepo = (limits: Limit[]) => ({
   findByCounterparty: vi.fn().mockResolvedValue(limits),
-  findById:           vi.fn(),
-  findByBook:         vi.fn(),
-  findAllInBreach:    vi.fn(),
-  save:               vi.fn(),
-  update:             vi.fn(),
+  findById: vi.fn(),
+  findByBook: vi.fn(),
+  findAllInBreach: vi.fn(),
+  save: vi.fn(),
+  update: vi.fn(),
 });
 
 describe('PreDealCheckHandler', () => {
@@ -79,7 +84,11 @@ describe('PreDealCheckHandler', () => {
 
   it('populates responseTimeMs', async () => {
     const handler = new PreDealCheckHandler(makeRepo([makeLimit()]) as never);
-    const result = await handler.execute({ tenantId, counterpartyId, requestedExposure: Money.of(1_000_000, 'USD') });
+    const result = await handler.execute({
+      tenantId,
+      counterpartyId,
+      requestedExposure: Money.of(1_000_000, 'USD'),
+    });
     expect(result.responseTimeMs).toBeGreaterThanOrEqual(0);
   });
 });

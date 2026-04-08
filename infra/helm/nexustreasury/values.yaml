@@ -6,7 +6,7 @@ global:
   environment: production
 
   kafka:
-    brokers: "kafka.nexus-data:9092"
+    brokers: 'kafka.nexus-data:9092'
 
   postgres:
     host: postgres.nexus-data
@@ -132,8 +132,8 @@ ingress:
   enabled: true
   className: nginx
   annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/rate-limit: "1000"
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/rate-limit: '1000'
     cert-manager.io/cluster-issuer: letsencrypt-prod
   hosts:
     - host: nexustreasury.com

@@ -3,31 +3,31 @@
  */
 export type Brand<T, B extends string> = T & { readonly __brand: B };
 
-export type TradeId       = Brand<string, 'TradeId'>;
-export type PositionId    = Brand<string, 'PositionId'>;
+export type TradeId = Brand<string, 'TradeId'>;
+export type PositionId = Brand<string, 'PositionId'>;
 export type CounterpartyId = Brand<string, 'CounterpartyId'>;
-export type InstrumentId  = Brand<string, 'InstrumentId'>;
-export type BookId        = Brand<string, 'BookId'>;
-export type TraderId      = Brand<string, 'TraderId'>;
-export type LimitId       = Brand<string, 'LimitId'>;
-export type TenantId      = Brand<string, 'TenantId'>;
+export type InstrumentId = Brand<string, 'InstrumentId'>;
+export type BookId = Brand<string, 'BookId'>;
+export type TraderId = Brand<string, 'TraderId'>;
+export type LimitId = Brand<string, 'LimitId'>;
+export type TenantId = Brand<string, 'TenantId'>;
 
-export const TradeId       = (v: string): TradeId        => v as TradeId;
-export const PositionId    = (v: string): PositionId     => v as PositionId;
+export const TradeId = (v: string): TradeId => v as TradeId;
+export const PositionId = (v: string): PositionId => v as PositionId;
 export const CounterpartyId = (v: string): CounterpartyId => v as CounterpartyId;
-export const InstrumentId  = (v: string): InstrumentId   => v as InstrumentId;
-export const BookId        = (v: string): BookId         => v as BookId;
-export const TraderId      = (v: string): TraderId       => v as TraderId;
-export const LimitId       = (v: string): LimitId        => v as LimitId;
-export const TenantId      = (v: string): TenantId       => v as TenantId;
+export const InstrumentId = (v: string): InstrumentId => v as InstrumentId;
+export const BookId = (v: string): BookId => v as BookId;
+export const TraderId = (v: string): TraderId => v as TraderId;
+export const LimitId = (v: string): LimitId => v as LimitId;
+export const TenantId = (v: string): TenantId => v as TenantId;
 
 /**
  * Money value object — immutable, currency-aware, no floating point arithmetic.
  */
 export class Money {
   private constructor(
-    public readonly amount: bigint,      // stored as integer cents
-    public readonly currency: string,    // ISO 4217
+    public readonly amount: bigint, // stored as integer cents
+    public readonly currency: string, // ISO 4217
     public readonly decimals: number = 2,
   ) {}
 

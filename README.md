@@ -26,22 +26,22 @@ packages/
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Language** | TypeScript 5.4 (strict mode throughout) |
-| **API Framework** | Fastify 4 (REST + OpenAPI 3.0) |
-| **Frontend** | Next.js 14, React 18, Tailwind CSS |
-| **Event Bus** | Apache Kafka (exactly-once semantics) |
-| **Database** | PostgreSQL 16 + TimescaleDB + Row Level Security |
-| **Cache** | Redis 7 |
-| **Secrets** | HashiCorp Vault |
-| **Identity** | Keycloak (OAuth2/OIDC) |
-| **Networking** | Cilium eBPF (Zero Trust mTLS) |
-| **Orchestration** | Kubernetes + Helm + ArgoCD GitOps |
+| Layer             | Technology                                          |
+| ----------------- | --------------------------------------------------- |
+| **Language**      | TypeScript 5.4 (strict mode throughout)             |
+| **API Framework** | Fastify 4 (REST + OpenAPI 3.0)                      |
+| **Frontend**      | Next.js 14, React 18, Tailwind CSS                  |
+| **Event Bus**     | Apache Kafka (exactly-once semantics)               |
+| **Database**      | PostgreSQL 16 + TimescaleDB + Row Level Security    |
+| **Cache**         | Redis 7                                             |
+| **Secrets**       | HashiCorp Vault                                     |
+| **Identity**      | Keycloak (OAuth2/OIDC)                              |
+| **Networking**    | Cilium eBPF (Zero Trust mTLS)                       |
+| **Orchestration** | Kubernetes + Helm + ArgoCD GitOps                   |
 | **Observability** | OpenTelemetry → Prometheus + Grafana + ELK + Jaeger |
-| **Build** | Turborepo + pnpm workspaces |
-| **CI/CD** | GitHub Actions (blue-green, 2-approver gate) |
-| **Security** | Renovate Bot + Trivy (CVE patched < 24h) |
+| **Build**         | Turborepo + pnpm workspaces                         |
+| **CI/CD**         | GitHub Actions (blue-green, 2-approver gate)        |
+| **Security**      | Renovate Bot + Trivy (CVE patched < 24h)            |
 
 ## Prerequisites
 
@@ -103,40 +103,40 @@ pnpm --filter @nexustreasury/web test:e2e
 
 ## Microservice Ports
 
-| Service | Port | Description |
-|---|---|---|
-| `web` | 3000 | Next.js dealing room UI |
-| `trade-service` | 4001 | Trade booking REST API |
-| `position-service` | 4002 | Real-time position engine |
-| `risk-service` | 4003 | Pre-deal checks, VaR, limits |
-| `alm-service` | 4004 | LCR/NSFR/liquidity gap |
-| `bo-service` | 4005 | SWIFT, settlement, Nostro |
-| `market-data-service` | 4006 | Bloomberg/Refinitiv bridge |
-| `postgres` | 5432 | TimescaleDB |
-| `redis` | 6379 | Cache + rate limiting |
-| `kafka` | 9092 | Event bus |
-| `kafka-ui` | 8080 | Kafka browser |
-| `schema-registry` | 8081 | Confluent Schema Registry |
-| `vault` | 8200 | HashiCorp Vault |
-| `keycloak` | 8443 | Identity provider |
-| `prometheus` | 9090 | Metrics |
-| `grafana` | 3001 | Dashboards |
-| `elasticsearch` | 9200 | Log storage |
-| `kibana` | 5601 | Log dashboards |
-| `jaeger` | 16686 | Distributed tracing |
+| Service               | Port  | Description                  |
+| --------------------- | ----- | ---------------------------- |
+| `web`                 | 3000  | Next.js dealing room UI      |
+| `trade-service`       | 4001  | Trade booking REST API       |
+| `position-service`    | 4002  | Real-time position engine    |
+| `risk-service`        | 4003  | Pre-deal checks, VaR, limits |
+| `alm-service`         | 4004  | LCR/NSFR/liquidity gap       |
+| `bo-service`          | 4005  | SWIFT, settlement, Nostro    |
+| `market-data-service` | 4006  | Bloomberg/Refinitiv bridge   |
+| `postgres`            | 5432  | TimescaleDB                  |
+| `redis`               | 6379  | Cache + rate limiting        |
+| `kafka`               | 9092  | Event bus                    |
+| `kafka-ui`            | 8080  | Kafka browser                |
+| `schema-registry`     | 8081  | Confluent Schema Registry    |
+| `vault`               | 8200  | HashiCorp Vault              |
+| `keycloak`            | 8443  | Identity provider            |
+| `prometheus`          | 9090  | Metrics                      |
+| `grafana`             | 3001  | Dashboards                   |
+| `elasticsearch`       | 9200  | Log storage                  |
+| `kibana`              | 5601  | Log dashboards               |
+| `jaeger`              | 16686 | Distributed tracing          |
 
 ## SLA Targets
 
-| Metric | Target |
-|---|---|
-| Uptime | 99.99% |
-| Trade booking P99 | < 100ms |
-| Pre-deal check P99 | < 5ms |
-| Throughput | 500+ TPS |
-| LCR recalculation | Real-time (< 1s) |
-| VaR recalculation | < 5 seconds |
-| STP Rate | ≥ 95% |
-| CVE Patch Time | < 24 hours (automated) |
+| Metric             | Target                 |
+| ------------------ | ---------------------- |
+| Uptime             | 99.99%                 |
+| Trade booking P99  | < 100ms                |
+| Pre-deal check P99 | < 5ms                  |
+| Throughput         | 500+ TPS               |
+| LCR recalculation  | Real-time (< 1s)       |
+| VaR recalculation  | < 5 seconds            |
+| STP Rate           | ≥ 95%                  |
+| CVE Patch Time     | < 24 hours (automated) |
 
 ## Deployment
 
@@ -155,4 +155,4 @@ Basel IV · FRTB SA/IMA · IRRBB BCBS 368 · LCR BCBS 238 · NSFR BCBS 295 · EM
 
 ---
 
-*NexusTreasury v1.0.0 — © 2026 NexusTreasury. Confidential.*
+_NexusTreasury v1.0.0 — © 2026 NexusTreasury. Confidential._

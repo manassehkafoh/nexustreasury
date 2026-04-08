@@ -1,0 +1,15 @@
+# Build artefacts
+dist/
+.next/
+coverage/
+node_modules/
+
+# Lock files (auto-generated)
+pnpm-lock.yaml
+
+# Helm templates use {{ }} Go templating which Prettier cannot parse as valid YAML
+infra/helm/nexustreasury/templates/
+
+# Generated files
+packages/web/next-env.d.ts
+*.tsbuildinfo

@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { Position, PositionDomainError } from './position.aggregate.js';
 import {
-  PositionId, InstrumentId, BookId, TenantId, TraderId,
-  CounterpartyId, Money, BusinessDate,
+  PositionId,
+  InstrumentId,
+  BookId,
+  TenantId,
+  TraderId,
+  CounterpartyId,
+  Money,
+  BusinessDate,
 } from '../shared/value-objects.js';
 import { Trade, AssetClass, TradeDirection } from '../trading/trade.aggregate.js';
 
@@ -36,7 +42,7 @@ function buyTrade(notional: number): Trade {
     bookId: BookId('book-001'),
     traderId: TraderId('trader-001'),
     notional: Money.of(notional, 'USD'),
-    price: 98.50,
+    price: 98.5,
     tradeDate: BusinessDate.today(),
     valueDate: BusinessDate.today().addDays(2),
     preDealCheck,
@@ -69,7 +75,7 @@ describe('Position Aggregate', () => {
     const trade = buyTrade(1_000_000);
     pos.applyTradeBooked({ trade } as Parameters<typeof pos.applyTradeBooked>[0]);
     const events = pos.pullDomainEvents();
-    expect(events.some(e => e.eventType === 'nexus.position.position.updated')).toBe(true);
+    expect(events.some((e) => e.eventType === 'nexus.position.position.updated')).toBe(true);
   });
 
   it('revalue skips flat positions (no error, no event)', () => {

@@ -6,7 +6,7 @@ global:
   environment: staging
 
   kafka:
-    brokers: "kafka.nexus-data:9092"
+    brokers: 'kafka.nexus-data:9092'
   postgres:
     host: postgres.nexus-data
     port: 5432

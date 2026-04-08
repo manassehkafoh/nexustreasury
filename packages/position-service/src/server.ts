@@ -4,15 +4,27 @@ import { healthRoutes } from './routes/health.routes.js';
 import { PositionKafkaConsumer } from './infrastructure/kafka/consumer.js';
 import { PrismaPositionRepository } from './infrastructure/postgres/position.repository.js';
 import {
-  Position, PositionId, InstrumentId, BookId, TenantId, BusinessDate,
-  TradeBookedEvent, TradeCancelledEvent,
+  Position,
+  PositionId,
+  InstrumentId,
+  BookId,
+  TenantId,
+  BusinessDate,
+  TradeBookedEvent,
+  TradeCancelledEvent,
 } from '@nexustreasury/domain';
 
 const PORT = Number(process.env['PORT'] ?? 4002);
 const log = (level: string, msg: string, data?: object): void => {
-  process.stdout.write(JSON.stringify({
-    level, service: 'position-service', msg, time: new Date().toISOString(), ...data,
-  }) + '\n')
+  process.stdout.write(
+    JSON.stringify({
+      level,
+      service: 'position-service',
+      msg,
+      time: new Date().toISOString(),
+      ...data,
+    }) + '\n',
+  );
 };
 
 async function main(): Promise<void> {
@@ -23,18 +35,18 @@ async function main(): Promise<void> {
   const consumer = new PositionKafkaConsumer(
     async (event: TradeBookedEvent) => {
       const trade = event.trade;
-      const posId  = PositionId(`${trade.tenantId}:${trade.bookId}:${trade.instrumentId}`);
+      const posId = PositionId(`${trade.tenantId}:${trade.bookId}:${trade.instrumentId}`);
 
       let position = await repo.findById(posId, trade.tenantId as TenantId);
 
       if (!position) {
         position = Position.create({
-          id:           posId,
-          tenantId:     trade.tenantId as TenantId,
+          id: posId,
+          tenantId: trade.tenantId as TenantId,
           instrumentId: trade.instrumentId as InstrumentId,
-          bookId:       trade.bookId as BookId,
-          currency:     trade.notional.currency,
-          openDate:     BusinessDate.today(),
+          bookId: trade.bookId as BookId,
+          currency: trade.notional.currency,
+          openDate: BusinessDate.today(),
         });
         position.applyTradeBooked(event);
         await repo.save(position);
@@ -48,9 +60,12 @@ async function main(): Promise<void> {
     },
     async (event: TradeCancelledEvent) => {
       const trade = event.trade;
-      const posId  = PositionId(`${trade.tenantId}:${trade.bookId}:${trade.instrumentId}`);
+      const posId = PositionId(`${trade.tenantId}:${trade.bookId}:${trade.instrumentId}`);
       const position = await repo.findById(posId, trade.tenantId as TenantId);
-      if (!position) { log('warn', 'Position not found for cancelled trade', { tradeId: trade.id }); return; }
+      if (!position) {
+        log('warn', 'Position not found for cancelled trade', { tradeId: trade.id });
+        return;
+      }
       position.applyCancelledTrade(event);
       await repo.update(position);
       position.pullDomainEvents();
@@ -72,13 +87,15 @@ async function main(): Promise<void> {
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);
-  process.on('SIGINT',  shutdown);
+  process.on('SIGINT', shutdown);
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   log('info', `Position service ready on port ${PORT}`);
 }
 
 main().catch((err: unknown) => {
-  process.stderr.write(JSON.stringify({ level: 'fatal', service: 'position-service', err: String(err) }) + '\n');
+  process.stderr.write(
+    JSON.stringify({ level: 'fatal', service: 'position-service', err: String(err) }) + '\n',
+  );
   process.exit(1);
 });

@@ -8,14 +8,14 @@
  *  - MockRateAdapter         (dev / testing)
  */
 export interface MarketRate {
-  instrument:   string;
-  bid:          number;
-  ask:          number;
-  mid:          number;
-  currency:     string;
-  tenor?:       string;
-  timestamp:    Date;
-  source:       'BLOOMBERG' | 'REFINITIV' | 'INTERNAL' | 'MOCK';
+  instrument: string;
+  bid: number;
+  ask: number;
+  mid: number;
+  currency: string;
+  tenor?: string;
+  timestamp: Date;
+  source: 'BLOOMBERG' | 'REFINITIV' | 'INTERNAL' | 'MOCK';
 }
 
 export interface MarketDataAdapter {
@@ -31,16 +31,23 @@ export class MockRateAdapter implements MarketDataAdapter {
   subscribe(instruments: string[]): void {
     this.timer = setInterval(() => {
       for (const instrument of instruments) {
-        const mid = 1.0800 + (Math.random() - 0.5) * 0.002;
+        const mid = 1.08 + (Math.random() - 0.5) * 0.002;
         this.callback?.({
-          instrument, bid: mid - 0.0001, ask: mid + 0.0001, mid,
-          currency: 'USD', timestamp: new Date(), source: 'MOCK',
+          instrument,
+          bid: mid - 0.0001,
+          ask: mid + 0.0001,
+          mid,
+          currency: 'USD',
+          timestamp: new Date(),
+          source: 'MOCK',
         });
       }
     }, 5000);
   }
 
-  onRate(callback: (rate: MarketRate) => void): void { this.callback = callback; }
+  onRate(callback: (rate: MarketRate) => void): void {
+    this.callback = callback;
+  }
 
   async disconnect(): Promise<void> {
     if (this.timer) clearInterval(this.timer);

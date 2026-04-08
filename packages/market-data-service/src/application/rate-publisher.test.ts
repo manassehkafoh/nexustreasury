@@ -4,8 +4,12 @@ import { MockRateAdapter } from './rate-publisher.js';
 describe('MockRateAdapter', () => {
   let adapter: MockRateAdapter;
 
-  beforeEach(() => { adapter = new MockRateAdapter(); });
-  afterEach(async () => { await adapter.disconnect(); });
+  beforeEach(() => {
+    adapter = new MockRateAdapter();
+  });
+  afterEach(async () => {
+    await adapter.disconnect();
+  });
 
   it('calls onRate callback with rates after subscribe', async () => {
     const callback = vi.fn();
@@ -23,7 +27,9 @@ describe('MockRateAdapter', () => {
   });
 
   it('generates rates with correct structure', async () => {
-    const rates: Parameters<typeof adapter.onRate>[0] extends (rate: infer R) => void ? R : never[] = [];
+    const rates: Parameters<typeof adapter.onRate>[0] extends (rate: infer R) => void
+      ? R
+      : never[] = [];
     adapter.onRate((rate) => rates.push(rate as never));
     adapter.subscribe(['USD/EUR']);
 

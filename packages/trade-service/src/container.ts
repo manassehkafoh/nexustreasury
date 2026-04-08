@@ -21,12 +21,12 @@ export class Container {
   private constructor() {
     this.prisma = new PrismaClient();
 
-    this.tradeRepository   = new PrismaTradeRepository(this.prisma);
-    this.kafkaProducer     = new KafkaProducer();
+    this.tradeRepository = new PrismaTradeRepository(this.prisma);
+    this.kafkaProducer = new KafkaProducer();
 
-    this.bookTradeCommand  = new BookTradeCommand(
+    this.bookTradeCommand = new BookTradeCommand(
       this.tradeRepository,
-      new PassThroughPreDealCheck(),   // swap with GrpcPreDealCheck in production
+      new PassThroughPreDealCheck(), // swap with GrpcPreDealCheck in production
       this.kafkaProducer,
     );
   }

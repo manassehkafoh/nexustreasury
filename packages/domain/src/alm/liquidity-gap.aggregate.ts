@@ -6,29 +6,29 @@ import { TenantId, Money, BusinessDate } from '../shared/value-objects.js';
  * BCBS 238 standard time buckets for liquidity gap analysis.
  */
 export enum LiquidityTimeBucket {
-  OVERNIGHT  = 'OVERNIGHT',
-  ONE_WEEK   = 'ONE_WEEK',
-  ONE_MONTH  = 'ONE_MONTH',
+  OVERNIGHT = 'OVERNIGHT',
+  ONE_WEEK = 'ONE_WEEK',
+  ONE_MONTH = 'ONE_MONTH',
   THREE_MONTH = 'THREE_MONTH',
-  SIX_MONTH  = 'SIX_MONTH',
-  ONE_YEAR   = 'ONE_YEAR',
-  TWO_YEAR   = 'TWO_YEAR',
-  FIVE_YEAR  = 'FIVE_YEAR',
-  TEN_YEAR   = 'TEN_YEAR',
+  SIX_MONTH = 'SIX_MONTH',
+  ONE_YEAR = 'ONE_YEAR',
+  TWO_YEAR = 'TWO_YEAR',
+  FIVE_YEAR = 'FIVE_YEAR',
+  TEN_YEAR = 'TEN_YEAR',
   OVER_TEN_YEAR = 'OVER_TEN_YEAR',
 }
 
 export enum ALMScenario {
-  CONTRACTUAL   = 'CONTRACTUAL',    // Contractual cash flows only
-  BEHAVIOURAL   = 'BEHAVIOURAL',    // Adjusted for NMD runoff, prepayments
-  STRESSED      = 'STRESSED',       // Idiosyncratic + market stress (BCBS)
+  CONTRACTUAL = 'CONTRACTUAL', // Contractual cash flows only
+  BEHAVIOURAL = 'BEHAVIOURAL', // Adjusted for NMD runoff, prepayments
+  STRESSED = 'STRESSED', // Idiosyncratic + market stress (BCBS)
 }
 
 export interface CashFlowBucket {
   readonly bucket: LiquidityTimeBucket;
   readonly inflows: Money;
   readonly outflows: Money;
-  readonly gap: Money;             // inflows - outflows
+  readonly gap: Money; // inflows - outflows
   readonly cumulativeGap: Money;
 }
 
@@ -38,7 +38,7 @@ export interface LCRComponents {
   readonly hqlaLevel2B: Money;
   readonly totalHQLA: Money;
   readonly netCashOutflows30d: Money;
-  readonly lcrRatio: number;        // percentage
+  readonly lcrRatio: number; // percentage
   readonly minimumRequired: number; // 100% Basel minimum
   readonly isCompliant: boolean;
 }
@@ -121,9 +121,9 @@ export class LiquidityGapReport {
     // Calculate cumulative gaps
     let runningCumulative = Money.of(0, params.currency);
     const buckets: CashFlowBucket[] = params.rawBuckets.map((rb) => {
-      const inflows  = Money.of(rb.inflows,  params.currency);
+      const inflows = Money.of(rb.inflows, params.currency);
       const outflows = Money.of(rb.outflows, params.currency);
-      const gap      = inflows.subtract(outflows);
+      const gap = inflows.subtract(outflows);
       runningCumulative = runningCumulative.add(gap);
       return { bucket: rb.bucket, inflows, outflows, gap, cumulativeGap: runningCumulative };
     });
@@ -132,9 +132,10 @@ export class LiquidityGapReport {
     const totalHQLA = params.lcrComponents.hqlaLevel1
       .add(params.lcrComponents.hqlaLevel2A)
       .add(params.lcrComponents.hqlaLevel2B);
-    const lcrRatio = params.lcrComponents.netCashOutflows30d.toNumber() > 0
-      ? (totalHQLA.toNumber() / params.lcrComponents.netCashOutflows30d.toNumber()) * 100
-      : 999;
+    const lcrRatio =
+      params.lcrComponents.netCashOutflows30d.toNumber() > 0
+        ? (totalHQLA.toNumber() / params.lcrComponents.netCashOutflows30d.toNumber()) * 100
+        : 999;
     const lcr: LCRComponents = {
       ...params.lcrComponents,
       totalHQLA,
@@ -144,10 +145,12 @@ export class LiquidityGapReport {
     };
 
     // Calculate NSFR ratio
-    const nsfrRatio = params.nsfrComponents.requiredStableFunding.toNumber() > 0
-      ? (params.nsfrComponents.availableStableFunding.toNumber() /
-         params.nsfrComponents.requiredStableFunding.toNumber()) * 100
-      : 999;
+    const nsfrRatio =
+      params.nsfrComponents.requiredStableFunding.toNumber() > 0
+        ? (params.nsfrComponents.availableStableFunding.toNumber() /
+            params.nsfrComponents.requiredStableFunding.toNumber()) *
+          100
+        : 999;
     const nsfr: NSFRComponents = {
       ...params.nsfrComponents,
       nsfrRatio,

@@ -85,16 +85,12 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 
   /** Readiness — real dependency checks. Kubernetes stops routing on 503. */
   app.get('/ready', async (_req, reply) => {
-    const [db, kafka, redis] = await Promise.all([
-      checkPostgres(),
-      checkKafka(),
-      checkRedis(),
-    ]);
+    const [db, kafka, redis] = await Promise.all([checkPostgres(), checkKafka(), checkRedis()]);
 
     const allReady = db.status === 'ok' && kafka.status === 'ok' && redis.status === 'ok';
     const response: ReadinessResponse = {
-      status:    allReady ? 'ready' : 'not-ready',
-      checks:    { db, kafka, redis },
+      status: allReady ? 'ready' : 'not-ready',
+      checks: { db, kafka, redis },
       timestamp: new Date().toISOString(),
     };
     return reply.status(allReady ? 200 : 503).send(response);
@@ -102,7 +98,7 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 
   /** Startup probe */
   app.get('/startup', async () => ({
-    status:  'started',
+    status: 'started',
     version: process.env['npm_package_version'] ?? '1.0.0',
   }));
 }

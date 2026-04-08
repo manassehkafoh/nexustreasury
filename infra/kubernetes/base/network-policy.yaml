@@ -45,27 +45,27 @@ spec:
               kubernetes.io/metadata.name: nexus-data
       ports:
         - protocol: TCP
-          port: 5432    # PostgreSQL
+          port: 5432 # PostgreSQL
         - protocol: TCP
-          port: 6379    # Redis
+          port: 6379 # Redis
         - protocol: TCP
-          port: 9092    # Kafka
+          port: 9092 # Kafka
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: nexus-platform
       ports:
         - protocol: TCP
-          port: 8200    # Vault
+          port: 8200 # Vault
         - protocol: TCP
-          port: 8080    # Keycloak
+          port: 8080 # Keycloak
     - to:
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: nexus-observability
       ports:
         - protocol: TCP
-          port: 4317    # OTLP gRPC
+          port: 4317 # OTLP gRPC
     - ports:
         - protocol: UDP
-          port: 53      # DNS
+          port: 53 # DNS

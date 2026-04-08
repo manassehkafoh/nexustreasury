@@ -1,12 +1,16 @@
 import {
-  Limit, LimitRepository, TenantId, CounterpartyId, Money,
+  Limit,
+  LimitRepository,
+  TenantId,
+  CounterpartyId,
+  Money,
   type PreDealCheckResponse,
 } from '@nexustreasury/domain';
 
 export interface PreDealCheckInput {
-  tenantId:           TenantId;
-  counterpartyId:     CounterpartyId;
-  requestedExposure:  Money;
+  tenantId: TenantId;
+  counterpartyId: CounterpartyId;
+  requestedExposure: Money;
 }
 
 /**
@@ -21,19 +25,16 @@ export class PreDealCheckHandler {
     const start = performance.now();
 
     // Load all applicable limits for the counterparty
-    const limits = await this.limitRepo.findByCounterparty(
-      input.counterpartyId,
-      input.tenantId,
-    );
+    const limits = await this.limitRepo.findByCounterparty(input.counterpartyId, input.tenantId);
 
     const allFailures: string[] = [];
     let minHeadroom = input.requestedExposure; // default to requested if no limits
 
     for (const limit of limits) {
       const result = limit.checkPreDeal({
-        counterpartyId:    input.counterpartyId,
+        counterpartyId: input.counterpartyId,
         requestedExposure: input.requestedExposure,
-        tenantId:          input.tenantId,
+        tenantId: input.tenantId,
       });
 
       if (!result.approved) {
@@ -46,19 +47,24 @@ export class PreDealCheckHandler {
       }
     }
 
-    const utilisationPct = limits.length > 0
-      ? limits.reduce((max: number, l: Limit) =>
-          Math.max(max, (l.utilisedAmount.toNumber() / l.limitAmount.toNumber()) * 100), 0)
-      : 0;
+    const utilisationPct =
+      limits.length > 0
+        ? limits.reduce(
+            (max: number, l: Limit) =>
+              Math.max(max, (l.utilisedAmount.toNumber() / l.limitAmount.toNumber()) * 100),
+            0,
+          )
+        : 0;
 
     return {
-      approved:            allFailures.length === 0,
-      currentUtilisation:  limits[0]?.utilisedAmount ?? Money.of(0, input.requestedExposure.currency),
+      approved: allFailures.length === 0,
+      currentUtilisation:
+        limits[0]?.utilisedAmount ?? Money.of(0, input.requestedExposure.currency),
       utilisationPct,
-      headroom:            minHeadroom,
-      failureReasons:      allFailures,
-      checkedAt:           new Date(),
-      responseTimeMs:      performance.now() - start,
+      headroom: minHeadroom,
+      failureReasons: allFailures,
+      checkedAt: new Date(),
+      responseTimeMs: performance.now() - start,
     };
   }
 }

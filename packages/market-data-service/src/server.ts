@@ -6,14 +6,19 @@ import type { MarketRate } from './application/rate-publisher.js';
 
 const PORT = Number(process.env['PORT'] ?? 4006);
 const log = (msg: string, data?: object): void => {
-  process.stdout.write(JSON.stringify({
-    level: 'info', service: 'market-data-service', msg,
-    time: new Date().toISOString(), ...data,
-  }) + '\n')
+  process.stdout.write(
+    JSON.stringify({
+      level: 'info',
+      service: 'market-data-service',
+      msg,
+      time: new Date().toISOString(),
+      ...data,
+    }) + '\n',
+  );
 };
 
 const INSTRUMENTS = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDGHS', 'USDNGN', 'EURGBP', 'XAUUSD'];
-const RATE_TOPIC  = 'nexus.marketdata.rates';
+const RATE_TOPIC = 'nexus.marketdata.rates';
 
 async function main(): Promise<void> {
   // Kafka producer for rate publishing
@@ -30,11 +35,13 @@ async function main(): Promise<void> {
   adapter.onRate(async (rate: MarketRate) => {
     await producer.send({
       topic: RATE_TOPIC,
-      messages: [{
-        key:   rate.instrument,
-        value: JSON.stringify(rate),
-        headers: { source: rate.source, instrument: rate.instrument },
-      }],
+      messages: [
+        {
+          key: rate.instrument,
+          value: JSON.stringify(rate),
+          headers: { source: rate.source, instrument: rate.instrument },
+        },
+      ],
     });
     log('Rate published', { instrument: rate.instrument, mid: rate.mid });
   });
@@ -62,13 +69,15 @@ async function main(): Promise<void> {
     process.exit(0);
   };
   process.on('SIGTERM', shutdown);
-  process.on('SIGINT',  shutdown);
+  process.on('SIGINT', shutdown);
 
   await app.listen({ port: PORT, host: '0.0.0.0' });
   log(`Market data service ready on port ${PORT}`);
 }
 
 main().catch((err: unknown) => {
-  process.stderr.write(JSON.stringify({ level: 'fatal', service: 'market-data-service', err: String(err) }) + '\n');
+  process.stderr.write(
+    JSON.stringify({ level: 'fatal', service: 'market-data-service', err: String(err) }) + '\n',
+  );
   process.exit(1);
 });

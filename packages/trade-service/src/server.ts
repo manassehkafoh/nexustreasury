@@ -19,7 +19,7 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
   if (!jwtSecret) {
     throw new Error(
       'JWT_SECRET environment variable is required. ' +
-      'Set it via Vault agent injection or your .env file.',
+        'Set it via Vault agent injection or your .env file.',
     );
   }
 
@@ -70,12 +70,14 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
   });
 
   await app.register(healthRoutes, { prefix: '/health' });
-  await app.register(tradeRoutes,  { prefix: '/api/v1/trades' });
+  await app.register(tradeRoutes, { prefix: '/api/v1/trades' });
 
   app.setErrorHandler((error, request, reply) => {
     logger.error({ err: error, reqId: request.id }, 'Unhandled error');
     if (error.validation) {
-      return reply.status(400).send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
+      return reply
+        .status(400)
+        .send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
     }
     const statusCode = error.statusCode ?? 500;
     return reply.status(statusCode).send({
@@ -110,7 +112,10 @@ async function main(): Promise<void> {
   };
 
   process.on('SIGTERM', shutdown);
-  process.on('SIGINT',  shutdown);
+  process.on('SIGINT', shutdown);
 }
 
-main().catch((err) => { console.error(err); process.exit(1); });
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

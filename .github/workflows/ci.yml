@@ -67,7 +67,7 @@ jobs:
       - name: Generate Prisma client (combined root schema)
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm lint
-      - run: pnpm exec prettier --check "**/*.{ts,tsx,yaml,md}" --ignore-path .gitignore
+      - run: pnpm exec prettier --check "**/*.{ts,tsx,yaml,md}" --ignore-path .prettierignore
 
   # ── Type Check ────────────────────────────────────────────
   typecheck:

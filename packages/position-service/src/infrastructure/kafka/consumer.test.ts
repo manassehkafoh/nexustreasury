@@ -5,9 +5,9 @@ import { PositionKafkaConsumer } from './consumer.js';
 vi.mock('kafkajs', () => ({
   Kafka: vi.fn().mockImplementation(() => ({
     consumer: vi.fn().mockReturnValue({
-      connect:    vi.fn().mockResolvedValue(undefined),
-      subscribe:  vi.fn().mockResolvedValue(undefined),
-      run:        vi.fn().mockResolvedValue(undefined),
+      connect: vi.fn().mockResolvedValue(undefined),
+      subscribe: vi.fn().mockResolvedValue(undefined),
+      run: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
     }),
   })),
@@ -19,9 +19,9 @@ describe('PositionKafkaConsumer', () => {
   let consumer: PositionKafkaConsumer;
 
   beforeEach(() => {
-    onBooked    = vi.fn().mockResolvedValue(undefined);
+    onBooked = vi.fn().mockResolvedValue(undefined);
     onCancelled = vi.fn().mockResolvedValue(undefined);
-    consumer    = new PositionKafkaConsumer(onBooked, onCancelled);
+    consumer = new PositionKafkaConsumer(onBooked, onCancelled);
   });
 
   it('starts and subscribes to nexus.trading.trades', async () => {

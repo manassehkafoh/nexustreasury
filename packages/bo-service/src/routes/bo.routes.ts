@@ -3,19 +3,22 @@ import { z } from 'zod';
 import { SWIFTMatcher, SWIFTMessageType } from '../application/swift-matcher.js';
 
 const SWIFTMessageSchema = z.object({
-  messageId:   z.string(),
+  messageId: z.string(),
   messageType: z.nativeEnum(SWIFTMessageType),
-  senderBIC:   z.string().length(8).or(z.string().length(11)),
+  senderBIC: z.string().length(8).or(z.string().length(11)),
   receiverBIC: z.string().length(8).or(z.string().length(11)),
-  content:     z.string().min(1),
+  content: z.string().min(1),
 });
 
 const matcher = new SWIFTMatcher();
 
 export async function boRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', async (req: FastifyRequest, reply: FastifyReply) => {
-    try { await req.jwtVerify(); }
-    catch { await reply.status(401).send({ error: 'UNAUTHORIZED' }); }
+    try {
+      await req.jwtVerify();
+    } catch {
+      await reply.status(401).send({ error: 'UNAUTHORIZED' });
+    }
   });
 
   /**
@@ -44,9 +47,9 @@ export async function boRoutes(app: FastifyInstance): Promise<void> {
   app.get('/settlement-ladder', async (_req: FastifyRequest, reply: FastifyReply) => {
     return reply.status(200).send({
       ladder: [
-        { date: 'T+0', currency: 'TTD', netAmount: 842_000_000,  status: 'SETTLED' },
+        { date: 'T+0', currency: 'TTD', netAmount: 842_000_000, status: 'SETTLED' },
         { date: 'T+1', currency: 'TTD', netAmount: 1_240_000_000, status: 'PENDING' },
-        { date: 'T+2', currency: 'USD', netAmount: 12_500_000,   status: 'INSTRUCTIONS_SENT' },
+        { date: 'T+2', currency: 'USD', netAmount: 12_500_000, status: 'INSTRUCTIONS_SENT' },
       ],
     });
   });

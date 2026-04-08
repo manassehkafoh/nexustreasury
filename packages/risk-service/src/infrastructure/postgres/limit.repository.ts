@@ -1,7 +1,15 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
-  Limit, LimitRepository, LimitId, LimitType, LimitLevel,
-  CounterpartyId, BookId, TenantId, Money, Percentage,
+  Limit,
+  LimitRepository,
+  LimitId,
+  LimitType,
+  LimitLevel,
+  CounterpartyId,
+  BookId,
+  TenantId,
+  Money,
+  Percentage,
 } from '@nexustreasury/domain';
 
 export class PrismaLimitRepository implements LimitRepository {
@@ -46,36 +54,36 @@ export class PrismaLimitRepository implements LimitRepository {
 
   private toCreateRow(l: Limit): Prisma.LimitUncheckedCreateInput {
     return {
-      id:               l.id,
-      tenantId:         l.tenantId,
-      limitType:        l.limitType,
-      level:            l.level,
-      entityId:         (l as unknown as { _entityId: string })._entityId,
-      limitAmount:      l.limitAmount.toNumber(),
-      limitCurrency:    l.limitAmount.currency,
-      utilisedAmount:   l.utilisedAmount.toNumber(),
+      id: l.id,
+      tenantId: l.tenantId,
+      limitType: l.limitType,
+      level: l.level,
+      entityId: (l as unknown as { _entityId: string })._entityId,
+      limitAmount: l.limitAmount.toNumber(),
+      limitCurrency: l.limitAmount.currency,
+      utilisedAmount: l.utilisedAmount.toNumber(),
       warningThreshold: l.warningThreshold.value,
-      inBreach:         l.inBreach,
-      version:          l.version,
+      inBreach: l.inBreach,
+      version: l.version,
     };
   }
 
   private toUpdateRow(l: Limit): Prisma.LimitUncheckedUpdateInput {
     return {
-      utilisedAmount:   l.utilisedAmount.toNumber(),
-      inBreach:         l.inBreach,
-      version:          l.version,
+      utilisedAmount: l.utilisedAmount.toNumber(),
+      inBreach: l.inBreach,
+      version: l.version,
     };
   }
 
   private toDomain(row: Prisma.LimitGetPayload<object>): Limit {
     return Limit.create({
-      tenantId:         TenantId(row.tenantId),
-      limitType:        row.limitType as LimitType,
-      level:            row.level as LimitLevel,
-      limitAmount:      Money.of(Number(row.limitAmount), row.limitCurrency),
+      tenantId: TenantId(row.tenantId),
+      limitType: row.limitType as LimitType,
+      level: row.level as LimitLevel,
+      limitAmount: Money.of(Number(row.limitAmount), row.limitCurrency),
       warningThreshold: Percentage.of(Number(row.warningThreshold)),
-      entityId:         row.entityId,
+      entityId: row.entityId,
     });
   }
 }

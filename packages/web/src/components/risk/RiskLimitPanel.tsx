@@ -12,16 +12,18 @@ export function RiskLimitPanel(): JSX.Element {
   const limits: LimitItem[] = [
     { counterparty: 'Republic Bank Group', utilised: 34, limit: 50, pct: 68, warning: false },
     { counterparty: 'CIBC FirstCaribbean', utilised: 22.5, limit: 50, pct: 45, warning: false },
-    { counterparty: 'Scotiabank TT',       utilised: 44.5, limit: 50, pct: 89, warning: true },
-    { counterparty: 'National Bank TT',    utilised: 16,   limit: 50, pct: 32, warning: false },
+    { counterparty: 'Scotiabank TT', utilised: 44.5, limit: 50, pct: 89, warning: true },
+    { counterparty: 'National Bank TT', utilised: 16, limit: 50, pct: 32, warning: false },
   ];
 
   return (
     <div className="bg-[#071827] border border-white/[0.065] rounded-xl p-5 h-full">
-      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">Counterparty Limits</h2>
+      <h2 className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-4">
+        Counterparty Limits
+      </h2>
 
       <div className="flex flex-col gap-4 mb-5">
-        {limits.map(l => (
+        {limits.map((l) => (
           <div key={l.counterparty}>
             <div className="flex justify-between text-xs mb-1.5">
               <span className="text-gray-400 truncate max-w-[150px]">{l.counterparty}</span>
@@ -39,7 +41,9 @@ export function RiskLimitPanel(): JSX.Element {
                 }}
               />
             </div>
-            <div className={`text-[9px] text-right mt-0.5 ${l.warning ? 'text-yellow-400' : 'text-gray-600'}`}>
+            <div
+              className={`text-[9px] text-right mt-0.5 ${l.warning ? 'text-yellow-400' : 'text-gray-600'}`}
+            >
               {l.pct}% utilised
             </div>
           </div>

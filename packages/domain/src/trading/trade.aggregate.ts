@@ -1,8 +1,14 @@
 import { randomUUID } from 'crypto';
 import { DomainEvent } from '../shared/domain-event.js';
 import {
-  TradeId, CounterpartyId, InstrumentId, BookId, TraderId,
-  TenantId, Money, BusinessDate,
+  TradeId,
+  CounterpartyId,
+  InstrumentId,
+  BookId,
+  TraderId,
+  TenantId,
+  Money,
+  BusinessDate,
 } from '../shared/value-objects.js';
 
 // ── Enums ────────────────────────────────────────────────────
@@ -141,10 +147,7 @@ export class Trade {
 
     // Invariant: value date >= trade date
     if (params.valueDate.isBefore(params.tradeDate)) {
-      throw new TradeDomainError(
-        'INVALID_VALUE_DATE',
-        'Value date cannot be before trade date',
-      );
+      throw new TradeDomainError('INVALID_VALUE_DATE', 'Value date cannot be before trade date');
     }
 
     const now = new Date();
@@ -230,23 +233,57 @@ export class Trade {
   }
 
   // ── Accessors ────────────────────────────────────────────
-  get id(): TradeId             { return this._props.id; }
-  get tenantId(): TenantId      { return this._props.tenantId; }
-  get reference(): string       { return this._props.reference; }
-  get assetClass(): AssetClass  { return this._props.assetClass; }
-  get direction(): TradeDirection { return this._props.direction; }
-  get status(): TradeStatus     { return this._props.status; }
-  get counterpartyId(): CounterpartyId { return this._props.counterpartyId; }
-  get instrumentId(): InstrumentId { return this._props.instrumentId; }
-  get bookId(): BookId          { return this._props.bookId; }
-  get traderId(): TraderId      { return this._props.traderId; }
-  get notional(): Money         { return this._props.notional; }
-  get price(): number           { return this._props.price; }
-  get tradeDate(): BusinessDate { return this._props.tradeDate; }
-  get valueDate(): BusinessDate { return this._props.valueDate; }
-  get maturityDate(): BusinessDate | undefined { return this._props.maturityDate; }
-  get version(): number         { return this._props.version; }
-  get createdAt(): Date         { return this._props.createdAt; }
+  get id(): TradeId {
+    return this._props.id;
+  }
+  get tenantId(): TenantId {
+    return this._props.tenantId;
+  }
+  get reference(): string {
+    return this._props.reference;
+  }
+  get assetClass(): AssetClass {
+    return this._props.assetClass;
+  }
+  get direction(): TradeDirection {
+    return this._props.direction;
+  }
+  get status(): TradeStatus {
+    return this._props.status;
+  }
+  get counterpartyId(): CounterpartyId {
+    return this._props.counterpartyId;
+  }
+  get instrumentId(): InstrumentId {
+    return this._props.instrumentId;
+  }
+  get bookId(): BookId {
+    return this._props.bookId;
+  }
+  get traderId(): TraderId {
+    return this._props.traderId;
+  }
+  get notional(): Money {
+    return this._props.notional;
+  }
+  get price(): number {
+    return this._props.price;
+  }
+  get tradeDate(): BusinessDate {
+    return this._props.tradeDate;
+  }
+  get valueDate(): BusinessDate {
+    return this._props.valueDate;
+  }
+  get maturityDate(): BusinessDate | undefined {
+    return this._props.maturityDate;
+  }
+  get version(): number {
+    return this._props.version;
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
 
   pullDomainEvents(): DomainEvent[] {
     const events = [...this._domainEvents];

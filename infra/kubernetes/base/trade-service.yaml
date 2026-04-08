@@ -24,12 +24,12 @@ spec:
         app: trade-service
         version: v1
       annotations:
-        vault.hashicorp.com/agent-inject: "true"
-        vault.hashicorp.com/role: "trade-service"
-        vault.hashicorp.com/agent-inject-secret-db: "database/creds/trade-service"
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9090"
-        prometheus.io/path: "/metrics"
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'trade-service'
+        vault.hashicorp.com/agent-inject-secret-db: 'database/creds/trade-service'
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+        prometheus.io/path: '/metrics'
     spec:
       serviceAccountName: trade-service
       automountServiceAccountToken: false
@@ -65,7 +65,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: PORT
-              value: "4001"
+              value: '4001'
             - name: KAFKA_BROKERS
               valueFrom:
                 configMapKeyRef:
@@ -153,7 +153,7 @@ spec:
               topic: nexus.trading.trades
         target:
           type: AverageValue
-          averageValue: "100"
+          averageValue: '100'
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 60

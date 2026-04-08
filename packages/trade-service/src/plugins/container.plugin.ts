@@ -13,7 +13,9 @@ declare module 'fastify' {
 export const containerPlugin = fp(async (app: FastifyInstance) => {
   const container = Container.get();
   await container.connect();
-  app.decorate('container',       container);
+  app.decorate('container', container);
   app.decorate('tradeRepository', container.tradeRepository);
-  app.addHook('onClose', async () => { await container.disconnect(); });
+  app.addHook('onClose', async () => {
+    await container.disconnect();
+  });
 });

@@ -1,7 +1,15 @@
 import {
-  Trade, AssetClass, TradeDirection, TenantId,
-  CounterpartyId, InstrumentId, BookId, TraderId,
-  Money, BusinessDate, TradeRepository,
+  Trade,
+  AssetClass,
+  TradeDirection,
+  TenantId,
+  CounterpartyId,
+  InstrumentId,
+  BookId,
+  TraderId,
+  Money,
+  BusinessDate,
+  TradeRepository,
 } from '@nexustreasury/domain';
 import type { KafkaProducer } from '../../infrastructure/kafka/producer.js';
 import type { PreDealCheckService } from '../services/pre-deal-check.service.js';
@@ -41,25 +49,25 @@ export class BookTradeCommand {
 
     // 1. Pre-deal limit check via gRPC (target P99 < 5ms)
     const checkResult = await this.preDealCheck.check({
-      tenantId:          input.tenantId,
-      counterpartyId:    input.counterpartyId,
+      tenantId: input.tenantId,
+      counterpartyId: input.counterpartyId,
       requestedExposure: Money.of(input.notionalAmount, input.notionalCurrency),
     });
 
     // 2. Book trade aggregate (domain invariants enforced)
     const trade = Trade.book({
-      tenantId:       input.tenantId,
-      assetClass:     input.assetClass,
-      direction:      input.direction,
+      tenantId: input.tenantId,
+      assetClass: input.assetClass,
+      direction: input.direction,
       counterpartyId: input.counterpartyId,
-      instrumentId:   input.instrumentId,
-      bookId:         input.bookId,
-      traderId:       input.traderId,
-      notional:       Money.of(input.notionalAmount, input.notionalCurrency),
-      price:          input.price,
-      tradeDate:      BusinessDate.fromDate(new Date(input.tradeDate)),
-      valueDate:      BusinessDate.fromDate(new Date(input.valueDate)),
-      maturityDate:   input.maturityDate
+      instrumentId: input.instrumentId,
+      bookId: input.bookId,
+      traderId: input.traderId,
+      notional: Money.of(input.notionalAmount, input.notionalCurrency),
+      price: input.price,
+      tradeDate: BusinessDate.fromDate(new Date(input.tradeDate)),
+      valueDate: BusinessDate.fromDate(new Date(input.valueDate)),
+      maturityDate: input.maturityDate
         ? BusinessDate.fromDate(new Date(input.maturityDate))
         : undefined,
       preDealCheck: checkResult,

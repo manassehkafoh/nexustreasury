@@ -7,15 +7,20 @@ const tenantId = TenantId('tenant-001');
 
 const standardInput = {
   tenantId,
-  asOfDate:  BusinessDate.today(),
-  scenario:  ALMScenario.CONTRACTUAL,
-  currency:  'USD',
+  asOfDate: BusinessDate.today(),
+  scenario: ALMScenario.CONTRACTUAL,
+  currency: 'USD',
   cashFlows: [
     { bucket: LiquidityTimeBucket.OVERNIGHT, inflowAmount: 500, outflowAmount: 200 },
-    { bucket: LiquidityTimeBucket.ONE_WEEK,  inflowAmount: 300, outflowAmount: 400 },
+    { bucket: LiquidityTimeBucket.ONE_WEEK, inflowAmount: 300, outflowAmount: 400 },
     { bucket: LiquidityTimeBucket.ONE_MONTH, inflowAmount: 200, outflowAmount: 600 },
   ],
-  lcr: { hqlaLevel1: 1_200_000_000, hqlaLevel2A: 200_000_000, hqlaLevel2B: 50_000_000, netCashOutflows30d: 1_000_000_000 },
+  lcr: {
+    hqlaLevel1: 1_200_000_000,
+    hqlaLevel2A: 200_000_000,
+    hqlaLevel2B: 50_000_000,
+    netCashOutflows30d: 1_000_000_000,
+  },
   nsfr: { availableStableFunding: 2_000_000_000, requiredStableFunding: 1_700_000_000 },
 };
 
@@ -49,7 +54,7 @@ describe('LCRCalculator', () => {
     const report = calc.generate(breachInput);
     expect(report.lcr.isCompliant).toBe(false);
     const events = report.pullDomainEvents();
-    expect(events.some(e => e.eventType === 'nexus.alm.lcr.breach')).toBe(true);
+    expect(events.some((e) => e.eventType === 'nexus.alm.lcr.breach')).toBe(true);
   });
 
   describe('applyHQLAHaircuts', () => {

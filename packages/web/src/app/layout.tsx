@@ -7,11 +7,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}): JSX.Element {
+export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
   return (
     <html lang="en" className="dark">
       <body>{children}</body>

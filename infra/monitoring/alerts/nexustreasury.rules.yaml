@@ -12,9 +12,9 @@ groups:
           severity: warning
           team: treasury
         annotations:
-          summary: "Trade booking P99 latency above 100ms SLA"
-          description: "P99 booking latency is {{ $value | humanizeDuration }}. SLA target < 100ms."
-          runbook: "https://wiki.nexustreasury.com/runbooks/trade-latency"
+          summary: 'Trade booking P99 latency above 100ms SLA'
+          description: 'P99 booking latency is {{ $value | humanizeDuration }}. SLA target < 100ms.'
+          runbook: 'https://wiki.nexustreasury.com/runbooks/trade-latency'
 
       - alert: TradeServiceErrorRateHigh
         expr: |
@@ -26,8 +26,8 @@ groups:
           severity: critical
           team: treasury
         annotations:
-          summary: "Trade Service error rate above 1%"
-          description: "Error rate: {{ $value | humanizePercentage }}. Investigate immediately."
+          summary: 'Trade Service error rate above 1%'
+          description: 'Error rate: {{ $value | humanizePercentage }}. Investigate immediately.'
 
       - alert: KafkaConsumerLagHigh
         expr: kafka_consumer_group_lag{topic="nexus.trading.trades"} > 1000
@@ -36,8 +36,8 @@ groups:
           severity: warning
           team: platform
         annotations:
-          summary: "High Kafka consumer lag on trading topic"
-          description: "Consumer lag: {{ $value }} messages. position-service may be falling behind."
+          summary: 'High Kafka consumer lag on trading topic'
+          description: 'Consumer lag: {{ $value }} messages. position-service may be falling behind.'
 
   - name: nexustreasury.alm
     rules:
@@ -47,11 +47,11 @@ groups:
         labels:
           severity: critical
           team: treasury
-          regulatory: "true"
+          regulatory: 'true'
         annotations:
-          summary: "LCR below regulatory minimum of 100%"
-          description: "LCR: {{ $value }}%. Immediate action required. Notify ALM desk and Risk."
-          runbook: "https://wiki.nexustreasury.com/runbooks/lcr-breach"
+          summary: 'LCR below regulatory minimum of 100%'
+          description: 'LCR: {{ $value }}%. Immediate action required. Notify ALM desk and Risk.'
+          runbook: 'https://wiki.nexustreasury.com/runbooks/lcr-breach'
 
       - alert: LCRApproachingThreshold
         expr: nexus_alm_lcr_ratio < 115
@@ -60,8 +60,8 @@ groups:
           severity: warning
           team: treasury
         annotations:
-          summary: "LCR approaching management buffer threshold (115%)"
-          description: "LCR: {{ $value }}%. Management buffer at risk."
+          summary: 'LCR approaching management buffer threshold (115%)'
+          description: 'LCR: {{ $value }}%. Management buffer at risk.'
 
       - alert: NSFRBelowMinimum
         expr: nexus_alm_nsfr_ratio < 100
@@ -69,10 +69,10 @@ groups:
         labels:
           severity: critical
           team: treasury
-          regulatory: "true"
+          regulatory: 'true'
         annotations:
-          summary: "NSFR below regulatory minimum of 100%"
-          description: "NSFR: {{ $value }}%. Regulatory breach — notify Risk and Finance immediately."
+          summary: 'NSFR below regulatory minimum of 100%'
+          description: 'NSFR: {{ $value }}%. Regulatory breach — notify Risk and Finance immediately.'
 
   - name: nexustreasury.risk
     rules:
@@ -83,8 +83,8 @@ groups:
           severity: critical
           team: risk
         annotations:
-          summary: "Active limit breach detected"
-          description: "{{ $value }} active limit breach(es). Notify Risk Manager immediately."
+          summary: 'Active limit breach detected'
+          description: '{{ $value }} active limit breach(es). Notify Risk Manager immediately.'
 
   - name: nexustreasury.security
     rules:
@@ -96,8 +96,8 @@ groups:
           severity: warning
           team: security
         annotations:
-          summary: "Spike in authentication failures"
-          description: "{{ $value }} auth failures/sec. Possible brute-force or misconfigured client."
+          summary: 'Spike in authentication failures'
+          description: '{{ $value }} auth failures/sec. Possible brute-force or misconfigured client.'
 
       - alert: CriticalCVEFound
         expr: nexus_security_trivy_vulnerabilities{severity="CRITICAL"} > 0
@@ -106,8 +106,8 @@ groups:
           severity: critical
           team: security
         annotations:
-          summary: "Critical CVE detected in container image"
-          description: "{{ $value }} critical CVE(s) found. Renovate Bot should auto-patch within 24h."
+          summary: 'Critical CVE detected in container image'
+          description: '{{ $value }} critical CVE(s) found. Renovate Bot should auto-patch within 24h.'
 
   - name: nexustreasury.platform
     rules:
@@ -118,9 +118,9 @@ groups:
           severity: critical
           team: platform
         annotations:
-          summary: "NexusTreasury service is down"
-          description: "{{ $labels.job }} has been unreachable for 1 minute."
-          runbook: "https://wiki.nexustreasury.com/runbooks/service-down"
+          summary: 'NexusTreasury service is down'
+          description: '{{ $labels.job }} has been unreachable for 1 minute.'
+          runbook: 'https://wiki.nexustreasury.com/runbooks/service-down'
 
       - alert: PodRestartingFrequently
         expr: |
@@ -130,5 +130,5 @@ groups:
           severity: warning
           team: platform
         annotations:
-          summary: "Pod restarting frequently"
-          description: "{{ $labels.pod }} has restarted {{ $value }} times in the last hour."
+          summary: 'Pod restarting frequently'
+          description: '{{ $labels.pod }} has restarted {{ $value }} times in the last hour.'

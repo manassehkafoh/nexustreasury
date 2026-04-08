@@ -21,20 +21,24 @@ export class BlotterGateway {
 
   register(app: FastifyInstance): void {
     // @ts-expect-error — websocket property added by @fastify/websocket plugin at runtime
-    app.get('/api/v1/trades/stream', { websocket: true }, (socket: WebSocketLike, _req: FastifyRequest) => {
-      this.clients.add(socket);
-      logger.info({ totalClients: this.clients.size }, 'Blotter client connected');
+    app.get(
+      '/api/v1/trades/stream',
+      { websocket: true },
+      (socket: WebSocketLike, _req: FastifyRequest) => {
+        this.clients.add(socket);
+        logger.info({ totalClients: this.clients.size }, 'Blotter client connected');
 
-      socket.on('close', () => {
-        this.clients.delete(socket);
-        logger.info({ totalClients: this.clients.size }, 'Blotter client disconnected');
-      });
+        socket.on('close', () => {
+          this.clients.delete(socket);
+          logger.info({ totalClients: this.clients.size }, 'Blotter client disconnected');
+        });
 
-      socket.on('error', (err: unknown) => {
-        logger.warn({ err }, 'Blotter WebSocket error');
-        this.clients.delete(socket);
-      });
-    });
+        socket.on('error', (err: unknown) => {
+          logger.warn({ err }, 'Blotter WebSocket error');
+          this.clients.delete(socket);
+        });
+      },
+    );
   }
 
   broadcast(row: object): void {
@@ -45,5 +49,7 @@ export class BlotterGateway {
     }
   }
 
-  get connectedClients(): number { return this.clients.size; }
+  get connectedClients(): number {
+    return this.clients.size;
+  }
 }

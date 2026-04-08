@@ -3,10 +3,10 @@ import type { DomainEvent } from '@nexustreasury/domain';
 import { logger } from '../logger.js';
 
 const KAFKA_TOPICS = {
-  TRADES:    'nexus.trading.trades',
+  TRADES: 'nexus.trading.trades',
   POSITIONS: 'nexus.position.positions',
-  RISK:      'nexus.risk.events',
-  ALM:       'nexus.alm.events',
+  RISK: 'nexus.risk.events',
+  ALM: 'nexus.alm.events',
 } as const;
 
 export class KafkaProducer {
@@ -26,7 +26,7 @@ export class KafkaProducer {
 
     this.producer = this.kafka.producer({
       createPartitioner: Partitioners.LegacyPartitioner,
-      idempotent: true,       // exactly-once semantics
+      idempotent: true, // exactly-once semantics
       transactionalId: 'trade-service-producer',
     });
   }
@@ -47,11 +47,11 @@ export class KafkaProducer {
             key: event.aggregateId,
             value: JSON.stringify(event),
             headers: {
-              eventType:     event.eventType,
-              eventId:       event.eventId,
+              eventType: event.eventType,
+              eventId: event.eventId,
               schemaVersion: String(event.schemaVersion),
-              tenantId:      event.tenantId,
-              occurredAt:    event.occurredAt.toISOString(),
+              tenantId: event.tenantId,
+              occurredAt: event.occurredAt.toISOString(),
             },
           })),
         },

@@ -22,15 +22,15 @@ describe('Limit Aggregate', () => {
     });
 
     it('throws on non-positive limit amount', () => {
-      expect(() =>
-        Limit.create({ ...params, limitAmount: Money.of(0, 'USD') }),
-      ).toThrow(LimitDomainError);
+      expect(() => Limit.create({ ...params, limitAmount: Money.of(0, 'USD') })).toThrow(
+        LimitDomainError,
+      );
     });
 
     it('throws when warning threshold is 100%', () => {
-      expect(() =>
-        Limit.create({ ...params, warningThreshold: Percentage.of(100) }),
-      ).toThrow(LimitDomainError);
+      expect(() => Limit.create({ ...params, warningThreshold: Percentage.of(100) })).toThrow(
+        LimitDomainError,
+      );
     });
   });
 
@@ -64,7 +64,7 @@ describe('Limit Aggregate', () => {
       const limit = Limit.create(params);
       limit.utilise(Money.of(51_000_000, 'USD'));
       const events = limit.pullDomainEvents();
-      expect(events.some(e => e.eventType === 'nexus.risk.limit.breached')).toBe(true);
+      expect(events.some((e) => e.eventType === 'nexus.risk.limit.breached')).toBe(true);
     });
 
     it('throws on negative utilisation amount', () => {
@@ -94,7 +94,7 @@ describe('Limit Aggregate', () => {
       limit.pullDomainEvents();
       limit.release(Money.of(10_000_000, 'USD'));
       const events = limit.pullDomainEvents();
-      expect(events.some(e => e.eventType === 'nexus.risk.limit.resolved')).toBe(true);
+      expect(events.some((e) => e.eventType === 'nexus.risk.limit.resolved')).toBe(true);
     });
   });
 });

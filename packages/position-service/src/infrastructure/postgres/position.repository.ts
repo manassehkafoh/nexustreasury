@@ -1,7 +1,13 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import {
-  Position, PositionRepository, PositionId, BookId, InstrumentId, TenantId,
-  Money, BusinessDate,
+  Position,
+  PositionRepository,
+  PositionId,
+  BookId,
+  InstrumentId,
+  TenantId,
+  Money,
+  BusinessDate,
 } from '@nexustreasury/domain';
 
 export class PrismaPositionRepository implements PositionRepository {
@@ -35,38 +41,38 @@ export class PrismaPositionRepository implements PositionRepository {
 
   private toRow(p: Position): Prisma.PositionUncheckedCreateInput {
     return {
-      id:                   p.id,
-      tenantId:             p.tenantId,
-      instrumentId:         p.instrumentId,
-      bookId:               p.bookId,
-      currency:             p.currency,
-      netQuantity:          p.netQuantity,
-      averageCostAmount:    p.averageCost.toNumber(),
-      mtmValueAmount:       p.mtmValue.toNumber(),
-      unrealisedPnlAmount:  p.unrealisedPnl.toNumber(),
-      openDate:             p.openDate.toDate(),
-      version:              p.version,
+      id: p.id,
+      tenantId: p.tenantId,
+      instrumentId: p.instrumentId,
+      bookId: p.bookId,
+      currency: p.currency,
+      netQuantity: p.netQuantity,
+      averageCostAmount: p.averageCost.toNumber(),
+      mtmValueAmount: p.mtmValue.toNumber(),
+      unrealisedPnlAmount: p.unrealisedPnl.toNumber(),
+      openDate: p.openDate.toDate(),
+      version: p.version,
     };
   }
 
   private toUpdateRow(p: Position): Prisma.PositionUncheckedUpdateInput {
     return {
-      netQuantity:          p.netQuantity,
-      averageCostAmount:    p.averageCost.toNumber(),
-      mtmValueAmount:       p.mtmValue.toNumber(),
-      unrealisedPnlAmount:  p.unrealisedPnl.toNumber(),
-      version:              p.version,
+      netQuantity: p.netQuantity,
+      averageCostAmount: p.averageCost.toNumber(),
+      mtmValueAmount: p.mtmValue.toNumber(),
+      unrealisedPnlAmount: p.unrealisedPnl.toNumber(),
+      version: p.version,
     };
   }
 
   private toDomain(row: Prisma.PositionGetPayload<object>): Position {
     return Position.create({
-      id:           PositionId(row.id),
-      tenantId:     TenantId(row.tenantId),
+      id: PositionId(row.id),
+      tenantId: TenantId(row.tenantId),
       instrumentId: InstrumentId(row.instrumentId),
-      bookId:       BookId(row.bookId),
-      currency:     row.currency,
-      openDate:     BusinessDate.fromDate(new Date(row.openDate)),
+      bookId: BookId(row.bookId),
+      currency: row.currency,
+      openDate: BusinessDate.fromDate(new Date(row.openDate)),
     });
   }
 }

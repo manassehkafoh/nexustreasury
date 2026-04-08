@@ -5,12 +5,12 @@ const matcher = new SWIFTMatcher();
 
 function makeMessage(type = SWIFTMessageType.MT300): Parameters<typeof matcher.match>[0] {
   return {
-    messageId:   'MSG-' + Math.random().toString(36).slice(2),
+    messageId: 'MSG-' + Math.random().toString(36).slice(2),
     messageType: type,
-    senderBIC:   'BARCLONDON',
+    senderBIC: 'BARCLONDON',
     receiverBIC: 'NEXUSGB2L',
-    content:     ':20:TRDE-2026-001\n:32A:260409USD12500000\n:33B:EUR11535000',
-    receivedAt:  new Date(),
+    content: ':20:TRDE-2026-001\n:32A:260409USD12500000\n:33B:EUR11535000',
+    receivedAt: new Date(),
   };
 }
 

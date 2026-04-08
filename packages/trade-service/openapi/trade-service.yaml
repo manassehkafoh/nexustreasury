@@ -46,15 +46,15 @@ paths:
             example:
               assetClass: FX
               direction: BUY
-              counterpartyId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
-              instrumentId: "7a1b2c3d-4e5f-6789-abcd-ef0123456789"
-              bookId: "1234abcd-ab12-1234-1234-123412341234"
-              traderId: "abcd1234-1234-abcd-abcd-abcd12341234"
+              counterpartyId: '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+              instrumentId: '7a1b2c3d-4e5f-6789-abcd-ef0123456789'
+              bookId: '1234abcd-ab12-1234-1234-123412341234'
+              traderId: 'abcd1234-1234-abcd-abcd-abcd12341234'
               notionalAmount: 12500000
               notionalCurrency: USD
               price: 1.0842
-              tradeDate: "2026-04-07"
-              valueDate: "2026-04-09"
+              tradeDate: '2026-04-07'
+              valueDate: '2026-04-09'
       responses:
         '201':
           description: Trade booked successfully
@@ -179,13 +179,34 @@ components:
   schemas:
     BookTradeRequest:
       type: object
-      required: [assetClass, direction, counterpartyId, instrumentId, bookId, traderId,
-                 notionalAmount, notionalCurrency, price, tradeDate, valueDate]
+      required:
+        [
+          assetClass,
+          direction,
+          counterpartyId,
+          instrumentId,
+          bookId,
+          traderId,
+          notionalAmount,
+          notionalCurrency,
+          price,
+          tradeDate,
+          valueDate,
+        ]
       properties:
         assetClass:
           type: string
-          enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE,
-                 EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE]
+          enum:
+            [
+              FX,
+              FIXED_INCOME,
+              MONEY_MARKET,
+              INTEREST_RATE_DERIVATIVE,
+              EQUITY,
+              COMMODITY,
+              REPO,
+              ISLAMIC_FINANCE,
+            ]
         direction:
           type: string
           enum: [BUY, SELL]

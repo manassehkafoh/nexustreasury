@@ -1,6 +1,10 @@
 import {
-  LiquidityGapReport, ALMScenario, LiquidityTimeBucket,
-  Money, BusinessDate, TenantId,
+  LiquidityGapReport,
+  ALMScenario,
+  LiquidityTimeBucket,
+  Money,
+  BusinessDate,
+  TenantId,
 } from '@nexustreasury/domain';
 
 export interface CashFlowInput {
@@ -10,15 +14,15 @@ export interface CashFlowInput {
 }
 
 export interface LCRInput {
-  hqlaLevel1:          number;
-  hqlaLevel2A:         number;
-  hqlaLevel2B:         number;
-  netCashOutflows30d:  number;
+  hqlaLevel1: number;
+  hqlaLevel2A: number;
+  hqlaLevel2B: number;
+  netCashOutflows30d: number;
 }
 
 export interface NSFRInput {
   availableStableFunding: number;
-  requiredStableFunding:  number;
+  requiredStableFunding: number;
 }
 
 export class LCRCalculator {
@@ -30,35 +34,35 @@ export class LCRCalculator {
    *   - Kafka event: nexus.trading.trade.booked (incremental)
    */
   generate(params: {
-    tenantId:    TenantId;
-    asOfDate:    BusinessDate;
-    scenario:    ALMScenario;
-    currency:    string;
-    cashFlows:   CashFlowInput[];
-    lcr:         LCRInput;
-    nsfr:        NSFRInput;
+    tenantId: TenantId;
+    asOfDate: BusinessDate;
+    scenario: ALMScenario;
+    currency: string;
+    cashFlows: CashFlowInput[];
+    lcr: LCRInput;
+    nsfr: NSFRInput;
   }): LiquidityGapReport {
     return LiquidityGapReport.generate({
-      tenantId:  params.tenantId,
-      asOfDate:  params.asOfDate,
-      scenario:  params.scenario,
-      currency:  params.currency,
+      tenantId: params.tenantId,
+      asOfDate: params.asOfDate,
+      scenario: params.scenario,
+      currency: params.currency,
       rawBuckets: params.cashFlows.map((cf) => ({
-        bucket:   cf.bucket,
-        inflows:  cf.inflowAmount,
+        bucket: cf.bucket,
+        inflows: cf.inflowAmount,
         outflows: cf.outflowAmount,
       })),
       lcrComponents: {
-        hqlaLevel1:          Money.of(params.lcr.hqlaLevel1,         params.currency),
-        hqlaLevel2A:         Money.of(params.lcr.hqlaLevel2A,        params.currency),
-        hqlaLevel2B:         Money.of(params.lcr.hqlaLevel2B,        params.currency),
-        totalHQLA:           Money.of(0, params.currency), // calculated by aggregate
-        netCashOutflows30d:  Money.of(params.lcr.netCashOutflows30d, params.currency),
-        minimumRequired:     100,
+        hqlaLevel1: Money.of(params.lcr.hqlaLevel1, params.currency),
+        hqlaLevel2A: Money.of(params.lcr.hqlaLevel2A, params.currency),
+        hqlaLevel2B: Money.of(params.lcr.hqlaLevel2B, params.currency),
+        totalHQLA: Money.of(0, params.currency), // calculated by aggregate
+        netCashOutflows30d: Money.of(params.lcr.netCashOutflows30d, params.currency),
+        minimumRequired: 100,
       },
       nsfrComponents: {
         availableStableFunding: Money.of(params.nsfr.availableStableFunding, params.currency),
-        requiredStableFunding:  Money.of(params.nsfr.requiredStableFunding,  params.currency),
+        requiredStableFunding: Money.of(params.nsfr.requiredStableFunding, params.currency),
       },
     });
   }
@@ -69,14 +73,17 @@ export class LCRCalculator {
    * Cap: Level 2 assets ≤ 40% of total HQLA; Level 2B ≤ 15%
    */
   applyHQLAHaircuts(raw: { level1: number; level2A: number; level2B: number }): {
-    level1: number; level2A: number; level2B: number; total: number
+    level1: number;
+    level2A: number;
+    level2B: number;
+    total: number;
   } {
-    const l1   = raw.level1;
-    const l2a  = raw.level2A * 0.85;  // 15% haircut
-    const l2b  = raw.level2B * 0.75;  // 25% haircut (conservative)
+    const l1 = raw.level1;
+    const l2a = raw.level2A * 0.85; // 15% haircut
+    const l2b = raw.level2B * 0.75; // 25% haircut (conservative)
 
     const totalBeforeCap = l1 + l2a + l2b;
-    const maxL2  = totalBeforeCap * 0.40;
+    const maxL2 = totalBeforeCap * 0.4;
     const maxL2b = totalBeforeCap * 0.15;
 
     const adjL2b = Math.min(l2b, maxL2b);
