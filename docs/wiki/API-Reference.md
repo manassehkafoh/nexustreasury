@@ -337,8 +337,18 @@ Calculates LCR, NSFR, and cash flow gaps across all BCBS time buckets.
 }
 ```
 
-**Valid `messageType` values:** `MT300` · `MT320` · `MT360` · `MT361` · `MT530` · `MT548` ·
-`pacs.008` · `pacs.009` · `camt.053`
+**Valid `messageType` values:**
+
+MX (ISO 20022 XML) — primary format:
+`fxtr.008` · `fxtr.014` · `pacs.002` · `pacs.008` · `pacs.009` · `pacs.028` ·
+`camt.053` · `camt.054` · `camt.056`
+
+MT (Legacy SWIFT FIN) — accepted during coexistence period until Nov 2028:
+`MT300` · `MT320` · `MT360` · `MT361` · `MT530` · `MT548` · `MT940` · `MT950`
+
+> **Note:** ISO 20022 messages are MX format (XML), not MT format. MX and MT are
+> completely different wire formats. MT uses colon-tagged FIN text (`:20:`, `:32B:`);
+> MX uses XML with namespace declarations.
 
 **200 response:**
 

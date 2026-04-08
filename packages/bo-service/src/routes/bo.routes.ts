@@ -4,18 +4,28 @@ import { SWIFTMatcher, SWIFTMessageType } from '../application/swift-matcher.js'
 
 /**
  * Zod validation schema for incoming SWIFT messages.
- * Supports both legacy MT format and ISO 20022 MX (XML) format.
  *
- * ISO 20022 message types (SWIFT MX):
- *   fxtr.008  — FX Trade Confirmation (replaces MT300)
- *   fxtr.014  — FX Trade Status Advice
- *   pacs.008  — Customer Credit Transfer (replaces MT103)
- *   pacs.009  — FI Credit Transfer / FX settlement (replaces MT202)
- *   pacs.002  — Payment Status Report
- *   pacs.028  — FI Payment Status Request
- *   camt.053  — Bank to Customer Statement (replaces MT940)
- *   camt.054  — Bank to Customer Debit/Credit Notification
- *   camt.056  — FI to FI Payment Cancellation Request
+ * Supports:
+ * ── MX format (ISO 20022 XML) ────────────────────────────────────────────────
+ * XML-structured messages wrapped in the ISO 20022 Document envelope.
+ * `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:{msgtype}.{version}">...`
+ *   fxtr.008  — FX Trade Confirmation    (MX equivalent of MT300)
+ *   fxtr.014  — FX Trade Status Advice   (MX equivalent of MT300)
+ *   pacs.008  — Customer Credit Transfer (MX equivalent of MT103)
+ *   pacs.009  — FI Credit Transfer       (MX equivalent of MT202, FX settlement)
+ *   pacs.002  — Payment Status Report    (MX equivalent of MT199)
+ *   pacs.028  — FI Payment Status Req    (MX equivalent of MT192)
+ *   camt.053  — Bank Statement           (MX equivalent of MT940, Nostro recon)
+ *   camt.054  — Debit/Credit Notification(MX equivalent of MT942)
+ *   camt.056  — Payment Cancellation Req (MX equivalent of MT192/MT292)
+ *
+ * ── MT format (Legacy SWIFT FIN) ────────────────────────────────────────────
+ * Text-based colon-tagged field messages. Still accepted during coexistence.
+ *   MT300  — FX Confirmation
+ *   MT320  — Money Market Confirmation
+ *   MT360/361 — Interest Rate Derivatives
+ *   MT530/548 — Settlement Instructions
+ *   MT940/950 — Account Statements
  */
 const SWIFTMessageSchema = z.object({
   messageId: z.string().min(1),

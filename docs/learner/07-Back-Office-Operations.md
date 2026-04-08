@@ -180,26 +180,58 @@ A back office operator investigates:
 
 ---
 
-## ISO 20022 Migration
+## SWIFT MX (ISO 20022) and MT (Legacy) Format Support
 
-SWIFT is migrating from MT (legacy format) to ISO 20022 MX format (pacs, camt, pain).
-NexusTreasury supports both formats via the `SWIFTMatcher`:
+SWIFT completed its **MX migration** for cross-border payments in November 2025.
+A coexistence period runs until November 2028, during which both formats are accepted.
+
+### The Critical Distinction: MX ≠ MT
+
+|                  | MX (ISO 20022)                                                  | MT (Legacy FIN)              |
+| ---------------- | --------------------------------------------------------------- | ---------------------------- |
+| **Full name**    | Message XML                                                     | Message Type                 |
+| **Wire format**  | XML with namespace declarations                                 | Colon-tagged plain text      |
+| **Example**      | `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009...">` | `:20:FX-20260407-A3B2C1`     |
+| **Field access** | XPath / XML parsing                                             | Regex on `:TAG:` fields      |
+| **Status**       | Current standard                                                | Legacy, end-of-life Nov 2028 |
+
+> **Important:** When someone says "ISO 20022" they mean **MX**, not MT.
+> Do not use "MT" to describe ISO 20022 messages. MT300 is a legacy FIN message;
+> `fxtr.008` is its MX (ISO 20022) replacement.
+
+### How NexusTreasury Handles Both
+
+NexusTreasury auto-detects the format from message content:
 
 ```typescript
-// MT300 support (legacy)
-if (message.messageType === 'MT300') {
-  reference = this.parseField(content, ':20:');
-  notional = this.parseField(content, ':32B:');
-}
+// Content starting with '<' = MX (ISO 20022 XML envelope)
+const isMX = message.content.trimStart().startsWith('<');
 
-// pacs.008 support (ISO 20022)
-if (message.messageType === 'pacs.008') {
-  reference = this.parseXMLField(content, 'EndToEndId');
-  notional = this.parseXMLField(content, 'IntrBkSttlmAmt');
+if (isMX) {
+  // MX path: XML field navigation
+  // pacs.009 — interbank FX settlement
+  const ref = doc.Document.FICdtTrf.CdtTrfTxInf.PmtId.EndToEndId;
+  const notional = doc.Document.FICdtTrf.CdtTrfTxInf.IntrBkSttlmAmt;
+} else {
+  // MT path: colon-tagged FIN text extraction
+  // MT300 — legacy FX confirmation
+  const ref = content.match(/:20:([^\r\n]+)/)[1];
+  const notional = content.match(/:32B:([A-Z]{3})([\d,]+)/);
 }
 ```
 
----
+### MX → MT Migration Map
+
+| MX message (ISO 20022) | Replaces (legacy MT) | Status                           |
+| ---------------------- | -------------------- | -------------------------------- |
+| `fxtr.008`             | MT300                | New FX confirmations — use MX    |
+| `pacs.009`             | MT202                | Interbank FX settlement — use MX |
+| `pacs.008`             | MT103                | Customer payments — use MX       |
+| `camt.053`             | MT940                | Bank statements — use MX         |
+| `camt.056`             | MT192/MT292          | Cancellation requests — use MX   |
+
+New integrations **must** use MX format. MT is accepted only for backwards
+compatibility during the coexistence period.
 
 ## Next Steps
 

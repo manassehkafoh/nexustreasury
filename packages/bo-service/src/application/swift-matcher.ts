@@ -4,7 +4,8 @@
  * SWIFT Message Auto-Matching Engine — ISO 20022 compliant.
  *
  * SWIFT completed its ISO 20022 cross-border payment migration in November 2025.
- * NexusTreasury supports both legacy MT format and ISO 20022 MX format.
+ * NexusTreasury supports both SWIFT MX (ISO 20022 XML) and legacy MT (FIN) formats.
+ * MX = ISO 20022 XML envelope. MT = legacy colon-tagged FIN text messages.
  *
  * ## Matching Algorithm
  * Weighted field scoring (total 100 points):
@@ -219,8 +220,10 @@ export class SWIFTMatcher {
   }
 
   /**
-   * Detect whether the message content is ISO 20022 XML (MX) or legacy MT FIN.
-   * ISO 20022 messages begin with an XML declaration or a Document root element.
+   * Auto-detect message format:
+   * - MX (ISO 20022): content starts with `<` — parse as XML
+   * - MT (legacy FIN): colon-tagged text format — use MT field parser
+   * Note: MX ≠ MT. These are completely different wire formats.
    */
   private static parseMessage(message: SWIFTMessage): ParsedMessageFields {
     const isXML = message.content.trimStart().startsWith('<');

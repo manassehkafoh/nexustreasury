@@ -1,24 +1,32 @@
 /**
  * @module ISO20022Parser
  *
- * Parser for SWIFT ISO 20022 XML messages and legacy MT FIN format.
+ * Parser for SWIFT MX (ISO 20022 XML) messages and legacy MT (FIN) messages.
  *
- * ISO 20022 is the global standard for financial messaging, replacing legacy
- * MT messages. SWIFT completed its cross-border payments migration in November 2025.
+ * ## SWIFT Message Format Terminology
  *
- * ## Supported Message Categories
+ * **MX** (Message XML) — ISO 20022 format. XML-structured, namespace-declared.
+ * Example: `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10">`
+ * These are the current SWIFT standard. SWIFT completed its cross-border
+ * payments MX migration in November 2025.
  *
- * | ISO 20022 | Replaces | Purpose |
- * |-----------|----------|---------|
- * | fxtr.008  | MT300    | FX Trade Confirmation |
- * | fxtr.014  | MT300    | FX Trade Status Advice |
- * | pacs.008  | MT103    | Customer Credit Transfer |
- * | pacs.009  | MT202    | FI Credit Transfer (FX settlement) |
- * | pacs.002  | MT199    | Payment Status Report |
- * | pacs.028  | MT192    | FI Payment Status Request |
- * | camt.053  | MT940    | Bank to Customer Statement |
- * | camt.054  | MT942    | Bank to Customer Notification |
- * | camt.056  | MT192    | Payment Cancellation Request |
+ * **MT** (Message Type) — Legacy SWIFT FIN format. Text-based, colon-tagged fields.
+ * Example: `:20:FX-20260407-A3B2C1`, `:32B:USD12500000,`
+ * Still accepted during the coexistence period (until 2028).
+ *
+ * ## MX → MT Migration Map
+ *
+ * | MX (ISO 20022)  | Replaces (MT) | Purpose |
+ * |-----------------|---------------|---------|
+ * | fxtr.008        | MT300         | FX Trade Confirmation |
+ * | fxtr.014        | MT300         | FX Trade Status Advice |
+ * | pacs.008        | MT103         | Customer Credit Transfer |
+ * | pacs.009        | MT202         | FI Credit Transfer (FX settlement) |
+ * | pacs.002        | MT199         | Payment Status Report |
+ * | pacs.028        | MT192         | FI Payment Status Request |
+ * | camt.053        | MT940         | Bank to Customer Statement |
+ * | camt.054        | MT942         | Bank to Customer Debit/Credit Notification |
+ * | camt.056        | MT192/MT292   | Payment Cancellation Request |
  *
  * ## Key ISO 20022 Identifiers
  * - **UTI** (Unique Transaction Identifier) — regulatory field in EndToEndId
@@ -28,7 +36,17 @@
 
 import { XMLParser } from 'fast-xml-parser';
 
-/** All supported ISO 20022 and MT message types */
+/**
+ * All supported SWIFT message types.
+ *
+ * ── MX (ISO 20022 XML) ──────────────────────────────────────────────────────
+ * These are XML-based messages following the ISO 20022 standard.
+ * Format: `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:{msgtype}">` envelope.
+ *
+ * ── MT (Legacy SWIFT FIN) ───────────────────────────────────────────────────
+ * These are text-based messages using colon-tagged fields (`:20:`, `:32B:`).
+ * Still accepted during SWIFT's coexistence period (ends November 2028).
+ */
 export enum SWIFTMessageType {
   // ── Legacy MT (still supported during transition period) ───────────
   MT300 = 'MT300', // FX Confirmation → migrate to fxtr.008
@@ -131,7 +149,7 @@ export class ISO20022Parser {
     }
   }
 
-  /** Parse legacy MT FIN format using field tag extraction */
+  /** Parse legacy MT FIN (Message Type) format using colon-tagged field extraction. Not MX. */
   static parseMT(finContent: string, messageType: SWIFTMessageType): ParsedMessageFields {
     const field = (tag: string): string | null => {
       // MT FIN format: :TAG:VALUE or :TAG:SUBFIELD1SUBFIELD2

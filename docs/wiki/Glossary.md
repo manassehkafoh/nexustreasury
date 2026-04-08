@@ -161,6 +161,19 @@ The domain never imports Prisma.
 A collection of packages managed together in a monorepo. All NexusTreasury packages
 are declared in `pnpm-workspace.yaml` under the `packages/*` glob.
 
+**SWIFT MT (Message Type)**
+The legacy SWIFT financial messaging format. Text-based, using colon-prefixed field tags.
+Example: `:20:FX-20260407-A3B2C1` (reference field), `:32B:USD12500000,` (amount).
+Message types are numbered: MT300 (FX), MT940 (statement), MT103 (payment).
+Still accepted during SWIFT's MT-to-MX coexistence period (until November 2028).
+
+**SWIFT MX (Message XML)**
+The current ISO 20022-based SWIFT messaging format. XML-structured with full namespace
+declarations. The `MX` label stands for Message XML.
+Example: `<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.009.001.10">...`
+MX message names follow the pattern: `{category}.{number}` (e.g. pacs.009, fxtr.008, camt.053).
+**ISO 20022 = MX. MT is the legacy format. They are completely different wire formats.**
+
 **Zero Trust**
 A network security model where no traffic is trusted by default.
 NexusTreasury uses Cilium eBPF with default-deny-all network policies in Kubernetes.
