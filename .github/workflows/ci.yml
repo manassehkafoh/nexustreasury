@@ -244,7 +244,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Start local stack
-        run: docker-compose up -d postgres redis kafka
+        run: docker compose up -d postgres redis kafka
       - run: sleep 45
       - run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
       - run: pnpm --filter @nexustreasury/web test:e2e
