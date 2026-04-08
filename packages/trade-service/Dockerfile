@@ -13,7 +13,9 @@ COPY packages/alm-service/package.json ./packages/alm-service/
 COPY packages/bo-service/package.json ./packages/bo-service/
 COPY packages/market-data-service/package.json ./packages/market-data-service/
 COPY packages/web/package.json ./packages/web/
-RUN pnpm install --frozen-lockfile --shamefully-hoist
+# node-linker=hoisted: copy workspace packages as flat dirs, not symlinks
+# Prevents BuildKit overlayfs from conflicting when cached dir vs new symlink
+RUN echo "node-linker=hoisted" > .npmrc && pnpm install --frozen-lockfile
 
 # Copy root Prisma schema and generate @prisma/client types
 COPY prisma ./prisma
