@@ -37,16 +37,19 @@ const TEST_SECRET = 'test-jwt-secret-route-tests';
 
 async function buildTestServer() {
   const app = Fastify({ logger: false });
-
   await app.register(jwt, { secret: TEST_SECRET });
 
-  // Minimal container plugin mock
+  const mockTrade = {
+    id: 'trade-uuid-001',
+    reference: 'FX-20260407-TEST1',
+    status: 'PENDING_VALIDATION',
+    amend: vi.fn(),
+    cancel: vi.fn(),
+    pullDomainEvents: vi.fn().mockReturnValue([]),
+  };
+
   app.decorate('tradeRepository', {
-    findById: vi.fn().mockResolvedValue({
-      id: 'trade-uuid-001',
-      reference: 'FX-20260407-TEST1',
-      status: 'PENDING_VALIDATION',
-    }),
+    findById: vi.fn().mockResolvedValue(mockTrade),
     save: vi.fn().mockResolvedValue(undefined),
     update: vi.fn().mockResolvedValue(undefined),
   });
@@ -76,7 +79,7 @@ const VALID_BODY = {
   valueDate: '2026-04-09',
 };
 
-describe('Trade Routes — HTTP layer', () => {
+describe('Trade Routes - HTTP layer', () => {
   let app: Awaited<ReturnType<typeof buildTestServer>>;
   let token: string;
 
@@ -142,6 +145,100 @@ describe('Trade Routes — HTTP layer', () => {
         headers: { authorization: `Bearer ${token}` },
       });
       expect(res.statusCode).toBe(200);
+    });
+
+    it('returns 404 when trade not found', async () => {
+      (app.tradeRepository.findById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/v1/trades/nonexistent',
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('PATCH /api/v1/trades/:tradeId', () => {
+    it('returns 401 without JWT', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/trades/trade-uuid-001',
+        payload: { newNotionalAmount: 2_000_000, newNotionalCurrency: 'USD', newPrice: 1.09 },
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 400 with missing fields', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/trades/trade-uuid-001',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { newNotionalAmount: 2_000_000 },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 200 on valid amend', async () => {
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/trades/trade-uuid-001',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { newNotionalAmount: 2_000_000, newNotionalCurrency: 'USD', newPrice: 1.09 },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('returns 404 when trade not found', async () => {
+      (app.tradeRepository.findById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const res = await app.inject({
+        method: 'PATCH',
+        url: '/api/v1/trades/nonexistent',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { newNotionalAmount: 2_000_000, newNotionalCurrency: 'USD', newPrice: 1.09 },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('DELETE /api/v1/trades/:tradeId', () => {
+    it('returns 401 without JWT', async () => {
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/trades/trade-uuid-001',
+        payload: { reason: 'wrong cpty' },
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('returns 400 with empty reason', async () => {
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/trades/trade-uuid-001',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { reason: '' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('returns 200 on valid cancellation', async () => {
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/trades/trade-uuid-001',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { reason: 'wrong counterparty' },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('returns 404 when trade not found', async () => {
+      (app.tradeRepository.findById as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
+      const res = await app.inject({
+        method: 'DELETE',
+        url: '/api/v1/trades/nonexistent',
+        headers: { authorization: `Bearer ${token}` },
+        payload: { reason: 'wrong counterparty' },
+      });
+      expect(res.statusCode).toBe(404);
     });
   });
 });

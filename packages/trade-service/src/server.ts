@@ -4,6 +4,7 @@ import jwt from '@fastify/jwt';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { ZodError } from 'zod';
 import { tradeRoutes } from './routes/trade.routes.js';
 import { healthRoutes } from './routes/health.routes.js';
 import { registerTelemetry } from './infrastructure/telemetry.js';
@@ -74,10 +75,19 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
 
   app.setErrorHandler((error, request, reply) => {
     logger.error({ err: error, reqId: request.id }, 'Unhandled error');
+    // Fastify built-in JSON schema validation
     if (error.validation) {
       return reply
         .status(400)
         .send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
+    }
+    // Zod validation errors — parse() throws ZodError, not a Fastify validation error
+    if (error instanceof ZodError) {
+      return reply.status(400).send({
+        error: 'VALIDATION_ERROR',
+        message: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+        statusCode: 400,
+      });
     }
     const statusCode = error.statusCode ?? 500;
     return reply.status(statusCode).send({

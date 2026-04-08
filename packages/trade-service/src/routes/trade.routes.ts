@@ -57,7 +57,15 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
       schema: { tags: ['trades'], summary: 'Book a new trade', security: [{ bearerAuth: [] }] },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const body = BookTradeSchema.parse(request.body);
+      const parsed = BookTradeSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          statusCode: 400,
+        });
+      }
+      const body = parsed.data;
       const user = request.user as { tenantId: string };
       const tenantId = TenantId(user.tenantId);
 
@@ -116,7 +124,17 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { tradeId } = request.params as { tradeId: string };
-      const body = AmendTradeSchema.parse(request.body);
+      const parsedAmend = AmendTradeSchema.safeParse(request.body);
+      if (!parsedAmend.success) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: parsedAmend.error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join('; '),
+          statusCode: 400,
+        });
+      }
+      const body = parsedAmend.data;
       const user = request.user as { tenantId: string };
       const trade = await app.tradeRepository.findById(TradeId(tradeId), TenantId(user.tenantId));
       if (!trade)
@@ -144,7 +162,17 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { tradeId } = request.params as { tradeId: string };
-      const { reason } = CancelTradeSchema.parse(request.body);
+      const parsedCancel = CancelTradeSchema.safeParse(request.body);
+      if (!parsedCancel.success) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: parsedCancel.error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join('; '),
+          statusCode: 400,
+        });
+      }
+      const { reason } = parsedCancel.data;
       const user = request.user as { tenantId: string };
       const trade = await app.tradeRepository.findById(TradeId(tradeId), TenantId(user.tenantId));
       if (!trade)

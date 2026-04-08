@@ -14,7 +14,23 @@ export default defineConfig({
         branches: 70,
         statements: 80,
       },
-      exclude: ['src/**/*.test.ts', 'src/server.ts', 'dist/**'],
+      exclude: [
+        // Test files
+        'src/**/*.test.ts',
+        // Infrastructure adapters — require real Kafka/Prisma/Redis/OTel
+        // Tested via integration/E2E tests, not unit tests
+        'src/server.ts',
+        'src/container.ts',
+        'src/plugins/**',
+        'src/infrastructure/kafka/**',
+        'src/infrastructure/postgres/**',
+        'src/infrastructure/websocket/**',
+        'src/infrastructure/telemetry.ts',
+        'src/infrastructure/logger.ts',
+        // Health routes require real DB/Kafka/Redis — covered by integration tests
+        'src/routes/health.routes.ts',
+        'dist/**',
+      ],
     },
   },
 });
