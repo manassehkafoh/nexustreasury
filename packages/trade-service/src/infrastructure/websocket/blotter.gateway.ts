@@ -1,5 +1,4 @@
-import type { FastifyInstance } from 'fastify';
-import type { FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { logger } from '../logger.js';
 
 interface WebSocketLike {
@@ -14,26 +13,29 @@ interface WebSocketLike {
  * Endpoint: GET /api/v1/trades/stream?token=<jwt>
  *
  * Requires @fastify/websocket registered on the Fastify instance.
- * Server-push only — no client messages expected.
+ * The `websocket: true` route option and WebSocket handler signature are
+ * injected by @fastify/websocket at runtime and are not reflected in
+ * Fastify's core TypeScript types — hence the (app as any) cast below.
  */
 export class BlotterGateway {
   private readonly clients = new Set<WebSocketLike>();
 
   register(app: FastifyInstance): void {
-    // @ts-expect-error — websocket property added by @fastify/websocket plugin at runtime
-    app.get(
+    // @fastify/websocket augments app.get() at runtime; cast required
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (app as any).get(
       '/api/v1/trades/stream',
       { websocket: true },
-      (socket: WebSocketLike, _req: FastifyRequest) => {
+      (socket: WebSocketLike, _req: FastifyRequest): void => {
         this.clients.add(socket);
         logger.info({ totalClients: this.clients.size }, 'Blotter client connected');
 
-        socket.on('close', () => {
+        socket.on('close', (): void => {
           this.clients.delete(socket);
           logger.info({ totalClients: this.clients.size }, 'Blotter client disconnected');
         });
 
-        socket.on('error', (err: unknown) => {
+        socket.on('error', (err: unknown): void => {
           logger.warn({ err }, 'Blotter WebSocket error');
           this.clients.delete(socket);
         });
