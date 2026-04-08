@@ -5,6 +5,12 @@ on:
     - cron: '0 */6 * * *'   # Every 6 hours — SOC 2 CC6.8 compliance
   workflow_dispatch:
 
+# Cancel any in-progress or queued run when a newer commit lands on main.
+# Prevents stale scheduled runs from executing with old workflow code.
+concurrency:
+  group: security-patch-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   pull-requests: write
