@@ -10,7 +10,7 @@ COPY packages/alm-service/package.json ./packages/alm-service/
 COPY packages/bo-service/package.json ./packages/bo-service/
 COPY packages/market-data-service/package.json ./packages/market-data-service/
 COPY packages/web/package.json ./packages/web/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 # Copy root Prisma schema and generate @prisma/client types
 COPY prisma ./prisma
