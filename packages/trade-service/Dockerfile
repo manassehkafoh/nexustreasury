@@ -4,6 +4,7 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 
+# Copy ALL workspace package manifests (pnpm workspace requires all to be present)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json ./
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/trade-service/package.json ./packages/trade-service/
@@ -13,19 +14,24 @@ COPY packages/alm-service/package.json ./packages/alm-service/
 COPY packages/bo-service/package.json ./packages/bo-service/
 COPY packages/market-data-service/package.json ./packages/market-data-service/
 COPY packages/web/package.json ./packages/web/
-# node-linker=hoisted: copy workspace packages as flat dirs, not symlinks
-# Prevents BuildKit overlayfs from conflicting when cached dir vs new symlink
-RUN echo "node-linker=hoisted" > .npmrc && pnpm install --frozen-lockfile
+
+# Install all dependencies (workspace packages remain symlinks here — that is fine;
+# pnpm deploy below will copy them as physical files for the production stage)
+RUN pnpm install --frozen-lockfile
 
 # Copy root Prisma schema and generate @prisma/client types
 COPY prisma ./prisma
 RUN pnpm exec prisma generate --schema=prisma/schema.prisma
 
+# Copy source and build domain + service
 COPY packages/domain ./packages/domain
 COPY packages/trade-service ./packages/trade-service
-
 RUN pnpm --filter @nexustreasury/domain build
 RUN pnpm --filter @nexustreasury/trade-service build
+
+# pnpm deploy: creates /deploy with ALL production deps as PHYSICAL FILES
+# This eliminates workspace symlinks entirely — no more overlayfs conflicts
+RUN pnpm deploy --filter @nexustreasury/trade-service --prod /deploy
 
 # ─── Stage 2: Production ─────────────────────────────────────
 FROM node:22-alpine3.21 AS production
@@ -36,13 +42,15 @@ RUN addgroup -g 1001 nexus && adduser -u 1001 -G nexus -s /bin/sh -D nexus
 WORKDIR /app
 RUN chown nexus:nexus /app
 
-COPY --from=builder --chown=nexus:nexus /app/packages/trade-service/dist ./dist
-COPY --from=builder --chown=nexus:nexus /app/packages/domain/dist ./node_modules/@nexustreasury/domain/dist
-COPY --from=builder --chown=nexus:nexus /app/packages/trade-service/node_modules ./node_modules
+# Copy the self-contained deployment (no symlinks, no workspace packages)
+COPY --from=builder --chown=nexus:nexus /deploy/node_modules ./node_modules
+COPY --from=builder --chown=nexus:nexus /deploy/dist ./dist
 
 USER nexus
 
-EXPOSE 4001 4101 9090
+EXPOSE 4001 9090
+
+ENV NODE_ENV=production
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:4001/health/live || exit 1

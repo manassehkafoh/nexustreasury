@@ -206,8 +206,11 @@ jobs:
           push: false
           load: true
           tags: nexustreasury/${{ matrix.service }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # GHA Docker layer cache removed: pnpm workspace packages are always
+          # symlinks, but the GHA cache stored @nexustreasury/domain as a directory
+          # from an older layer. BuildKit overlayfs cannot replace a cached directory
+          # with a symlink → "cannot replace to directory with file".
+          # Clean builds per CI run ensures no stale cache conflicts.
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@master
         with:

@@ -13,12 +13,8 @@ COPY packages/alm-service/package.json ./packages/alm-service/
 COPY packages/bo-service/package.json ./packages/bo-service/
 COPY packages/market-data-service/package.json ./packages/market-data-service/
 COPY packages/web/package.json ./packages/web/
-# node-linker=hoisted: copy workspace packages as flat dirs, not symlinks
-# Prevents BuildKit overlayfs from conflicting when cached dir vs new symlink
-RUN echo "node-linker=hoisted" > .npmrc && pnpm install --frozen-lockfile
 
-COPY packages/domain ./packages/domain
-COPY packages/web    ./packages/web
+RUN pnpm install --frozen-lockfile
 
 # Ensure public/ exists — Next.js expects it even if empty
 RUN mkdir -p packages/web/public
@@ -26,6 +22,9 @@ RUN mkdir -p packages/web/public
 # Copy root Prisma schema (web may use Prisma types via domain)
 COPY prisma ./prisma
 RUN pnpm exec prisma generate --schema=prisma/schema.prisma
+
+COPY packages/domain ./packages/domain
+COPY packages/web    ./packages/web
 
 RUN pnpm --filter @nexustreasury/domain build
 RUN pnpm --filter @nexustreasury/web    build
@@ -39,6 +38,7 @@ RUN addgroup -g 1001 nexus && adduser -u 1001 -G nexus -s /bin/sh -D nexus
 WORKDIR /app
 RUN chown nexus:nexus /app
 
+# Next.js standalone output is self-contained (no node_modules symlinks)
 COPY --from=builder --chown=nexus:nexus /app/packages/web/.next/standalone  ./
 COPY --from=builder --chown=nexus:nexus /app/packages/web/.next/static       ./.next/static
 COPY --from=builder --chown=nexus:nexus /app/packages/web/public             ./public
