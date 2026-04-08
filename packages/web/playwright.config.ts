@@ -25,6 +25,22 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
+
+  // Playwright starts the Next.js app and waits for it to be ready
+  // before running any tests. This replaces the manual 'sleep' approach
+  // and guarantees the server is actually accepting connections.
+  webServer: {
+    command: 'pnpm start',
+    url: 'http://localhost:3000',
+    reuseExistingServer: !process.env['CI'],
+    timeout: 120_000, // 2 min: allows for cold Next.js startup in CI
+    env: {
+      NODE_ENV: 'production',
+      PORT: '3000',
+      JWT_SECRET: process.env['JWT_SECRET'] ?? 'local-dev-secret',
+    },
+  },
+
   projects: [
     {
       name: 'chromium',

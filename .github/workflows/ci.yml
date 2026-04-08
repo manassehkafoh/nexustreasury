@@ -238,6 +238,26 @@ jobs:
     name: E2E Tests (Playwright)
     needs: build-images
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://nexus:nexus_test@localhost:5432/nexustreasury_test
+      JWT_SECRET: ci-e2e-secret
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg16
+        env:
+          POSTGRES_USER: nexus
+          POSTGRES_PASSWORD: nexus_test
+          POSTGRES_DB: nexustreasury_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -246,11 +266,16 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Start local stack
-        run: docker compose up -d postgres redis kafka
-      - run: sleep 45
-      - run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
-      - run: pnpm --filter @nexustreasury/web test:e2e
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - name: Build web application (required for pnpm start)
+        run: pnpm --filter @nexustreasury/domain build && pnpm --filter @nexustreasury/web build
+      - name: Install Playwright browsers
+        run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
+      - name: Run E2E tests
+        # playwright.config.ts webServer starts `pnpm start` and waits for
+        # http://localhost:3000 to respond before running any test — no sleep needed
+        run: pnpm --filter @nexustreasury/web test:e2e
         env:
           BASE_URL: http://localhost:3000
           JWT_SECRET: ci-e2e-secret
