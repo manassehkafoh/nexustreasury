@@ -285,7 +285,7 @@ jobs:
           echo "Next.js PID: $!"
           echo "Polling http://localhost:3000 every 5s (max 36 attempts = 180s)..."
           for i in $(seq 1 36); do
-            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
               echo "✅ Dev server ready after $((i * 5))s"
               exit 0
             fi
