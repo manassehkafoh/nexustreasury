@@ -5,6 +5,11 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.js
 COPY packages/domain/package.json ./packages/domain/
 COPY packages/bo-service/package.json ./packages/bo-service/
 RUN pnpm install --frozen-lockfile
+
+# Copy root Prisma schema and generate @prisma/client types
+COPY prisma ./prisma
+RUN pnpm exec prisma generate --schema=prisma/schema.prisma
+
 COPY packages/domain ./packages/domain
 COPY packages/bo-service ./packages/bo-service
 RUN pnpm --filter @nexustreasury/domain build

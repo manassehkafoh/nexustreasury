@@ -13,6 +13,13 @@ RUN pnpm install --frozen-lockfile
 COPY packages/domain ./packages/domain
 COPY packages/web    ./packages/web
 
+# Ensure public/ exists — Next.js expects it even if empty
+RUN mkdir -p packages/web/public
+
+# Copy root Prisma schema (web may use Prisma types via domain)
+COPY prisma ./prisma
+RUN pnpm exec prisma generate --schema=prisma/schema.prisma
+
 RUN pnpm --filter @nexustreasury/domain build
 RUN pnpm --filter @nexustreasury/web    build
 

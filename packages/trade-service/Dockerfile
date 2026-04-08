@@ -10,6 +10,10 @@ COPY packages/trade-service/package.json ./packages/trade-service/
 
 RUN pnpm install --frozen-lockfile
 
+# Copy root Prisma schema and generate @prisma/client types
+COPY prisma ./prisma
+RUN pnpm exec prisma generate --schema=prisma/schema.prisma
+
 COPY packages/domain ./packages/domain
 COPY packages/trade-service ./packages/trade-service
 
