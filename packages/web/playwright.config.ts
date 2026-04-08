@@ -29,17 +29,18 @@ export default defineConfig({
   // Playwright starts the Next.js app and waits for it to be ready
   // before running any tests. This replaces the manual 'sleep' approach
   // and guarantees the server is actually accepting connections.
-  // next.config.mjs sets output: 'standalone'. With standalone output,
-  // 'next start' is not supported — use node .next/standalone/server.js.
-  // See: https://nextjs.org/docs/app/api-reference/next-config-js/output
+  // Use Next.js dev server for E2E tests.
+  // The standalone server (node .next/standalone/server.js) requires a prior
+  // production build which can fail in CI due to missing env vars or network
+  // issues. The dev server requires no build step and starts reliably.
+  // Playwright blocks all tests until localhost:3000 responds (2xx/3xx).
   webServer: {
-    command: 'node .next/standalone/server.js',
+    command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env['CI'],
-    timeout: 120_000, // 2 min for cold standalone startup in CI
+    timeout: 120_000, // 2 min for Next.js cold start in CI
     env: {
-      NODE_ENV: 'production',
-      HOSTNAME: '0.0.0.0',
+      NODE_ENV: 'development',
       PORT: '3000',
       JWT_SECRET: process.env['JWT_SECRET'] ?? 'local-dev-secret',
     },
