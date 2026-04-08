@@ -1,5 +1,5 @@
 # ─── Stage 1: Builder ────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.21 AS builder
 WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
@@ -17,7 +17,7 @@ RUN pnpm --filter @nexustreasury/domain build
 RUN pnpm --filter @nexustreasury/trade-service build
 
 # ─── Stage 2: Production ─────────────────────────────────────
-FROM node:20-alpine AS production
+FROM node:20-alpine3.21 AS production
 
 RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 nexus && adduser -u 1001 -G nexus -s /bin/sh -D nexus
