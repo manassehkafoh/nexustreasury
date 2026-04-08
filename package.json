@@ -43,5 +43,8 @@
   },
   "dependencies": {
     "@prisma/client": "^5.9.0"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
   }
 }
