@@ -12,6 +12,9 @@ concurrency:
 
 env:
   NODE_VERSION: '24'
+  # Force all GitHub Actions JavaScript runners to use Node.js 24
+  # Suppresses: 'Node.js 20 actions are deprecated' warnings
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ── Setup & Cache ──────────────────────────────────────────
