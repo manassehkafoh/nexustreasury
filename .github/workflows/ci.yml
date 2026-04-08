@@ -273,6 +273,8 @@ jobs:
           pnpm --filter @nexustreasury/domain build
           pnpm --filter @nexustreasury/web build
           # Copy static assets next to standalone server (required by Next.js standalone)
+          # mkdir -p ensures the target directories exist before copying
+          mkdir -p packages/web/.next/standalone/.next
           cp -r packages/web/.next/static packages/web/.next/standalone/.next/static
           cp -r packages/web/public packages/web/.next/standalone/public
       - name: Install Playwright browsers
