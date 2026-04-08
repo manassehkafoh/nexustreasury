@@ -93,3 +93,37 @@ describe('Position Aggregate', () => {
     expect(pos.unrealisedPnl.toNumber()).toBeCloseTo(1_500_000, 0);
   });
 });
+
+describe('Position accessors', () => {
+  it('exposes averageCost after trade applied', () => {
+    const pos = makePosition();
+    const trade = buyTrade(1_000_000);
+    pos.applyTradeBooked({ trade } as Parameters<typeof pos.applyTradeBooked>[0]);
+    expect(pos.averageCost.toNumber()).toBeGreaterThan(0);
+  });
+
+  it('exposes version incremented after each event', () => {
+    const pos = makePosition();
+    const v0 = pos.version;
+    const trade = buyTrade(1_000_000);
+    pos.applyTradeBooked({ trade } as Parameters<typeof pos.applyTradeBooked>[0]);
+    expect(pos.version).toBe(v0 + 1);
+  });
+
+  it('isFlat is false after trade applied', () => {
+    const pos = makePosition();
+    const trade = buyTrade(500_000);
+    pos.applyTradeBooked({ trade } as Parameters<typeof pos.applyTradeBooked>[0]);
+    expect(pos.isFlat).toBe(false);
+  });
+
+  it('mtmValue and unrealisedPnl update after revalue', () => {
+    const pos = makePosition();
+    const trade = buyTrade(1_000_000);
+    pos.applyTradeBooked({ trade } as Parameters<typeof pos.applyTradeBooked>[0]);
+    pos.pullDomainEvents();
+    pos.revalue(100);
+    expect(pos.mtmValue.toNumber()).toBeGreaterThan(0);
+    expect(pos.unrealisedPnl.toNumber()).toBeDefined();
+  });
+});
