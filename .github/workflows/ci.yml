@@ -269,14 +269,32 @@ jobs:
       - name: Generate Prisma client
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - name: Build domain (required for workspace TypeScript resolution)
-        # Next.js dev server needs @nexustreasury/domain compiled so imports
-        # resolve correctly. Without dist/, the dev server hangs at startup.
         run: pnpm --filter @nexustreasury/domain build
+      - name: Start Next.js dev server (background)
+        # Start before browser install to maximise warm-up time.
+        # Server logs appear inline; failures are visible immediately.
+        working-directory: packages/web
+        run: pnpm dev &
+        env:
+          PORT: '3000'
+          NODE_ENV: development
+          JWT_SECRET: ci-e2e-secret
       - name: Install Playwright browsers
         run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
+      - name: Wait for Next.js dev server (up to 3 min)
+        run: |
+          echo "Polling http://localhost:3000 every 3s (max 60 attempts = 180s)..."
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ Dev server ready after $((i * 3))s"
+              exit 0
+            fi
+            echo "  [$i/60] not ready, retrying in 3s..."
+            sleep 3
+          done
+          echo "❌ Dev server did not start within 180s"
+          exit 1
       - name: Run E2E tests
-        # playwright.config.ts webServer starts `pnpm start` and waits for
-        # http://localhost:3000 to respond before running any test — no sleep needed
         run: pnpm --filter @nexustreasury/web test:e2e
         env:
           BASE_URL: http://localhost:3000
