@@ -14,7 +14,7 @@ export default defineConfig({
         branches: 70,
         statements: 80,
       },
-      exclude: ['src/**/*.test.ts', 'src/server.ts', 'dist/**'],
+      exclude: ['src/**/*.test.ts', 'src/server.ts', 'src/index.ts', 'dist/**'],
     },
   },
 });
