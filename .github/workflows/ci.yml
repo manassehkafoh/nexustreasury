@@ -270,35 +270,39 @@ jobs:
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - name: Build domain (required for workspace TypeScript resolution)
         run: pnpm --filter @nexustreasury/domain build
-      - name: Start Next.js dev server (background)
-        # Start before browser install to maximise warm-up time.
-        # Server logs appear inline; failures are visible immediately.
-        working-directory: packages/web
-        run: pnpm dev &
+      - name: Install Playwright browsers
+        run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
+      - name: Start Next.js dev server and wait for ready
+        # nohup + log file: captures server output for debugging if startup fails
+        # Server is started from the web package directory so Next.js finds its config
         env:
           PORT: '3000'
           NODE_ENV: development
           JWT_SECRET: ci-e2e-secret
-      - name: Install Playwright browsers
-        run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
-      - name: Wait for Next.js dev server (up to 3 min)
         run: |
-          echo "Polling http://localhost:3000 every 3s (max 60 attempts = 180s)..."
-          for i in $(seq 1 60); do
+          cd packages/web
+          nohup pnpm dev > /tmp/nextjs-dev.log 2>&1 &
+          echo "Next.js PID: $!"
+          echo "Polling http://localhost:3000 every 5s (max 36 attempts = 180s)..."
+          for i in $(seq 1 36); do
             if curl -sf http://localhost:3000 > /dev/null 2>&1; then
-              echo "✅ Dev server ready after $((i * 3))s"
+              echo "✅ Dev server ready after $((i * 5))s"
               exit 0
             fi
-            echo "  [$i/60] not ready, retrying in 3s..."
-            sleep 3
+            echo "  [$i/36] not ready yet..."
+            sleep 5
           done
-          echo "❌ Dev server did not start within 180s"
+          echo "❌ Dev server did not start within 180s. Last 50 lines of server log:"
+          tail -50 /tmp/nextjs-dev.log
           exit 1
       - name: Run E2E tests
         run: pnpm --filter @nexustreasury/web test:e2e
         env:
           BASE_URL: http://localhost:3000
           JWT_SECRET: ci-e2e-secret
+      - name: Print Next.js server log (always — useful for debugging)
+        if: always()
+        run: cat /tmp/nextjs-dev.log 2>/dev/null || echo "(no server log found)"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
