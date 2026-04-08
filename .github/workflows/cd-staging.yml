@@ -66,7 +66,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITOPS_TOKEN }}
+          # GITHUB_TOKEN is always available and has contents: write (granted above).
+          # A separate GITOPS_TOKEN PAT is not needed for same-repo GitOps commits.
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Helm values with new image tags
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
