@@ -73,11 +73,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          # GITHUB_TOKEN is always available for checkout.
+          # RENOVATE_TOKEN (a PAT) is only needed if Renovate must open PRs
+          # on behalf of a bot account. Set it as a repository secret if desired;
+          # if not set, GITHUB_TOKEN is used and Renovate runs as github-actions[bot].
+          token: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Run Renovate Bot
         uses: renovatebot/github-action@v41
         with:
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          token: ${{ secrets.RENOVATE_TOKEN || secrets.GITHUB_TOKEN }}
         env:
           LOG_LEVEL: info
           RENOVATE_CONFIG_FILE: renovate.json

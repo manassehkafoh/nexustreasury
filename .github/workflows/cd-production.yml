@@ -37,7 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITOPS_TOKEN }}
+          # GITHUB_TOKEN always available; has contents:write granted above.
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Record deployment start
         run: |
