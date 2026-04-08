@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import {
   Limit, LimitRepository, LimitId, LimitType, LimitLevel,
   CounterpartyId, BookId, TenantId, Money, Percentage,
@@ -16,41 +16,41 @@ export class PrismaLimitRepository implements LimitRepository {
     const rows = await this.prisma.limit.findMany({
       where: { entityId: counterpartyId, tenantId },
     });
-    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findByBook(bookId: BookId, tenantId: TenantId): Promise<Limit[]> {
     const rows = await this.prisma.limit.findMany({
       where: { entityId: bookId, tenantId, level: LimitLevel.BOOK },
     });
-    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
+    return rows.map((r) => this.toDomain(r));
   }
 
   async findAllInBreach(tenantId: TenantId): Promise<Limit[]> {
     const rows = await this.prisma.limit.findMany({
       where: { tenantId, inBreach: true },
     });
-    return rows.map((r: Record<string, unknown>) => this.toDomain(r));
+    return rows.map((r) => this.toDomain(r));
   }
 
   async save(limit: Limit): Promise<void> {
-    await this.prisma.limit.create({ data: this.toRow(limit) });
+    await this.prisma.limit.create({ data: this.toCreateRow(limit) });
   }
 
   async update(limit: Limit): Promise<void> {
     await this.prisma.limit.update({
       where: { id: limit.id },
-      data: this.toRow(limit),
+      data: this.toUpdateRow(limit),
     });
   }
 
-  private toRow(l: Limit): Record<string, unknown> {
+  private toCreateRow(l: Limit): Prisma.LimitUncheckedCreateInput {
     return {
       id:               l.id,
       tenantId:         l.tenantId,
       limitType:        l.limitType,
       level:            l.level,
-      entityId:         l['_entityId'] as string,
+      entityId:         (l as unknown as { _entityId: string })._entityId,
       limitAmount:      l.limitAmount.toNumber(),
       limitCurrency:    l.limitAmount.currency,
       utilisedAmount:   l.utilisedAmount.toNumber(),
@@ -60,14 +60,22 @@ export class PrismaLimitRepository implements LimitRepository {
     };
   }
 
-  private toDomain(row: Record<string, unknown>): Limit {
+  private toUpdateRow(l: Limit): Prisma.LimitUncheckedUpdateInput {
+    return {
+      utilisedAmount:   l.utilisedAmount.toNumber(),
+      inBreach:         l.inBreach,
+      version:          l.version,
+    };
+  }
+
+  private toDomain(row: Prisma.LimitGetPayload<object>): Limit {
     return Limit.create({
-      tenantId:         TenantId(String(row['tenantId'])),
-      limitType:        row['limitType'] as LimitType,
-      level:            row['level'] as LimitLevel,
-      limitAmount:      Money.of(Number(row['limitAmount']), String(row['limitCurrency'])),
-      warningThreshold: Percentage.of(Number(row['warningThreshold'])),
-      entityId:         String(row['entityId']),
+      tenantId:         TenantId(row.tenantId),
+      limitType:        row.limitType as LimitType,
+      level:            row.level as LimitLevel,
+      limitAmount:      Money.of(Number(row.limitAmount), row.limitCurrency),
+      warningThreshold: Percentage.of(Number(row.warningThreshold)),
+      entityId:         row.entityId,
     });
   }
 }

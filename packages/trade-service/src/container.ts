@@ -19,16 +19,7 @@ export class Container {
   public readonly bookTradeCommand: BookTradeCommand;
 
   private constructor() {
-    this.prisma = new PrismaClient({
-      log: [
-        { emit: 'event', level: 'query' },
-        { emit: 'event', level: 'error' },
-      ],
-    });
-
-    this.prisma.$on('error', (e: { message: string; target: string }) => {
-      logger.error({ msg: e.message, target: e.target }, 'Prisma error');
-    });
+    this.prisma = new PrismaClient();
 
     this.tradeRepository   = new PrismaTradeRepository(this.prisma);
     this.kafkaProducer     = new KafkaProducer();

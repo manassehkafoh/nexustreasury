@@ -40,14 +40,8 @@ jobs:
             pnpm install --no-frozen-lockfile
           fi
 
-      # Generate Prisma clients for all services that have a schema
-      - name: Generate Prisma clients
-        run: |
-          for schema in packages/*/prisma/schema.prisma; do
-            svc=$(echo "$schema" | cut -d/ -f2)
-            echo "Generating Prisma client for $svc..."
-            pnpm --filter "@nexustreasury/$svc" exec prisma generate
-          done
+      - name: Generate Prisma client (combined root schema)
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
 
       - name: Verify build compiles
         run: pnpm build
@@ -70,12 +64,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Generate Prisma clients
-        run: |
-          for schema in packages/*/prisma/schema.prisma; do
-            svc=$(echo "$schema" | cut -d/ -f2)
-            pnpm --filter "@nexustreasury/$svc" exec prisma generate
-          done
+      - name: Generate Prisma client (combined root schema)
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm lint
       - run: pnpm exec prettier --check "**/*.{ts,tsx,yaml,md}" --ignore-path .gitignore
 
@@ -94,12 +84,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Generate Prisma clients
-        run: |
-          for schema in packages/*/prisma/schema.prisma; do
-            svc=$(echo "$schema" | cut -d/ -f2)
-            pnpm --filter "@nexustreasury/$svc" exec prisma generate
-          done
+      - name: Generate Prisma client (combined root schema)
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm typecheck
 
   # ── Unit Tests ────────────────────────────────────────────
@@ -139,12 +125,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Generate Prisma clients
-        run: |
-          for schema in packages/*/prisma/schema.prisma; do
-            svc=$(echo "$schema" | cut -d/ -f2)
-            pnpm --filter "@nexustreasury/$svc" exec prisma generate
-          done
+      - name: Generate Prisma client (combined root schema)
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm build
       - run: pnpm test:coverage
       - uses: codecov/codecov-action@v4
@@ -176,12 +158,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - name: Generate Prisma clients
-        run: |
-          for schema in packages/*/prisma/schema.prisma; do
-            svc=$(echo "$schema" | cut -d/ -f2)
-            pnpm --filter "@nexustreasury/$svc" exec prisma generate
-          done
+      - name: Generate Prisma client (combined root schema)
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm build
       - uses: github/codeql-action/analyze@v3
 

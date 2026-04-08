@@ -1,0 +1,177 @@
+// NexusTreasury — Combined Prisma Schema (monorepo root)
+// All bounded contexts in one schema file.
+// Each model uses @@schema() to isolate into its own PostgreSQL schema.
+// 
+// Run `prisma generate` from root to generate ONE client with ALL models.
+// Individual service build scripts call `cd ../../.. && prisma generate`
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["trading", "position", "risk", "alm"]
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRADING CONTEXT
+// ═══════════════════════════════════════════════════════════
+
+model Trade {
+  id               String    @id @default(uuid()) @db.Uuid
+  tenantId         String    @map("tenant_id") @db.Uuid
+  reference        String    @unique
+  assetClass       String    @map("asset_class")
+  direction        String
+  status           String    @default("PENDING_VALIDATION")
+  counterpartyId   String    @map("counterparty_id") @db.Uuid
+  instrumentId     String    @map("instrument_id") @db.Uuid
+  bookId           String    @map("book_id") @db.Uuid
+  traderId         String    @map("trader_id") @db.Uuid
+  notionalAmount   Decimal   @map("notional_amount") @db.Decimal(20, 6)
+  notionalCurrency String    @map("notional_currency") @db.Char(3)
+  price            Decimal   @db.Decimal(20, 10)
+  tradeDate        DateTime  @map("trade_date") @db.Date
+  valueDate        DateTime  @map("value_date") @db.Date
+  maturityDate     DateTime? @map("maturity_date") @db.Date
+  preDealCheckJson Json?     @map("pre_deal_check")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  version          Int       @default(1)
+  events           TradeEvent[]
+
+  @@index([tenantId, bookId])
+  @@index([tenantId, counterpartyId])
+  @@index([tenantId, status])
+  @@map("trades")
+  @@schema("trading")
+}
+
+model TradeEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  tradeId     String    @map("trade_id") @db.Uuid
+  tenantId    String    @map("tenant_id") @db.Uuid
+  eventType   String    @map("event_type")
+  eventId     String    @unique @map("event_id") @db.Uuid
+  payload     Json
+  occurredAt  DateTime  @map("occurred_at")
+  publishedAt DateTime? @map("published_at")
+  trade       Trade     @relation(fields: [tradeId], references: [id])
+
+  @@index([tradeId])
+  @@index([tenantId, eventType])
+  @@map("trade_events")
+  @@schema("trading")
+}
+
+// ═══════════════════════════════════════════════════════════
+// POSITION CONTEXT
+// ═══════════════════════════════════════════════════════════
+
+model Position {
+  id                  String    @id @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  instrumentId        String    @map("instrument_id") @db.Uuid
+  bookId              String    @map("book_id") @db.Uuid
+  currency            String    @db.Char(3)
+  netQuantity         Decimal   @map("net_quantity") @db.Decimal(24, 6)
+  averageCostAmount   Decimal   @map("average_cost_amount") @db.Decimal(20, 6)
+  mtmValueAmount      Decimal   @map("mtm_value_amount") @db.Decimal(20, 6)
+  unrealisedPnlAmount Decimal   @map("unrealised_pnl_amount") @db.Decimal(20, 6)
+  openDate            DateTime  @map("open_date") @db.Date
+  version             Int       @default(0)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+  events              PositionEvent[]
+
+  @@index([tenantId, bookId])
+  @@index([tenantId, instrumentId])
+  @@map("positions")
+  @@schema("position")
+}
+
+model PositionEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  positionId String   @map("position_id") @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  eventType  String   @map("event_type")
+  eventId    String   @unique @map("event_id") @db.Uuid
+  payload    Json
+  occurredAt DateTime @map("occurred_at")
+  sequence   Int
+  position   Position @relation(fields: [positionId], references: [id])
+
+  @@index([positionId, sequence])
+  @@index([tenantId, eventType])
+  @@map("position_events")
+  @@schema("position")
+}
+
+// ═══════════════════════════════════════════════════════════
+// RISK CONTEXT
+// ═══════════════════════════════════════════════════════════
+
+model Limit {
+  id               String   @id @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  limitType        String   @map("limit_type")
+  level            String
+  entityId         String   @map("entity_id")
+  limitAmount      Decimal  @map("limit_amount") @db.Decimal(20, 6)
+  limitCurrency    String   @map("limit_currency") @db.Char(3)
+  utilisedAmount   Decimal  @map("utilised_amount") @db.Decimal(20, 6) @default(0)
+  warningThreshold Decimal  @map("warning_threshold") @db.Decimal(5, 2)
+  inBreach         Boolean  @map("in_breach") @default(false)
+  version          Int      @default(1)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId, entityId])
+  @@index([tenantId, inBreach])
+  @@map("limits")
+  @@schema("risk")
+}
+
+model VaRSnapshot {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  bookId       String?  @map("book_id") @db.Uuid
+  varAmount    Decimal  @map("var_amount") @db.Decimal(20, 6)
+  currency     String   @db.Char(3)
+  confidence   Decimal  @db.Decimal(5, 4)
+  horizon      Int
+  method       String
+  calculatedAt DateTime @map("calculated_at")
+
+  @@index([tenantId, bookId, calculatedAt])
+  @@map("var_snapshots")
+  @@schema("risk")
+}
+
+// ═══════════════════════════════════════════════════════════
+// ALM CONTEXT
+// ═══════════════════════════════════════════════════════════
+
+model LiquidityGapReport {
+  id               String   @id @db.Uuid
+  tenantId         String   @map("tenant_id") @db.Uuid
+  asOfDate         DateTime @map("as_of_date") @db.Date
+  scenario         String
+  currency         String   @db.Char(3)
+  lcrRatio         Decimal  @map("lcr_ratio") @db.Decimal(8, 4)
+  nsfrRatio        Decimal  @map("nsfr_ratio") @db.Decimal(8, 4)
+  isLcrBreached    Boolean  @map("is_lcr_breached") @default(false)
+  isNsfrBreached   Boolean  @map("is_nsfr_breached") @default(false)
+  bucketsJson      Json     @map("buckets_json")
+  lcrJson          Json     @map("lcr_json")
+  nsfrJson         Json     @map("nsfr_json")
+  generatedAt      DateTime @default(now()) @map("generated_at")
+
+  @@index([tenantId, asOfDate, scenario])
+  @@index([tenantId, isLcrBreached])
+  @@map("liquidity_gap_reports")
+  @@schema("alm")
+}

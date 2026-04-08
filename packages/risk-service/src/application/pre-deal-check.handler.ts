@@ -47,7 +47,7 @@ export class PreDealCheckHandler {
     }
 
     const utilisationPct = limits.length > 0
-      ? limits.reduce((max, l) =>
+      ? limits.reduce((max: number, l: Limit) =>
           Math.max(max, (l.utilisedAmount.toNumber() / l.limitAmount.toNumber()) * 100), 0)
       : 0;
 
