@@ -38,7 +38,7 @@ export default defineConfig({
     command: 'pnpm dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env['CI'],
-    timeout: 120_000, // 2 min for Next.js cold start in CI
+    timeout: 180_000, // 3 min — Next.js cold start + domain transpilation in CI
     env: {
       NODE_ENV: 'development',
       PORT: '3000',

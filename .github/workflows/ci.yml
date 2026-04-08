@@ -268,6 +268,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - name: Build domain (required for workspace TypeScript resolution)
+        # Next.js dev server needs @nexustreasury/domain compiled so imports
+        # resolve correctly. Without dist/, the dev server hangs at startup.
+        run: pnpm --filter @nexustreasury/domain build
       - name: Install Playwright browsers
         run: pnpm --filter @nexustreasury/web exec playwright install --with-deps chromium
       - name: Run E2E tests
