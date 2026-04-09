@@ -1,0 +1,1329 @@
+openapi: 3.1.0
+info:
+  title: NexusTreasury Platform API
+  version: 1.0.0
+  description: |
+    Cloud-native Treasury Management System — OpenAPI 3.1 specification
+    covering all 11 REST microservices.
+
+    **Authentication**: Bearer JWT (OAuth2/OIDC via Keycloak)
+    **Base URL**: https://api.nexustreasury.io/api/v1
+    **Rate limit**: 200 req/min per tenant
+
+  contact:
+    name: NexusTreasury Engineering
+    url: https://github.com/manassehkafoh/nexustreasury
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:4001/api/v1
+    description: Trade Service (local)
+  - url: http://localhost:4003/api/v1
+    description: Risk Service (local)
+  - url: http://localhost:4004/api/v1
+    description: ALM Service (local)
+  - url: http://localhost:4005/api/v1
+    description: BO Service (local)
+  - url: http://localhost:4007/api/v1
+    description: Accounting Service (local)
+  - url: http://localhost:4008/api/v1
+    description: Audit Service (local)
+  - url: http://localhost:4011/api/v1
+    description: Reporting Service (local)
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: trades
+    description: Trade capture, amendment, cancellation
+  - name: risk
+    description: Pre-deal checks, VaR, Greeks, FRTB SA capital
+  - name: alm
+    description: LCR, NSFR, liquidity gap, NMD modelling
+  - name: back-office
+    description: SWIFT, settlement instructions, SSI, reconciliation, corporate actions
+  - name: accounting
+    description: Journal entries, IFRS9 ECL, hedge accounting
+  - name: audit
+    description: Tamper-evident audit trail (SOC 2 Type II)
+  - name: reporting
+    description: LCR/NSFR/IRRBB regulatory reports
+  - name: collateral
+    description: ISDA CSA/GMRA margin calls and collateral management
+
+paths:
+  # ── Trade Service ──────────────────────────────────────────────────────────
+  /trades:
+    post:
+      tags: [trades]
+      operationId: bookTrade
+      summary: Book a new trade
+      description: |
+        Captures a new trade across all supported asset classes (FX, Fixed Income,
+        Money Market, IRS, Repo, Islamic Finance). Executes pre-deal sanctions
+        screening and credit limit check synchronously before booking.
+        Publishes `nexus.trading.trades.booked` Kafka event on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookTradeRequest'
+            example:
+              assetClass: FX
+              instrumentType: FORWARD
+              direction: BUY
+              notional: 1000000
+              currency: EUR
+              counterpartyCurrency: USD
+              price: 1.0842
+              counterpartyId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+              bookId: fx-options-desk
+              valueDate: "2026-04-11"
+      responses:
+        '201':
+          description: Trade booked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeResponse'
+        '422':
+          description: Pre-deal check failed (limit breach or sanctions match)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreDealRejection'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    get:
+      tags: [trades]
+      operationId: listTrades
+      summary: List trades (blotter)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING_VALIDATION, VALIDATED, CONFIRMED, SETTLED, CANCELLED]
+        - name: assetClass
+          in: query
+          schema:
+            type: string
+        - name: bookId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        '200':
+          description: Trade list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trades:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TradeResponse'
+                  total:
+                    type: integer
+
+  /trades/{tradeId}:
+    patch:
+      tags: [trades]
+      operationId: amendTrade
+      summary: Amend a trade
+      parameters:
+        - name: tradeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amendmentReason:
+                  type: string
+                notional:
+                  type: number
+                price:
+                  type: number
+              required: [amendmentReason]
+      responses:
+        '200':
+          description: Trade amended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradeResponse'
+
+  # ── Risk Service ───────────────────────────────────────────────────────────
+  /risk/pre-deal-check:
+    post:
+      tags: [risk]
+      operationId: preDealCheck
+      summary: Synchronous pre-deal credit limit check
+      description: |
+        Evaluates all applicable credit and market limits in the hierarchy
+        (entity → book → trader → counterparty). Target P99 < 5ms via
+        in-memory limit cache.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                counterpartyId:
+                  type: string
+                  format: uuid
+                requestedAmount:
+                  type: number
+                requestedCurrency:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+              required: [counterpartyId, requestedAmount, requestedCurrency]
+      responses:
+        '200':
+          description: Check passed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreDealCheckResult'
+        '422':
+          description: Limit would be breached
+
+  /risk/var/historical:
+    post:
+      tags: [risk]
+      operationId: calculateHistoricalVaR
+      summary: Historical Simulation VaR (Basel III)
+      description: |
+        Computes 1-day and 10-day VaR using the last 250 trading days of P&L.
+        99% confidence by default. Includes Expected Shortfall (ES).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pnlHistory:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date
+                      pnl:
+                        type: number
+                      currency:
+                        type: string
+                confidence:
+                  type: number
+                  default: 0.99
+                currency:
+                  type: string
+                  default: USD
+      responses:
+        '200':
+          description: VaR result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaRResult'
+
+  /risk/var/stressed:
+    post:
+      tags: [risk]
+      operationId: calculateStressedVaR
+      summary: Stressed VaR (Basel III 2007-2009 period)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pnlHistory:
+                  type: array
+                  items:
+                    type: object
+                confidence:
+                  type: number
+                  default: 0.99
+                currency:
+                  type: string
+                  default: USD
+      responses:
+        '200':
+          description: Stressed VaR result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VaRResult'
+
+  /risk/frtb/sa:
+    post:
+      tags: [risk]
+      operationId: calculateFRTBSA
+      summary: FRTB Standardised Approach capital (Basel IV)
+      description: |
+        Computes Delta + Vega + Curvature capital per BCBS 457 Sensitivity-Based
+        Method for all five risk classes (GIRR, FX, Equity, Credit, Commodity).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sensitivities:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/FRTBSensitivity'
+                currency:
+                  type: string
+                  default: USD
+      responses:
+        '200':
+          description: FRTB SA capital result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FRTBCapitalResult'
+
+  # ── ALM Service ────────────────────────────────────────────────────────────
+  /alm/report:
+    post:
+      tags: [alm]
+      operationId: generateALMReport
+      summary: Generate ALM liquidity gap report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scenario:
+                  type: string
+                  enum: [CONTRACTUAL, BEHAVIOURAL, STRESSED]
+                currency:
+                  type: string
+                asOfDate:
+                  type: string
+                  format: date
+                cashFlows:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: ALM report generated
+
+  /alm/lcr:
+    post:
+      tags: [alm]
+      operationId: calculateLCR
+      summary: Calculate Liquidity Coverage Ratio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LCRInput'
+      responses:
+        '200':
+          description: LCR result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LCRResult'
+
+  # ── Back Office ────────────────────────────────────────────────────────────
+  /bo/settlement-instructions:
+    get:
+      tags: [back-office]
+      operationId: getSettlementLadder
+      summary: Settlement ladder for the day
+      parameters:
+        - name: valueDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: currency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Settlement ladder
+
+  /bo/ssi:
+    post:
+      tags: [back-office]
+      operationId: upsertSSI
+      summary: Create or update a Standing Settlement Instruction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SSIInput'
+      responses:
+        '201':
+          description: SSI created or updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ssi:
+                    $ref: '#/components/schemas/SSIRecord'
+                  quarantined:
+                    type: boolean
+                  flags:
+                    type: array
+                    items:
+                      type: string
+
+  /bo/reconciliation:
+    post:
+      tags: [back-office]
+      operationId: reconcileNostro
+      summary: Reconcile nostro statement (camt.053/MT940)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                statementId:
+                  type: string
+                nostroAccount:
+                  type: string
+                currency:
+                  type: string
+                entries:
+                  type: array
+                  items:
+                    type: object
+                expectedFlows:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Reconciliation result with STP rate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconciliationResult'
+
+  # ── Accounting Service ─────────────────────────────────────────────────────
+  /accounting/journal-entries:
+    post:
+      tags: [accounting]
+      operationId: postJournalEntry
+      summary: Post a manual journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JournalEntryInput'
+      responses:
+        '201':
+          description: Journal entry posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JournalEntryResponse'
+
+  /accounting/ecl:
+    post:
+      tags: [accounting]
+      operationId: calculateECL
+      summary: Calculate IFRS9 Expected Credit Loss (Stage 1/2/3)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ECLInput'
+      responses:
+        '200':
+          description: ECL result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ECLResult'
+
+  /accounting/hedge/effectiveness-test:
+    post:
+      tags: [accounting]
+      operationId: hedgeEffectivenessTest
+      summary: IFRS9 hedge effectiveness test
+      description: Dollar-offset or regression effectiveness test per IAS 39.88
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HedgeTestInput'
+      responses:
+        '200':
+          description: Effectiveness test result
+
+  /accounting/chart-of-accounts:
+    get:
+      tags: [accounting]
+      operationId: getChartOfAccounts
+      summary: Get tenant Chart of Accounts
+      responses:
+        '200':
+          description: Standard banking CoA with IFRS9 tags
+
+  # ── Audit Service ──────────────────────────────────────────────────────────
+  /audit/records:
+    get:
+      tags: [audit]
+      operationId: searchAuditRecords
+      summary: Search audit records (SOC 2 evidence)
+      parameters:
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [TRADE, POSITION, RISK, ACCOUNTING, SETTLEMENT, SECURITY, PLATFORM]
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [INFO, WARNING, CRITICAL]
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Audit records matching criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditRecord'
+                  total:
+                    type: integer
+
+  # ── Reporting Service ──────────────────────────────────────────────────────
+  /reporting/lcr:
+    post:
+      tags: [reporting]
+      operationId: buildLCRReport
+      summary: Generate LCR Daily Monitoring Report (BCBS 238 Annex I)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LCRReportInput'
+      responses:
+        '200':
+          description: LCR regulatory report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LCRReport'
+
+  /reporting/nsfr:
+    post:
+      tags: [reporting]
+      operationId: buildNSFRReport
+      summary: Generate NSFR Quarterly Report (BCBS 295)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NSFRReportInput'
+      responses:
+        '200':
+          description: NSFR regulatory report
+
+  /reporting/irrbb:
+    post:
+      tags: [reporting]
+      operationId: buildIRRBBReport
+      summary: IRRBB Supervisory Outlier Test (BCBS 368 §12)
+      description: |
+        Computes EVE impact across 6 prescribed rate scenarios.
+        Flags outlier banks where |ΔEVE/Tier1| > 15%.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IRRBBReportInput'
+      responses:
+        '200':
+          description: IRRBB outlier test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IRRBBReport'
+
+  # ── Health endpoints (all services) ───────────────────────────────────────
+  /live:
+    get:
+      tags: [trades]
+      operationId: liveness
+      summary: Kubernetes liveness probe
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+
+  /ready:
+    get:
+      tags: [trades]
+      operationId: readiness
+      summary: Kubernetes readiness probe (checks DB + Kafka + Redis)
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+        '503':
+          description: Service not ready (dependency failure)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by Keycloak OIDC
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid JWT
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: UNAUTHORIZED
+
+  schemas:
+    BookTradeRequest:
+      type: object
+      required: [assetClass, instrumentType, direction, notional, currency, counterpartyId, bookId, valueDate]
+      properties:
+        assetClass:
+          type: string
+          enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE, EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE]
+        instrumentType:
+          type: string
+          description: e.g. SPOT, FORWARD, OPTION, BOND, IRS, DEPOSIT
+        direction:
+          type: string
+          enum: [BUY, SELL]
+        notional:
+          type: number
+          minimum: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        counterpartyCurrency:
+          type: string
+          minLength: 3
+          maxLength: 3
+        price:
+          type: number
+        counterpartyId:
+          type: string
+          format: uuid
+        bookId:
+          type: string
+        traderId:
+          type: string
+        valueDate:
+          type: string
+          format: date
+        dealerNotes:
+          type: string
+          maxLength: 200
+
+    TradeResponse:
+      type: object
+      properties:
+        tradeId:
+          type: string
+          format: uuid
+        reference:
+          type: string
+          example: FX-20260409-A1B2C3
+        status:
+          type: string
+          enum: [PENDING_VALIDATION, VALIDATED, CONFIRMED, SETTLED, CANCELLED, AMENDED]
+        assetClass:
+          type: string
+        instrumentType:
+          type: string
+        direction:
+          type: string
+        notional:
+          type: number
+        currency:
+          type: string
+        price:
+          type: number
+        valueDate:
+          type: string
+          format: date
+        bookedAt:
+          type: string
+          format: date-time
+        tenantId:
+          type: string
+
+    PreDealRejection:
+      type: object
+      properties:
+        approved:
+          type: boolean
+          example: false
+        failureReasons:
+          type: array
+          items:
+            type: string
+          example: ["Credit limit breach: headroom $0 on counterparty CITI", "Sanctions MATCH: entity on OFAC SDN list"]
+        utilisationPct:
+          type: number
+        headroomAmount:
+          type: number
+
+    PreDealCheckResult:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        utilisationPct:
+          type: number
+          description: Current limit utilisation percentage
+        headroomAmount:
+          type: number
+        currency:
+          type: string
+        failureReasons:
+          type: array
+          items:
+            type: string
+        checkedAt:
+          type: string
+          format: date-time
+        responseTimeMs:
+          type: number
+
+    VaRResult:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [HISTORICAL, MONTE_CARLO, STRESSED]
+        confidenceLevel:
+          type: number
+          example: 0.99
+        horizon:
+          type: integer
+          example: 1
+        var1Day:
+          type: number
+          description: 1-day VaR (positive loss amount)
+        var10Day:
+          type: number
+          description: 10-day VaR = var1Day × √10
+        expectedShortfall:
+          type: number
+        scenariosUsed:
+          type: integer
+        stressedPeriod:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+        currency:
+          type: string
+        computedAt:
+          type: string
+          format: date-time
+
+    FRTBSensitivity:
+      type: object
+      required: [positionId, riskClass, bucket, riskFactor, sensitivity, currency]
+      properties:
+        positionId:
+          type: string
+        riskClass:
+          type: string
+          enum: [GIRR, CREDIT_SPREAD_NON_SEC, FX, EQUITY, COMMODITY]
+        bucket:
+          type: string
+          description: Risk sub-bucket per BCBS 457 Appendix
+        riskFactor:
+          type: string
+          description: e.g. "5Y" for GIRR, "EURUSD" for FX
+        sensitivity:
+          type: number
+          description: DV01 for rates, delta for FX/equity
+        currency:
+          type: string
+
+    FRTBCapitalResult:
+      type: object
+      properties:
+        totalCapital:
+          type: number
+        deltaCapitalTotal:
+          type: number
+        vegaCapitalTotal:
+          type: number
+        curvatureCapitalTotal:
+          type: number
+        byRiskClass:
+          type: array
+          items:
+            type: object
+            properties:
+              riskClass:
+                type: string
+              deltaCapital:
+                type: number
+              vegaCapital:
+                type: number
+              curvatureCapital:
+                type: number
+              totalCapital:
+                type: number
+        currency:
+          type: string
+        computedAt:
+          type: string
+          format: date-time
+
+    LCRInput:
+      type: object
+      properties:
+        hqlaLevel1:
+          type: number
+        hqlaLevel2A:
+          type: number
+        hqlaLevel2B:
+          type: number
+        currency:
+          type: string
+        cashFlows:
+          type: array
+          items:
+            type: object
+
+    LCRResult:
+      type: object
+      properties:
+        lcrRatio:
+          type: number
+        totalHQLA:
+          type: number
+        netCashOutflows:
+          type: number
+        isCompliant:
+          type: boolean
+        currency:
+          type: string
+
+    SSIInput:
+      type: object
+      required: [counterpartyId, currency, instrumentType, method, beneficiaryBank, beneficiaryAccount, beneficiaryName]
+      properties:
+        counterpartyId:
+          type: string
+        currency:
+          type: string
+        instrumentType:
+          type: string
+        method:
+          type: string
+          enum: [SWIFT_MT, CLS, DTC, EUROCLEAR, CLEARSTREAM, LOCAL_CSD, INTERNAL]
+        correspondentBank:
+          $ref: '#/components/schemas/BankIdentifier'
+        beneficiaryBank:
+          $ref: '#/components/schemas/BankIdentifier'
+        beneficiaryAccount:
+          type: string
+        beneficiaryName:
+          type: string
+        reference:
+          type: string
+
+    SSIRecord:
+      allOf:
+        - $ref: '#/components/schemas/SSIInput'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            active:
+              type: boolean
+            version:
+              type: integer
+            createdAt:
+              type: string
+              format: date-time
+
+    BankIdentifier:
+      type: object
+      required: [bic]
+      properties:
+        bic:
+          type: string
+          description: SWIFT BIC (8 or 11 characters)
+        iban:
+          type: string
+        accountNumber:
+          type: string
+        routingCode:
+          type: string
+        bankName:
+          type: string
+        country:
+          type: string
+
+    ReconciliationResult:
+      type: object
+      properties:
+        statementId:
+          type: string
+        matchedCount:
+          type: integer
+        breakCount:
+          type: integer
+        reviewCount:
+          type: integer
+        stpRate:
+          type: number
+          description: STP rate (0–1); target ≥ 0.95
+        processingMs:
+          type: number
+        matches:
+          type: array
+          items:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [MATCHED, BREAK, REVIEW, PENDING]
+              breakType:
+                type: string
+                enum: [TIMING_DIFFERENCE, AMOUNT_MISMATCH, MISSING_PAYMENT, UNRECOGNISED, DUPLICATE]
+
+    JournalEntryInput:
+      type: object
+      required: [valueDate, description, lines, sourceSystem]
+      properties:
+        sourceTradeId:
+          type: string
+          format: uuid
+        valueDate:
+          type: string
+          format: date
+        description:
+          type: string
+        sourceSystem:
+          type: string
+          default: MANUAL
+        lines:
+          type: array
+          minItems: 2
+          items:
+            type: object
+            required: [accountCode, accountName, direction, amount, currency]
+            properties:
+              accountCode:
+                type: string
+                example: "1300"
+              accountName:
+                type: string
+              direction:
+                type: string
+                enum: [DR, CR]
+              amount:
+                type: number
+                minimum: 0
+              currency:
+                type: string
+              description:
+                type: string
+
+    JournalEntryResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DRAFT, POSTED, REVERSED]
+        lines:
+          type: array
+          items:
+            type: object
+        drTotal:
+          type: number
+        crTotal:
+          type: number
+
+    ECLInput:
+      type: object
+      required: [instrumentId, originationDate, outstandingPrincipal, currency]
+      properties:
+        instrumentId:
+          type: string
+        originationDate:
+          type: string
+          format: date
+        reportingDate:
+          type: string
+          format: date
+        outstandingPrincipal:
+          type: number
+        currency:
+          type: string
+        accruedInterest:
+          type: number
+          default: 0
+        originationRating:
+          type: string
+          default: BBB
+        currentRating:
+          type: string
+          default: BBB
+        daysPastDue:
+          type: integer
+          default: 0
+        onWatchList:
+          type: boolean
+          default: false
+        effectiveInterestRate:
+          type: number
+          default: 0.05
+        recoveryRate:
+          type: number
+          default: 0.4
+
+    ECLResult:
+      type: object
+      properties:
+        instrumentId:
+          type: string
+        stage:
+          type: integer
+          enum: [1, 2, 3]
+          description: IFRS9 impairment stage
+        pd12Month:
+          type: number
+        pdLifetime:
+          type: number
+        lgd:
+          type: number
+        ead:
+          type: number
+        ecl:
+          type: number
+        currency:
+          type: string
+        rationale:
+          type: string
+        sicrTriggered:
+          type: boolean
+
+    HedgeTestInput:
+      type: object
+      required: [hedgeId, hedgeType, hedgedItemId, hedgingInstrumentId, notional, currency, effectivenessMethod, designationDate, instrumentFVChange, hedgedItemFVChange]
+      properties:
+        hedgeId:
+          type: string
+        hedgeType:
+          type: string
+          enum: [FAIR_VALUE, CASH_FLOW, NET_INVESTMENT]
+        hedgedItemId:
+          type: string
+        hedgingInstrumentId:
+          type: string
+        notional:
+          type: number
+        currency:
+          type: string
+        effectivenessMethod:
+          type: string
+          enum: [DOLLAR_OFFSET, REGRESSION, HYPOTHETICAL_DERIVATIVE]
+        designationDate:
+          type: string
+          format: date
+        hedgeRatio:
+          type: number
+          default: 1.0
+        instrumentFVChange:
+          type: number
+        hedgedItemFVChange:
+          type: number
+        historicalPairs:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+
+    AuditRecord:
+      type: object
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+        eventId:
+          type: string
+        eventType:
+          type: string
+        category:
+          type: string
+          enum: [TRADE, POSITION, RISK, ACCOUNTING, SETTLEMENT, SECURITY, PLATFORM, MARKET_DATA, ALM, COMPLIANCE]
+        severity:
+          type: string
+          enum: [INFO, WARNING, CRITICAL]
+        entityId:
+          type: string
+        entityType:
+          type: string
+        actor:
+          type: object
+          properties:
+            userId:
+              type: string
+            username:
+              type: string
+            roles:
+              type: array
+              items:
+                type: string
+            ipAddress:
+              type: string
+        occurredAt:
+          type: string
+          format: date-time
+        recordedAt:
+          type: string
+          format: date-time
+        checksum:
+          type: string
+          description: HMAC-SHA256 tamper-evidence signature
+
+    LCRReportInput:
+      type: object
+      required: [tenantId, reportDate, currency, hqlaItems, outflowItems, inflowItems]
+      properties:
+        tenantId:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        currency:
+          type: string
+        hqlaItems:
+          type: array
+          items:
+            type: object
+        outflowItems:
+          type: array
+          items:
+            type: object
+        inflowItems:
+          type: array
+          items:
+            type: object
+
+    LCRReport:
+      type: object
+      properties:
+        reportDate:
+          type: string
+          format: date
+        totalHQLA:
+          type: number
+        totalOutflows:
+          type: number
+        totalInflows:
+          type: number
+        netCashOutflows:
+          type: number
+        lcrRatio:
+          type: number
+        minimumLCR:
+          type: number
+          default: 1.0
+        isCompliant:
+          type: boolean
+        deficitAmount:
+          type: number
+        generatedAt:
+          type: string
+          format: date-time
+        narrativeSummary:
+          type: string
+          description: AI/ML generated regulatory narrative (optional)
+
+    NSFRReportInput:
+      type: object
+      required: [tenantId, reportDate, currency, asfComponents, rsfComponents]
+      properties:
+        tenantId:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        currency:
+          type: string
+        asfComponents:
+          type: array
+          items:
+            type: object
+        rsfComponents:
+          type: array
+          items:
+            type: object
+
+    IRRBBReportInput:
+      type: object
+      required: [tenantId, reportDate, currency, tier1Capital, eveDeltas, niiSensitivity200Up, niiSensitivity200Down]
+      properties:
+        tenantId:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        currency:
+          type: string
+        tier1Capital:
+          type: number
+        eveDeltas:
+          type: object
+          description: ΔEVE for each BCBS 368 scenario
+          properties:
+            PARALLEL_UP:
+              type: number
+            PARALLEL_DOWN:
+              type: number
+            STEEPENER:
+              type: number
+            FLATTENER:
+              type: number
+            SHORT_RATE_UP:
+              type: number
+            SHORT_RATE_DOWN:
+              type: number
+        niiSensitivity200Up:
+          type: number
+        niiSensitivity200Down:
+          type: number
+
+    IRRBBReport:
+      type: object
+      properties:
+        reportDate:
+          type: string
+          format: date
+        tier1Capital:
+          type: number
+        scenarios:
+          type: array
+          items:
+            type: object
+            properties:
+              scenario:
+                type: string
+              shockBps:
+                type: integer
+              eveDelta:
+                type: number
+              eveRatioPct:
+                type: number
+              isOutlier:
+                type: boolean
+        hasOutlierBank:
+          type: boolean
+        generatedAt:
+          type: string
+          format: date-time

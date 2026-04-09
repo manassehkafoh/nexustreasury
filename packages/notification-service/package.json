@@ -1,7 +1,25 @@
 {
   "name": "@nexustreasury/notification-service",
-  "version": "1.0.0", "private": true, "type": "module",
-  "scripts": { "build": "tsc --build", "test": "vitest run", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@nexustreasury/domain": "workspace:*", "kafkajs": "^2.2.4", "fastify": "^4.26.0", "@fastify/jwt": "^8.0.0", "pino": "^8.18.0", "zod": "^3.22.0" },
-  "devDependencies": { "@vitest/coverage-v8": "^1.0.0", "@types/node": "^20.0.0", "tsx": "^4.7.0", "vitest": "^1.0.0" }
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nexustreasury/domain": "workspace:*",
+    "kafkajs": "^2.2.4",
+    "fastify": "^5.8.4",
+    "@fastify/jwt": "^9.1.0",
+    "pino": "^8.18.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "vitest": "^1.0.0"
+  }
 }

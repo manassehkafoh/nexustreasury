@@ -2,7 +2,7 @@
   "name": "nexustreasury",
   "version": "1.0.0",
   "private": true,
-  "description": "NexusTreasury — Cloud-Native Treasury Management Platform",
+  "description": "NexusTreasury \u2014 Cloud-Native Treasury Management Platform",
   "engines": {
     "node": ">=24",
     "pnpm": ">=9.0.0"
@@ -38,7 +38,8 @@
   "pnpm": {
     "overrides": {
       "react": "^18.3.1",
-      "react-dom": "^18.3.1"
+      "react-dom": "^18.3.1",
+      "fast-jwt": "^6.2.1"
     }
   },
   "dependencies": {

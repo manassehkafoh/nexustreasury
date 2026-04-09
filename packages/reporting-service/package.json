@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@nexustreasury/domain": "workspace:*",
-    "@fastify/jwt": "^8.0.0",
-    "fastify": "^4.26.0",
+    "@fastify/jwt": "^9.1.0",
+    "fastify": "^5.8.4",
     "kafkajs": "^2.2.4",
     "pino": "^8.18.0",
     "zod": "^3.22.0"
