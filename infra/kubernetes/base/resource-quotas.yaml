@@ -1,0 +1,52 @@
+# ResourceQuota — namespace-level resource caps
+# Prevents runaway resource consumption from misconfigured deployments.
+# Values sized for production: 13 services × average resource profile.
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: nexustreasury-quota
+  namespace: nexustreasury
+spec:
+  hard:
+    # Compute
+    requests.cpu:     "20"       # 13 services × avg 1.5 vCPU requests
+    requests.memory:  "40Gi"     # 13 services × avg 3Gi memory requests
+    limits.cpu:       "60"       # 13 services × avg 4.6 vCPU limits (burst)
+    limits.memory:    "80Gi"     # 13 services × avg 6Gi memory limits (burst)
+    # Object counts
+    pods:             "200"      # max 15 pods per service × 13 services
+    services:         "30"
+    persistentvolumeclaims: "20"
+    secrets:          "100"
+    configmaps:       "50"
+---
+# LimitRange — per-container defaults and caps
+# Prevents containers without resource specs from claiming unbounded CPU/memory.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: nexustreasury-limits
+  namespace: nexustreasury
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu:    500m
+        memory: 512Mi
+      defaultRequest:
+        cpu:    100m
+        memory: 256Mi
+      max:
+        cpu:    "4"
+        memory: 4Gi
+      min:
+        cpu:    50m
+        memory: 64Mi
+    - type: Pod
+      max:
+        cpu:    "8"
+        memory: 8Gi
+    - type: PersistentVolumeClaim
+      max:
+        storage: 100Gi

@@ -1,0 +1,69 @@
+{
+  "name": "NexusTreasury Dev Environment",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "forwardPorts": [3000, 4001, 4002, 4003, 4004, 4005, 4006, 4007, 4008, 4009, 4010, 4011],
+
+  "portsAttributes": {
+    "3000": { "label": "Web Dashboard",        "onAutoForward": "openBrowser" },
+    "4001": { "label": "Trade Service" },
+    "4002": { "label": "Position Service" },
+    "4003": { "label": "Risk Service" },
+    "4004": { "label": "ALM Service" },
+    "4005": { "label": "BO Service" },
+    "4006": { "label": "Market Data Service" },
+    "4007": { "label": "Accounting Service" },
+    "4008": { "label": "Audit Service" },
+    "4009": { "label": "Notification Service" },
+    "4010": { "label": "Collateral Service" },
+    "4011": { "label": "Reporting Service" }
+  },
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": { "source.organizeImports": "explicit" },
+        "vitest.enable": true,
+        "vitest.commandLine": "pnpm exec vitest",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "vitest.explorer",
+        "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "GitHub.vscode-pull-request-github",
+        "eamodio.gitlens",
+        "42Crunch.vscode-openapi",
+        "Arjun.swagger-viewer",
+        "humao.rest-client",
+        "rangav.vscode-thunder-client"
+      ]
+    }
+  },
+
+  "remoteEnv": {
+    "NODE_ENV": "development",
+    "JWT_SECRET": "devcontainer-secret-not-for-prod",
+    "AUDIT_HMAC_KEY": "devcontainer-hmac-key-32-chars!!",
+    "DATABASE_URL": "postgresql://nexus:nexus_dev@localhost:5432/nexustreasury",
+    "KAFKA_BROKERS": "localhost:9092",
+    "REDIS_URL": "redis://localhost:6379"
+  }
+}

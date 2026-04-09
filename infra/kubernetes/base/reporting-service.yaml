@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: nexustreasury
+  labels: { app: reporting-service, sprint: "6" }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: reporting-service }
+  template:
+    metadata:
+      labels: { app: reporting-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext: { runAsNonRoot: true, runAsUser: 1000 }
+      containers:
+        - name: reporting-service
+          image: ghcr.io/manassehkafoh/nexustreasury/reporting-service:latest
+          ports: [{ containerPort: 4011 }, { containerPort: 9090, name: metrics }]
+          env:
+            - { name: NODE_ENV, value: production }
+            - { name: PORT, value: "4011" }
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: nexustreasury-db, key: url-readonly }
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits:   { cpu: "2", memory: 2Gi }
+          livenessProbe:  { httpGet: { path: /live,  port: 4011 }, initialDelaySeconds: 20 }
+          readinessProbe: { httpGet: { path: /ready, port: 4011 }, initialDelaySeconds: 30, failureThreshold: 3 }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: nexustreasury
+spec:
+  selector: { app: reporting-service }
+  ports: [{ name: http, port: 4011, targetPort: 4011 }]

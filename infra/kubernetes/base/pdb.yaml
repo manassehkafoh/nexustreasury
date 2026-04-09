@@ -1,0 +1,127 @@
+# PodDisruptionBudgets — ensure minimum available pods during node drain / rolling updates
+# Prevents > 1 replica going down at a time for all production services.
+# Critical for trading hours: disruptions must not impact P99 < 100ms SLA.
+#
+# Pattern: minAvailable = replicas - 1 (allows rolling update of 1 pod at a time)
+# Services with minReplicas=2 get minAvailable=1
+# Services with minReplicas=3+ get minAvailable=2
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-trade-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: { app: trade-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-risk-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: risk-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-alm-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: alm-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-bo-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: bo-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-accounting-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: accounting-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-audit-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: audit-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-notification-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: notification-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-collateral-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: collateral-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-reporting-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: reporting-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-market-data-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: market-data-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-position-service
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: position-service }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-web
+  namespace: nexustreasury
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: { app: web }

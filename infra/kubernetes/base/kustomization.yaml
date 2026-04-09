@@ -1,9 +1,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: nexustreasury
+
 resources:
+  # Namespace
   - namespaces.yaml
-  - network-policy.yaml
+
+  # Sprint 1 services
   - trade-service.yaml
   - position-service.yaml
   - risk-service.yaml
@@ -11,3 +15,40 @@ resources:
   - bo-service.yaml
   - market-data-service.yaml
   - web.yaml
+
+  # Sprint 2 services
+  - accounting-service.yaml
+
+  # Sprint 5-6 services (HPA/KEDA in separate overlay)
+  - reporting-service.yaml
+
+  # Network policies (Zero Trust)
+  - network-policy.yaml
+
+  # Reliability
+  - pdb.yaml
+  - resource-quotas.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: nexustreasury
+  app.kubernetes.io/managed-by: argocd
+
+images:
+  - name: ghcr.io/manassehkafoh/nexustreasury/trade-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/position-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/risk-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/alm-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/bo-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/market-data-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/accounting-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/reporting-service
+    newTag: latest
+  - name: ghcr.io/manassehkafoh/nexustreasury/web
+    newTag: latest

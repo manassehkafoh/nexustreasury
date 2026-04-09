@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: accounting-service
+  namespace: nexustreasury
+  labels: { app: accounting-service, sprint: "2" }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: accounting-service }
+  template:
+    metadata:
+      labels: { app: accounting-service }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        vault.hashicorp.com/agent-inject: "true"
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext: { runAsNonRoot: true, runAsUser: 1000 }
+      containers:
+        - name: accounting-service
+          image: ghcr.io/manassehkafoh/nexustreasury/accounting-service:latest
+          ports: [{ containerPort: 4007 }, { containerPort: 9090, name: metrics }]
+          env:
+            - { name: NODE_ENV, value: production }
+            - { name: PORT, value: "4007" }
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: { name: nexustreasury-db, key: url }
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef: { name: nexustreasury-kafka, key: brokers }
+          resources:
+            requests: { cpu: 200m, memory: 512Mi }
+            limits:   { cpu: 1000m, memory: 1Gi }
+          livenessProbe:  { httpGet: { path: /live,  port: 4007 }, initialDelaySeconds: 15 }
+          readinessProbe: { httpGet: { path: /ready, port: 4007 }, initialDelaySeconds: 20, failureThreshold: 3 }
+          securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: accounting-service
+  namespace: nexustreasury
+spec:
+  selector: { app: accounting-service }
+  ports: [{ name: http, port: 4007, targetPort: 4007 }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: accounting-service-hpa
+  namespace: nexustreasury
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: accounting-service }
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
