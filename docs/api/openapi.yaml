@@ -649,6 +649,344 @@ paths:
         '503':
           description: Service not ready (dependency failure)
 
+  # ── Collateral Service ────────────────────────────────────────────────────
+
+  /collateral/agreements:
+    get:
+      summary: List CSA/GMRA Collateral Agreements
+      description: |
+        Returns all active ISDA CSA and GMRA collateral agreements for the tenant.
+        Each agreement defines the threshold, MTA, eligible collateral schedule,
+        and independent amount for a bilateral counterparty relationship.
+      operationId: listCollateralAgreements
+      tags: [Collateral]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: counterpartyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: agreementType
+          in: query
+          schema:
+            type: string
+            enum: [ISDA_CSA, GMRA, GMSLA]
+      responses:
+        '200':
+          description: Collateral agreements retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agreements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CollateralAgreement'
+
+  /collateral/margin-calls:
+    post:
+      summary: Compute Margin Call
+      description: |
+        Computes the margin call direction and amount for a bilateral counterparty
+        under the given CSA/GMRA agreement. Uses the formula:
+        callAmount = |netMTM| − threshold − |currentCollateralPosted|
+        subject to the minimum transfer amount (MTA).
+      operationId: computeMarginCall
+      tags: [Collateral]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agreementId, netMTM, currentCollateralPosted, valuationDate]
+              properties:
+                agreementId:
+                  type: string
+                  format: uuid
+                netMTM:
+                  type: number
+                  description: Net mark-to-market of the portfolio (positive = we are in-the-money)
+                currentCollateralPosted:
+                  type: number
+                  description: Current collateral posted (positive = we have posted, negative = they have posted)
+                valuationDate:
+                  type: string
+                  format: date
+              example:
+                agreementId: csa-550e8400-e29b-41d4
+                netMTM: 1800000
+                currentCollateralPosted: 200000
+                valuationDate: "2026-04-09"
+      responses:
+        '200':
+          description: Margin call computed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarginCallResult'
+
+  /collateral/margin-calls/settle:
+    post:
+      summary: Settle Margin Call (CTD Optimisation)
+      description: |
+        Selects the cheapest-to-deliver (CTD) collateral from the eligible inventory
+        to settle the given margin call amount. Applies haircuts from the CSA
+        eligibility schedule and returns the optimal allocation.
+      operationId: settleMarginCall
+      tags: [Collateral]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [marginCallId, agreementId, availableInventory]
+              properties:
+                marginCallId:
+                  type: string
+                agreementId:
+                  type: string
+                  format: uuid
+                availableInventory:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:        { type: string }
+                      collateralType: { type: string }
+                      faceValue: { type: number }
+                      marketValue: { type: number }
+                      currency:  { type: string }
+      responses:
+        '200':
+          description: CTD allocation computed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allocations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        collateralId: { type: string }
+                        adjustedValue: { type: number }
+                        haircut:       { type: number }
+                        currency:      { type: string }
+
+  # ── Notification Service ───────────────────────────────────────────────────
+
+  /notifications/rules:
+    get:
+      summary: List Notification Rules
+      description: Returns all active notification routing rules for the tenant.
+      operationId: listNotificationRules
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Rules retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/NotificationRule'
+    post:
+      summary: Create Notification Rule
+      description: |
+        Creates a notification routing rule. Rules define which Kafka event topics
+        trigger notifications to which channels (EMAIL, WEBSOCKET, WEBHOOK).
+        Priority (high/normal/low) determines email urgency and WS badge colour.
+      operationId: createNotificationRule
+      tags: [Notifications]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRuleInput'
+            example:
+              eventTopic: nexus.risk.limit-breach
+              channels: [EMAIL, WEBSOCKET]
+              priority: high
+              recipients: [risk@bank.com]
+              enabled: true
+      responses:
+        '201':
+          description: Rule created
+
+  # ── Market Data Service ────────────────────────────────────────────────────
+
+  /market-data/rates:
+    get:
+      summary: Get Current Rate Snapshot
+      description: |
+        Returns the latest market rate snapshot published by the market-data-service
+        from Bloomberg BLPAPI or LSEG RDP. Rates are sourced from the Redis cache
+        (max staleness: 1 second in production, 30 seconds in staging).
+      operationId: getRates
+      tags: [Market Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: pairs
+          in: query
+          description: Comma-separated currency pairs, e.g. EUR/USD,GBP/USD
+          schema:
+            type: string
+          example: EUR/USD,GBP/USD,USD/JPY
+        - name: asOf
+          in: query
+          description: Historical rate as of this datetime (ISO 8601). Omit for current.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Rate snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  snapshotAt:
+                    type: string
+                    format: date-time
+                  source:
+                    type: string
+                    enum: [BLOOMBERG, LSEG_RDP, MANUAL, FALLBACK_CACHE]
+                  rates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        pair:    { type: string, example: EUR/USD }
+                        bid:     { type: number }
+                        ask:     { type: number }
+                        mid:     { type: number }
+                        spread:  { type: number }
+
+  /market-data/curves:
+    get:
+      summary: Get Yield Curve (Discount/Forward)
+      description: |
+        Returns the discount and forward rate curves used for IRS NPV calculation
+        and bond pricing. Curves are bootstrapped from market instrument quotes.
+      operationId: getYieldCurves
+      tags: [Market Data]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: currency
+          in: query
+          required: true
+          schema:
+            type: string
+          example: USD
+        - name: curveType
+          in: query
+          schema:
+            type: string
+            enum: [DISCOUNT, FORWARD, OVERNIGHT_INDEX_SWAP]
+      responses:
+        '200':
+          description: Yield curve
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currency: { type: string }
+                  curveType: { type: string }
+                  tenors:    { type: array, items: { type: string } }
+                  rates:     { type: array, items: { type: number } }
+                  asOf:      { type: string, format: date-time }
+
+  # ── Risk Limits Management ─────────────────────────────────────────────────
+
+  /risk/limits:
+    get:
+      summary: List Risk Limits
+      description: Returns the full limit hierarchy for the tenant.
+      operationId: listLimits
+      tags: [Risk]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limitType
+          in: query
+          schema:
+            type: string
+            enum: [CREDIT, MARKET, CONCENTRATION, LIQUIDITY]
+        - name: counterpartyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Limits retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  limits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RiskLimit'
+
+  /risk/limits/{limitId}/override:
+    post:
+      summary: Override Limit (RISK_MANAGER approval required)
+      description: |
+        Temporarily increases a limit for a specific trade. Requires dual approval:
+        the requesting dealer submits the override, a RISK_MANAGER must approve.
+        All overrides are audit-logged with requester, approver, reason, and expiry.
+      operationId: overrideLimit
+      tags: [Risk]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limitId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestedAmount, currency, expiresAt, reason]
+              properties:
+                requestedAmount: { type: number }
+                currency:        { type: string }
+                expiresAt:       { type: string, format: date-time }
+                reason:          { type: string, maxLength: 500 }
+      responses:
+        '202':
+          description: Override request submitted, pending RISK_MANAGER approval
+        '403':
+          description: Insufficient permissions
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1264,6 +1602,73 @@ components:
           type: array
           items:
             type: object
+
+
+    CollateralAgreement:
+      type: object
+      properties:
+        id:              { type: string, format: uuid }
+        tenantId:        { type: string }
+        counterpartyId:  { type: string, format: uuid }
+        agreementType:   { type: string, enum: [ISDA_CSA, GMRA, GMSLA] }
+        threshold:       { type: number }
+        mta:             { type: number, description: Minimum Transfer Amount }
+        independentAmount: { type: number }
+        currency:        { type: string }
+        active:          { type: boolean }
+
+    MarginCallResult:
+      type: object
+      properties:
+        agreementId:  { type: string }
+        direction:    { type: string, enum: [WE_CALL, THEY_CALL, NO_CALL] }
+        callAmount:   { type: number }
+        currency:     { type: string }
+        valueDate:    { type: string, format: date }
+        threshold:    { type: number }
+        currentCollateral: { type: number }
+        netMTM:       { type: number }
+
+    NotificationRule:
+      type: object
+      properties:
+        id:           { type: string }
+        eventTopic:   { type: string }
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [EMAIL, WEBSOCKET, WEBHOOK]
+        priority:     { type: string, enum: [high, normal, low] }
+        recipients:   { type: array, items: { type: string } }
+        enabled:      { type: boolean }
+
+    NotificationRuleInput:
+      type: object
+      required: [eventTopic, channels, priority]
+      properties:
+        eventTopic: { type: string }
+        channels:
+          type: array
+          items: { type: string, enum: [EMAIL, WEBSOCKET, WEBHOOK] }
+        priority:   { type: string, enum: [high, normal, low] }
+        recipients: { type: array, items: { type: string, format: email } }
+        enabled:    { type: boolean, default: true }
+
+    RiskLimit:
+      type: object
+      properties:
+        id:           { type: string }
+        tenantId:     { type: string }
+        limitType:    { type: string, enum: [CREDIT, MARKET, CONCENTRATION, LIQUIDITY] }
+        counterpartyId: { type: string, format: uuid }
+        hardLimit:    { type: number }
+        softLimit:    { type: number }
+        currency:     { type: string }
+        utilisationPct: { type: number }
+        currentExposure: { type: number }
+        headroom:     { type: number }
+        active:       { type: boolean }
 
     IRRBBReportInput:
       type: object

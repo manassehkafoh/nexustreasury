@@ -60,6 +60,16 @@
       "key": "tokenExpiry",
       "value": "0",
       "description": "Token expiry epoch ms \u2014 auto-set by Get JWT Token"
+    },
+    {
+      "key": "baseUrl_collateral",
+      "value": "http://localhost:4010/api/v1",
+      "description": "Collateral Service"
+    },
+    {
+      "key": "baseUrl_market",
+      "value": "http://localhost:4006/api/v1",
+      "description": "Market Data Service"
     }
   ],
   "auth": {
