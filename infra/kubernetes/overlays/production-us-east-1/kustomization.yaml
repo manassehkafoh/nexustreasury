@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Secondary region: us-east-1 (N. Virginia)
+# Serves: Americas trading hours (08:00–17:00 EST)
+# Failover: Routes to eu-west-1 if unhealthy
+
+namespace: nexustreasury
+
+resources:
+  - ../../base
+
+patches:
+  - target: { kind: Deployment, name: trade-service }
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2   # lower than primary; scales up on failover
+  - target: { kind: Deployment, name: risk-service }
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 2
+
+commonAnnotations:
+  deployment.region: us-east-1
+  deployment.primary: "false"

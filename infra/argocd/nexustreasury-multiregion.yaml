@@ -1,0 +1,191 @@
+# ArgoCD ApplicationSet — Multi-Region Active-Active Deployment
+#
+# Deploys NexusTreasury to TWO production clusters simultaneously:
+#   Primary:   eks-nexustreasury-eu-west-1   (London)
+#   Secondary: eks-nexustreasury-us-east-1   (N. Virginia)
+#
+# Failover strategy:
+#   Route53 (or Cloudflare): latency-based routing with health checks.
+#   If a region's /ready endpoint returns 503 for 3 consecutive checks,
+#   Route53 removes it from rotation. Traffic continues to healthy region.
+#
+# RPO target:  < 1 minute  (Kafka MirrorMaker 2 replication lag)
+# RTO target:  < 5 minutes (Route53 health check failover time)
+#
+# @see ROADMAP.md Sprint 7.3
+# @see docs/architecture/c4/05-deployment.md
+
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: nexustreasury-production-multiregion
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - cluster:  eks-nexustreasury-eu-west-1
+            region:   eu-west-1
+            url:      https://eks-eu-west-1.nexustreasury.io
+            overlay:  production-eu-west-1
+            primary:  "true"
+          - cluster:  eks-nexustreasury-us-east-1
+            region:   us-east-1
+            url:      https://eks-us-east-1.nexustreasury.io
+            overlay:  production-us-east-1
+            primary:  "false"
+
+  template:
+    metadata:
+      name: "nexustreasury-{{region}}"
+      annotations:
+        notifications.argoproj.io/subscribe.on-sync-failed.slack: platform-alerts
+        notifications.argoproj.io/subscribe.on-health-degraded.slack: platform-alerts
+    spec:
+      project: nexustreasury-production
+
+      source:
+        repoURL: https://github.com/manassehkafoh/nexustreasury
+        targetRevision: main
+        path: "infra/kubernetes/overlays/{{overlay}}"
+
+      destination:
+        server:    "{{url}}"
+        namespace: nexustreasury
+
+      syncPolicy:
+        automated:
+          prune:    true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - PrunePropagationPolicy=foreground
+          - ApplyOutOfSyncOnly=true
+        retry:
+          limit: 5
+          backoff:
+            duration:    5s
+            factor:      2
+            maxDuration: 3m
+
+      # Progressive delivery: 10% canary → 100% via Argo Rollouts
+      ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+            - /spec/replicas  # KEDA manages replicas; ignore drift
+---
+# Kafka MirrorMaker 2 — Cross-Region Topic Replication
+# Replicates ALL nexus.* topics from eu-west-1 → us-east-1 with < 30s lag
+# nexus.security.* topics use dedicated high-priority connector
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaMirrorMaker2
+metadata:
+  name: nexustreasury-mirror-maker
+  namespace: nexustreasury
+spec:
+  version: 3.7.0
+  replicas: 3  # 3 replicas for HA
+  connectCluster: us-east-1
+  clusters:
+    - alias: eu-west-1
+      bootstrapServers: kafka.eu-west-1.nexustreasury.io:9092
+      authentication:
+        type: scram-sha-256
+        username: mirror-maker
+        passwordSecret:
+          secretName: nexustreasury-kafka-mm2
+          password: password
+      tls:
+        trustedCertificates: []  # TLS termination at load balancer
+    - alias: us-east-1
+      bootstrapServers: kafka.us-east-1.nexustreasury.io:9092
+      authentication:
+        type: scram-sha-256
+        username: mirror-maker
+        passwordSecret:
+          secretName: nexustreasury-kafka-mm2
+          password: password
+  mirrors:
+    - sourceCluster:  eu-west-1
+      targetCluster:  us-east-1
+      sourceConnector:
+        config:
+          replication.factor:               3
+          offset-syncs.topic.replication.factor: 3
+          sync.topic.acls.enabled:          "false"
+          refresh.topics.interval.seconds:  30
+      topicsPattern: "nexus\\..*"   # All nexus.* topics
+      groupsPattern:  "nexustreasury-.*"
+      heartbeatConnector:
+        config:
+          heartbeats.topic.replication.factor: 3
+      checkpointConnector:
+        config:
+          checkpoints.topic.replication.factor: 3
+          sync.group.offsets.enabled:          "true"
+          sync.group.offsets.interval.seconds: 60
+---
+# Route53 Health Check for eu-west-1
+# Checks /ready on the trade-service load balancer every 30s
+# 3 consecutive failures → remove from Route53 weighted routing
+# AWS CDK / Terraform manages the actual Route53 records.
+# This ConfigMap stores the health check configuration as code.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: route53-health-check-config
+  namespace: nexustreasury
+  annotations:
+    description: "Route53 health check parameters for multi-region failover"
+data:
+  config.json: |
+    {
+      "healthChecks": [
+        {
+          "name": "nexustreasury-eu-west-1-trade",
+          "type": "HTTPS",
+          "resourcePath": "/api/v1/ready",
+          "fullyQualifiedDomainName": "trade.eu-west-1.nexustreasury.io",
+          "port": 443,
+          "requestInterval": 30,
+          "failureThreshold": 3,
+          "enableSNI": true
+        },
+        {
+          "name": "nexustreasury-us-east-1-trade",
+          "type": "HTTPS",
+          "resourcePath": "/api/v1/ready",
+          "fullyQualifiedDomainName": "trade.us-east-1.nexustreasury.io",
+          "port": 443,
+          "requestInterval": 30,
+          "failureThreshold": 3,
+          "enableSNI": true
+        }
+      ],
+      "routingPolicy": {
+        "type": "LATENCY",
+        "records": [
+          {
+            "name": "trade.nexustreasury.io",
+            "type": "A",
+            "setIdentifier": "eu-west-1",
+            "region": "eu-west-1",
+            "aliasTarget": "nlb-eu-west-1.nexustreasury.io",
+            "healthCheckId": "nexustreasury-eu-west-1-trade",
+            "evaluateTargetHealth": true
+          },
+          {
+            "name": "trade.nexustreasury.io",
+            "type": "A",
+            "setIdentifier": "us-east-1",
+            "region": "us-east-1",
+            "aliasTarget": "nlb-us-east-1.nexustreasury.io",
+            "healthCheckId": "nexustreasury-us-east-1-trade",
+            "evaluateTargetHealth": true
+          }
+        ]
+      },
+      "rpo": "60s",
+      "rto": "300s"
+    }
