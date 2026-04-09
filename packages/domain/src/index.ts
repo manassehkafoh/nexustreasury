@@ -22,3 +22,10 @@ export * from './pricing/irs-pricer.js';
 export * from './pricing/option-pricer.js';
 export * from './pricing/pricing-engine.js';
 export * from './pricing/greeks-calculator.js';
+
+// ── Sprint 7.4 — Exotic Pricer (ADR-008 injectable interface) ─────────────────
+export * from './pricing/exotic-pricer.interface.js';
+export * from './pricing/barrier-option-pricer.js';
+export * from './pricing/bermudan-swaption-pricer.js';
+export * from './pricing/ts-exotic-pricer.js';
+export * from './pricing/wasm-exotic-pricer-pool.js';

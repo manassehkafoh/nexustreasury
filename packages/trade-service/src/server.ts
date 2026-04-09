@@ -73,7 +73,7 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(tradeRoutes, { prefix: '/api/v1/trades' });
 
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: Error & { statusCode?: number; code?: string; validation?: unknown }, request, reply) => {
     logger.error({ err: error, reqId: request.id }, 'Unhandled error');
     // Fastify built-in JSON schema validation
     if (error.validation) {

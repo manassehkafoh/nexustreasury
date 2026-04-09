@@ -103,6 +103,8 @@ export interface PricingEngineConfig {
   readonly irsPricer?: IRSPricer;
   /** Custom option pricer */
   readonly optionPricer?: OptionPricer;
+  /** Injectable exotic pricer (ADR-008) — defaults to WasmExoticPricerPool(poolSize:4) */
+  readonly exoticPricer?: IExoticPricer;
 }
 
 /** AI/ML volatility surface predictor interface. */
@@ -149,6 +151,8 @@ export class PricingEngine {
   readonly irs: IRSPricer;
   /** Options pricer (Black-Scholes, Greeks, implied vol). */
   readonly option: OptionPricer;
+  /** Exotic instrument pricer (barrier, look-back, Bermudan swaption) — ADR-008 injectable. */
+  readonly exotic: IExoticPricer;
 
   private readonly _config: PricingEngineConfig;
 
@@ -158,6 +162,7 @@ export class PricingEngine {
     this.bond = config.bondPricer ?? new BondPricer();
     this.irs = config.irsPricer ?? new IRSPricer();
     this.option = config.optionPricer ?? new OptionPricer();
+    this.exotic = config.exoticPricer ?? new WasmExoticPricerPool({ poolSize: 4 });
   }
 
   // ── FX Convenience Methods ────────────────────────────────────────────────
@@ -225,8 +230,30 @@ export class PricingEngine {
     return !!this._config.volPredictor;
   }
 
+  // ── Exotic Convenience Methods (Sprint 7.4) ──────────────────────────────
+
+  /** Price a barrier option (DOWN_AND_OUT, UP_AND_IN, etc.). */
+  priceBarrierOption(input: import('./exotic-pricer.interface.js').BarrierOptionInput): import('./exotic-pricer.interface.js').BarrierOptionResult {
+    return this.exotic.priceBarrier(input);
+  }
+
+  /** Price a look-back option (floating or fixed). */
+  priceLookbackOption(input: import('./exotic-pricer.interface.js').LookbackOptionInput): import('./exotic-pricer.interface.js').LookbackOptionResult {
+    return this.exotic.priceLookback(input);
+  }
+
+  /** Price a Bermudan swaption via Longstaff-Schwartz LSM Monte Carlo. */
+  priceBermudanSwaption(input: import('./exotic-pricer.interface.js').BermudanSwaptionInput): import('./exotic-pricer.interface.js').BermudanSwaptionResult {
+    return this.exotic.priceBermudanSwaption(input);
+  }
+
   /** Returns true if an ML basis predictor is configured (for EM FX). */
   get hasMLBasisPredictor(): boolean {
     return !!this._config.basisPredictor;
   }
 }
+
+// ── Sprint 7.4 — Exotic Pricer injection (ADR-008) ────────────────────────────
+import { WasmExoticPricerPool } from './wasm-exotic-pricer-pool.js';
+import type { IExoticPricer } from './exotic-pricer.interface.js';
+export type { IExoticPricer } from './exotic-pricer.interface.js';

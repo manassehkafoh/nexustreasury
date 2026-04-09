@@ -1,3 +1,33 @@
+## [1.1.0] — 2026-04-09 — Sprint 7: Exotic Pricer, Contract Tests, Performance
+
+### Added — Sprint 7.4 (QuantLib WASM Injectable Pricer, ADR-008)
+- `IExoticPricer` injectable interface in `@nexustreasury/domain` (ADR-008 pattern)
+- `BarrierOptionPricer` — Rubinstein-Reiner (1991) analytical formulas for all 4 barrier types
+- `BermudanSwaptionPricer` — Longstaff-Schwartz (2001) LSM Monte Carlo with polynomial regression
+- `TsExoticPricer` — TypeScript fallback: barrier + look-back (Conze-Viswanathan 1991) + Bermudan
+- `WasmExoticPricerPool` — 4-instance warm-up pool with round-robin load balancing + synchronous fallback
+- `PricingEngine.exotic` property — injects `WasmExoticPricerPool` by default; replaces via config
+- `PricingEngine.priceBarrierOption()`, `.priceLookbackOption()`, `.priceBermudanSwaption()` convenience methods
+- 49 unit tests covering all instrument types, P99 latency SLA, pool metrics, and error handling
+
+### Added — Sprint 7.2 (Pact Contract Tests)
+- `tests/contract/position-service-trades-booked.consumer.pact.ts` — position-service ← trade-service contract
+- `tests/contract/collateral-service-var-result.consumer.pact.ts` — collateral-service ← risk-service contract
+- Total Pact contracts: 4 (accounting, notification, position, collateral consumers)
+
+### Added — Sprint 7.1 (k6 Performance Tests)
+- `tests/performance/pre-deal-check.k6.js` — pre-deal limit check SLA: P99 < 5ms at 200 TPS
+- `tests/performance/var-calculation.k6.js` — Historical VaR EOD batch: 100 concurrent, P99 < 2000ms
+- 3 k6 scenarios per file: sustained load, spike test, ramp-up
+
+### Fixed
+- `trade-service/src/server.ts` — TypeScript strict error handler typing (`error: Error & {...}`)
+
+### Tests
+- Total unit tests: **551** (+49 exotic pricer)
+- Total E2E tests: **31** (unchanged)
+- CVEs: **0** (`pnpm audit --prod`)
+
 # NexusTreasury Changelog
 
 All notable changes are documented here.
