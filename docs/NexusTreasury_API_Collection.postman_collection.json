@@ -55,6 +55,11 @@
     {
       "key": "tenantId",
       "value": "bank-001"
+    },
+    {
+      "key": "tokenExpiry",
+      "value": "0",
+      "description": "Token expiry epoch ms \u2014 auto-set by Get JWT Token"
     }
   ],
   "auth": {
@@ -587,6 +592,26 @@
           }
         }
       ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// NexusTreasury \u2014 Collection Pre-Request Script (auth guard)",
+          "// Skips token check on auth and health endpoints",
+          "const skipPaths = ['/openid-connect/token', '/live', '/ready'];",
+          "const url = pm.request ? pm.request.url.toString() : '';",
+          "if (skipPaths.some(p => url.includes(p))) return;",
+          "",
+          "const token = pm.collectionVariables.get('accessToken');",
+          "if (!token || token.trim() === '') {",
+          "  console.warn('\u26a0\ufe0f  accessToken not set \u2014 run \ud83d\udd10 Get JWT Token first');",
+          "}"
+        ],
+        "type": "text/javascript"
+      }
     }
   ]
 }
