@@ -1,36 +1,49 @@
-# Architecture Decision Records
+# NexusTreasury Architecture Decision Records
 
-This directory contains all ADRs (Architecture Decision Records) for NexusTreasury.
+Architecture Decision Records (ADRs) capture the significant engineering decisions made during the design and build of NexusTreasury, including the context, options considered, and the rationale for each decision.
 
-ADRs document _why_ a decision was made — the context, the alternatives considered,
-and the consequences accepted. When you see something in the codebase and wonder
-"why is it done this way?", check here first.
+## Complete ADR Register
 
-| ADR     | Title                                                    | Status   |
-| ------- | -------------------------------------------------------- | -------- |
-| ADR-001 | Single Combined Prisma Schema at Root                    | Accepted |
-| ADR-002 | Renovate Bot Instead of Dependabot                       | Accepted |
-| ADR-003 | Turbo v2 `tasks` Instead of `pipeline`                   | Accepted |
-| ADR-004 | `(app as any).get()` for @fastify/websocket Routes       | Accepted |
-| ADR-005 | `@ts-expect-error` Banned in Favour of Explicit Casts    | Accepted |
-| ADR-006 | One Vitest Config Per Package with `tsc --build --force` | Accepted |
+| ADR | Title | Date | Status |
+|---|---|---|---|
+| [ADR-001](./ADR-001-monorepo-pnpm-turborepo.md) | Monorepo with pnpm Workspaces + Turborepo | Nov 2025 | Accepted |
+| [ADR-002](./ADR-002-fastify-vs-express-nestjs.md) | Fastify 5 vs Express vs NestJS | Nov 2025 | Accepted |
+| [ADR-003](./ADR-003-postgresql-timescaledb.md) | PostgreSQL + TimescaleDB vs Cassandra | Nov 2025 | Accepted |
+| [ADR-004](./ADR-004-kafka-vs-rabbitmq.md) | Apache Kafka vs RabbitMQ vs NATS | Nov 2025 | Accepted |
+| [ADR-005](./ADR-005-keycloak-identity.md) | Keycloak vs Auth0 vs AWS Cognito | Nov 2025 | Accepted |
+| [ADR-006](./ADR-006-typescript-strict-mode.md) | TypeScript Strict Mode Throughout | Nov 2025 | Accepted |
+| [ADR-007](./ADR-007-vitest-vs-jest.md) | Vitest vs Jest | Nov 2025 | Accepted |
+| [ADR-008](./ADR-008-typescript-pricing-vs-quantlib.md) | Custom TypeScript Pricing vs QuantLib WASM | Jan 2026 | Accepted |
+| [ADR-009](./ADR-009-audit-hmac-vs-blockchain.md) | HMAC-SHA256 Audit Trail vs Blockchain | Jan 2026 | Accepted |
+| [ADR-010](./ADR-010-collateral-bounded-context.md) | Collateral as Separate Bounded Context | Feb 2026 | Accepted |
 
-Full ADR text is in [ARCHITECTURE.md](../../ARCHITECTURE.md#11-architecture-decision-records-adrs).
+## How to Write an ADR
 
-## How to Write a New ADR
-
-When you make a significant architectural decision, document it:
+Use this template:
 
 ```markdown
-### ADR-NNN: Title
+# ADR-NNN: Title
 
-**Status:** Proposed | Accepted | Deprecated | Superseded by ADR-NNN
+**Status**: Proposed / Accepted / Deprecated / Superseded by ADR-XXX
+**Date**: YYYY-MM-DD
+**Deciders**: Names of decision-makers
 
-**Context:** What situation or problem led to this decision?
+## Context
+What is the problem being addressed?
 
-**Decision:** What did we decide to do?
+## Decision
+What was chosen?
 
-**Consequences:** What are the positive and negative outcomes?
+## Rationale
+Comparison table with winner column.
+
+## Consequences
+What changes as a result of this decision?
 ```
 
-Add the ADR to `ARCHITECTURE.md` and update this index.
+## Proposing a New ADR
+
+1. Copy the template above into a new file: `ADR-011-short-title.md`
+2. Fill in the context, options, and your recommendation
+3. Open a PR with `[ADR]` in the title for review by Principal Engineers
+4. Update this README table after the ADR is accepted

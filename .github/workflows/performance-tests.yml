@@ -1,0 +1,87 @@
+name: Performance Tests (k6)
+
+on:
+  # Run after every staging deployment
+  workflow_run:
+    workflows: ['CD — Staging']
+    types: [completed]
+  # Manual trigger for on-demand load testing
+  workflow_dispatch:
+    inputs:
+      target_env:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options: [staging, production]
+      duration:
+        description: 'Test duration (e.g. 5m, 10m)'
+        required: false
+        default: '5m'
+      vus:
+        description: 'Number of virtual users'
+        required: false
+        default: '50'
+
+jobs:
+  k6-trade-booking:
+    name: k6 — Trade Booking SLA (${{ inputs.target_env || 'staging' }})
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target_env || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install k6
+
+      - name: Run trade booking performance test
+        run: |
+          k6 run tests/performance/trade-booking.k6.js \
+            --vus ${{ inputs.vus || 50 }} \
+            --duration ${{ inputs.duration || '5m' }} \
+            --out json=results/trade-booking.json \
+            --summary-trend-stats='avg,min,med,max,p(90),p(95),p(99)'
+        env:
+          BASE_URL: ${{ vars.TRADE_SERVICE_URL }}
+          RISK_URL: ${{ vars.RISK_SERVICE_URL }}
+          JWT_TOKEN: ${{ secrets.PERF_TEST_JWT_TOKEN }}
+
+      - name: Run LCR report performance test
+        run: |
+          k6 run tests/performance/lcr-report.k6.js \
+            --vus 10 \
+            --duration 2m \
+            --out json=results/lcr-report.json
+        env:
+          REPORTING_URL: ${{ vars.REPORTING_SERVICE_URL }}
+          JWT_TOKEN: ${{ secrets.PERF_TEST_JWT_TOKEN }}
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results-${{ github.run_id }}
+          path: results/
+          retention-days: 30
+
+      - name: Comment k6 summary on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('results/trade-booking.json', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## k6 Performance Results\n```\n' + summary.slice(0, 2000) + '\n```'
+            });
