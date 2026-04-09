@@ -1,0 +1,24 @@
+{
+  "name": "@nexustreasury/e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "vitest run" },
+  "dependencies": {
+    "@nexustreasury/domain":               "workspace:*",
+    "@nexustreasury/trade-service":        "workspace:*",
+    "@nexustreasury/risk-service":         "workspace:*",
+    "@nexustreasury/accounting-service":   "workspace:*",
+    "@nexustreasury/bo-service":           "workspace:*",
+    "@nexustreasury/audit-service":        "workspace:*",
+    "@nexustreasury/notification-service": "workspace:*",
+    "@nexustreasury/collateral-service":   "workspace:*",
+    "@nexustreasury/alm-service":          "workspace:*",
+    "@nexustreasury/reporting-service":    "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0"
+  }
+}

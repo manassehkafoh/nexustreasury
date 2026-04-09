@@ -1,0 +1,569 @@
+# Kubernetes HPA + Resource Configs for Sprint 5+6 Services
+# Extends: infra/helm/nexustreasury/templates/deployment.yaml
+#
+# Services added in Sprints 5-6:
+#   - audit-service        :4008  (low latency, high throughput Kafka consumer)
+#   - notification-service :4009  (event-driven, burst-capable)
+#   - collateral-service   :4010  (CPU moderate, daily EOD spike)
+#   - reporting-service    :4011  (CPU-intensive batch, low concurrency)
+#
+# Scale-up strategy:
+#   audit-service:        Kafka lag-based HPA (KEDA ScaledObject)
+#   notification-service: CPU + custom metric (pending notifications queue)
+#   collateral-service:   CPU-based + EOD manual scale
+#   reporting-service:    Concurrency-based (regulatory reporting windows)
+
+---
+# ── AUDIT SERVICE ─────────────────────────────────────────────────────────────
+# High-throughput Kafka consumer. All 13 topics route here.
+# Scale based on Kafka consumer lag (via KEDA).
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: audit-service-scaler
+  namespace: nexustreasury
+spec:
+  scaleTargetRef:
+    name: audit-service
+  minReplicaCount: 2
+  maxReplicaCount: 10
+  cooldownPeriod: 60
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: "kafka.nexustreasury.svc.cluster.local:9092"
+        consumerGroup: nexustreasury-audit-service
+        topic: nexus.trading.trades.booked
+        lagThreshold: "500"
+        offsetResetPolicy: latest
+    - type: kafka
+      metadata:
+        bootstrapServers: "kafka.nexustreasury.svc.cluster.local:9092"
+        consumerGroup: nexustreasury-audit-service
+        topic: nexus.security.login-failed
+        lagThreshold: "100"   # security events: scale up faster
+        offsetResetPolicy: latest
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: nexustreasury
+  labels:
+    app: audit-service
+    sprint: "5"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+        version: "1.0.0"
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-audit-hmac: "secret/nexustreasury/prod"
+        vault.hashicorp.com/agent-inject-template-audit-hmac: |
+          {{- with secret "secret/nexustreasury/prod" -}}
+          export AUDIT_HMAC_KEY="{{ .Data.data.AUDIT_HMAC_KEY }}"
+          {{- end }}
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: audit-service
+          image: ghcr.io/manassehkafoh/nexustreasury/audit-service:latest
+          ports:
+            - containerPort: 4008
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4008"
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-kafka
+                  key: brokers
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-elasticsearch
+                  key: url
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 4008
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4008
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: audit-service
+  namespace: nexustreasury
+spec:
+  selector:
+    app: audit-service
+  ports:
+    - name: http
+      port: 4008
+      targetPort: 4008
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+
+---
+# ── NOTIFICATION SERVICE ──────────────────────────────────────────────────────
+# Event-driven alerting. Scales on CPU and pending notifications.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notification-service-hpa
+  namespace: nexustreasury
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notification-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: nexus_notification_pending_queue_depth
+        target:
+          type: AverageValue
+          averageValue: "50"  # scale if > 50 pending notifications per pod
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30   # fast scale-up for alert bursts
+      policies:
+        - type: Pods
+          value: 3
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300  # slow scale-down
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  namespace: nexustreasury
+  labels:
+    app: notification-service
+    sprint: "5"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: notification-service
+          image: ghcr.io/manassehkafoh/nexustreasury/notification-service:latest
+          ports:
+            - containerPort: 4009
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4009"
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-smtp
+                  key: host
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-smtp
+                  key: user
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-smtp
+                  key: password
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-kafka
+                  key: brokers
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 4009
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4009
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  namespace: nexustreasury
+spec:
+  selector:
+    app: notification-service
+  ports:
+    - name: http
+      port: 4009
+      targetPort: 4009
+
+---
+# ── COLLATERAL SERVICE ────────────────────────────────────────────────────────
+# EOD margin call batch is CPU-intensive. Scale manually for EOD.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: collateral-service-hpa
+  namespace: nexustreasury
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: collateral-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 600   # slow scale-down after EOD batch
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: collateral-service
+  namespace: nexustreasury
+  labels:
+    app: collateral-service
+    sprint: "6"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: collateral-service
+  template:
+    metadata:
+      labels:
+        app: collateral-service
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: collateral-service
+          image: ghcr.io/manassehkafoh/nexustreasury/collateral-service:latest
+          ports:
+            - containerPort: 4010
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4010"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-db
+                  key: url
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-kafka
+                  key: brokers
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 4010
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4010
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collateral-service
+  namespace: nexustreasury
+spec:
+  selector:
+    app: collateral-service
+  ports:
+    - name: http
+      port: 4010
+      targetPort: 4010
+
+---
+# ── REPORTING SERVICE ─────────────────────────────────────────────────────────
+# Regulatory reports are CPU-intensive but low-frequency.
+# Scale on concurrent requests (custom metric from Fastify).
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reporting-service-hpa
+  namespace: nexustreasury
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reporting-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60  # lower threshold: reports are CPU-bursty
+    - type: Pods
+      pods:
+        metric:
+          name: nexus_reporting_active_requests
+        target:
+          type: AverageValue
+          averageValue: "5"   # scale if > 5 concurrent reports per pod
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 900   # 15min: reports may take a while
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: nexustreasury
+  labels:
+    app: reporting-service
+    sprint: "6"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+    spec:
+      serviceAccountName: nexustreasury-workload
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: reporting-service
+          image: ghcr.io/manassehkafoh/nexustreasury/reporting-service:latest
+          ports:
+            - containerPort: 4011
+            - containerPort: 9090
+              name: metrics
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: PORT
+              value: "4011"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nexustreasury-db
+                  key: url-readonly   # read-only replica for reporting
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              cpu: 2000m   # 2 vCPU for IRRBB/LCR batch calculations
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: 4011
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 4011
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  namespace: nexustreasury
+spec:
+  selector:
+    app: reporting-service
+  ports:
+    - name: http
+      port: 4011
+      targetPort: 4011
+
+---
+# ── NETWORK POLICY ────────────────────────────────────────────────────────────
+# Zero Trust: deny all by default, allow only required paths
+# (Extends existing network policy from packages/06_Kubernetes_Platform_NexusTreasury.yaml)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: audit-service-netpol
+  namespace: nexustreasury
+spec:
+  podSelector:
+    matchLabels:
+      app: audit-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}  # all pods in nexustreasury namespace
+      ports:
+        - port: 4008
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - port: 9092
+    - to:
+        - podSelector:
+            matchLabels:
+              app: elasticsearch
+      ports:
+        - port: 9200
+    - to:
+        - podSelector:
+            matchLabels:
+              app: vault-agent
+      ports:
+        - port: 8200
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: notification-service-netpol
+  namespace: nexustreasury
+spec:
+  podSelector:
+    matchLabels:
+      app: notification-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 4009
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - port: 9092
+    - to:   # SMTP outbound
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - port: 587  # SMTP TLS
