@@ -92,7 +92,7 @@ sequenceDiagram
   Adapter->>Publisher: onTick(pair, bid, ask)
   Publisher->>Redis: SET nexus:rate:USDEUR ... EX 5 (T=2ms)
   Publisher->>Kafka: nexus.marketdata.rates (T=3ms)
-  Note right of Redis: Trade pre-deal checks use Redis<br/>< 5ms total latency
+  Note right of Redis: Trade pre-deal checks use Redis\n< 5ms total latency
   Kafka->>RiskSvc: RateTickEvent (T=8ms)
-  Note right of RiskSvc: VaR risk factor updated<br/>< 15ms from tick
+  Note right of RiskSvc: VaR risk factor updated\n< 15ms from tick
 ```

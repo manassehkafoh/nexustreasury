@@ -13,27 +13,27 @@ flowchart TB
   end
 
   subgraph edge["Edge Security Layer"]
-    waf[WAF / DDoS Protection<br/>Cloudflare / AWS Shield]
-    nlb[NLB + TLS 1.3<br/>Certificate Pinning]
-    rl[Rate Limiter<br/>Redis — per IP/tenant]
+    waf["WAF / DDoS Protection\nCloudflare / AWS Shield"]
+    nlb["NLB + TLS 1.3\nCertificate Pinning"]
+    rl["Rate Limiter\nRedis — per IP/tenant"]
   end
 
   subgraph auth["Authentication & Authorisation"]
-    keycloak[Keycloak OIDC<br/>MFA required<br/>JWT RS256]
-    opa[OPA Gatekeeper<br/>Policy-as-Code<br/>RBAC + ABAC]
-    vault[HashiCorp Vault<br/>Dynamic Secrets<br/>PKI / KMS / Database]
+    keycloak["Keycloak OIDC\nMFA required\nJWT RS256"]
+    opa["OPA Gatekeeper\nPolicy-as-Code\nRBAC + ABAC"]
+    vault["HashiCorp Vault\nDynamic Secrets\nPKI / KMS / Database"]
   end
 
   subgraph app["Application Layer — mTLS Mesh"]
-    kong[API Gateway<br/>JWT validation<br/>Tenant scoping]
-    services[Microservices<br/>mTLS between all pods<br/>Cilium eBPF L7 policies]
+    kong["API Gateway\nJWT validation\nTenant scoping"]
+    services["Microservices\nmTLS between all pods\nCilium eBPF L7 policies"]
   end
 
   subgraph data["Data Layer — Encryption at Rest"]
-    pg[PostgreSQL<br/>TDE + column encryption<br/>Row-level security]
-    kafka[Kafka<br/>SASL/SCRAM auth<br/>TLS in-transit]
-    redis[Redis<br/>AUTH + TLS<br/>ACL per service]
-    vault_kms[Vault KMS<br/>AES-256-GCM<br/>Key rotation 90 days]
+    pg["PostgreSQL\nTDE + column encryption\nRow-level security"]
+    kafka["Kafka\nSASL/SCRAM auth\nTLS in-transit"]
+    redis["Redis\nAUTH + TLS\nACL per service"]
+    vault_kms["Vault KMS\nAES-256-GCM\nKey rotation 90 days"]
   end
 
   user -->|HTTPS TLS 1.3| waf
@@ -97,26 +97,26 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   subgraph vault_paths["Vault Secret Paths"]
-    db_creds[database/creds/{service}<br/>Dynamic — TTL 1h]
-    kafka_creds[secret/kafka/credentials<br/>Static — rotation 30d]
-    jwt_keys[pki/issue/nexus<br/>TLS certs — rotation 90d]
-    api_keys[secret/external/{service}<br/>Bloomberg / LSEG keys]
-    encryption_key[transit/encrypt/nexus-data<br/>AES-256-GCM key]
+    db_creds["database/creds/{service}\nDynamic — TTL 1h"]
+    kafka_creds["secret/kafka/credentials\nStatic — rotation 30d"]
+    jwt_keys["pki/issue/nexus\nTLS certs — rotation 90d"]
+    api_keys["secret/external/{service}\nBloomberg / LSEG keys"]
+    encryption_key["transit/encrypt/nexus-data\nAES-256-GCM key"]
   end
 
-  subgraph services["Services (Vault Agent Injector)"]
-    trade[trade-service]
-    pos[position-service]
-    bo[bo-service]
+  subgraph services["Services — Vault Agent Injector"]
+    trade["trade-service"]
+    pos["position-service"]
+    bo["bo-service"]
   end
 
-  trade -->|Lease 1h| db_creds
-  pos -->|Lease 1h| db_creds
-  bo -->|Lease 1h| db_creds
-  bo -->|Read| api_keys
-  trade -->|Read| kafka_creds
-  pos -->|Read| kafka_creds
-  trade -->|Encrypt PII| encryption_key
+  trade -->|"Lease 1h"| db_creds
+  pos -->|"Lease 1h"| db_creds
+  bo -->|"Lease 1h"| db_creds
+  bo -->|"Read"| api_keys
+  trade -->|"Read"| kafka_creds
+  pos -->|"Read"| kafka_creds
+  trade -->|"Encrypt PII"| encryption_key
 ```
 
 ## Cilium Network Policies (Zero Trust)

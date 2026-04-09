@@ -178,10 +178,10 @@ to prevent duplicate or lost events:
 
 ```mermaid
 flowchart LR
-  A[Trade Service<br/>Producer] -->|transactional.id<br/>= nexus-trade-{pod}| B[Kafka Broker]
-  B -->|isolation.level<br/>= read_committed| C[Position Service<br/>Consumer]
-  C -->|consume-process-produce<br/>in single transaction| B
-  B --> D[Position Event<br/>Committed atomically]
+  A["Trade Service\nProducer"] -->|"transactional.id\n= nexus-trade-{pod}"| B[Kafka Broker]
+  B -->|"isolation.level\n= read_committed"| C["Position Service\nConsumer"]
+  C -->|"consume-process-produce\nin single transaction"| B
+  B --> D["Position Event\nCommitted atomically"]
 
   note1[enable.idempotence=true\nacks=all\nmin.insync.replicas=2] -.-> A
   note2[Transactional producer\nbeginTransaction()\ncommitTransaction()\nabortTransaction()] -.-> A

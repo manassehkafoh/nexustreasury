@@ -75,14 +75,14 @@ nexus.marketdata.curves"]
 
 ```mermaid
 flowchart TD
-  A[Cash Flows<br/>by Currency] --> B[Classify HQLA<br/>Level 1 / 2A / 2B]
+  A["Cash Flows\nby Currency"] --> B["Classify HQLA\nLevel 1 / 2A / 2B"]
   B --> C{Apply Haircuts}
   C -->|Level 1: 0%| D[HQLA Component]
   C -->|Level 2A: 15%| D
   C -->|Level 2B: 25-50%| D
-  D --> E[Total HQLA<br/>after haircuts and caps]
-  A --> F[30-Day Outflows<br/>by category]
-  F --> G[Apply Run-off Rates<br/>Retail/Wholesale/ABCP]
+  D --> E["Total HQLA\nafter haircuts and caps"]
+  A --> F["30-Day Outflows\nby category"]
+  F --> G["Apply Run-off Rates\nRetail/Wholesale/ABCP"]
   G --> H[Net Cash Outflows]
   E --> I[LCR = HQLA / Net Outflows]
   H --> I

@@ -89,13 +89,13 @@ VaR duration, limit check latency"]
 ```mermaid
 flowchart LR
   A[Position Snapshot] --> B{Method?}
-  B -->|Historical| C[250-Day Window<br/>P&L Series]
-  B -->|Monte Carlo| D[10,000 Paths<br/>Correlated RF]
-  C --> E[Sort Returns<br/>1st Percentile]
-  D --> F[Expected Shortfall<br/>CVaR 97.5%]
-  E --> G[1-Day VaR<br/>99% CI]
-  F --> H[Scaled to<br/>10-Day VaR]
+  B -->|Historical| C["250-Day Window\nP&L Series"]
+  B -->|Monte Carlo| D["10,000 Paths\nCorrelated RF"]
+  C --> E["Sort Returns\n1st Percentile"]
+  D --> F["Expected Shortfall\nCVaR 97.5%"]
+  E --> G["1-Day VaR\n99% CI"]
+  F --> H["Scaled to\n10-Day VaR"]
   G --> I[VaR Result Store]
   H --> I
-  I --> J[FRTB Capital<br/>Calculation]
+  I --> J["FRTB Capital\nCalculation"]
 ```

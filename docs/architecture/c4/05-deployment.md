@@ -131,8 +131,8 @@ flowchart TB
   end
 
   subgraph nexus_platform["nexus-platform namespace"]
-    kong[API Gateway<br/>Kong]
-    keycloak[Keycloak<br/>OIDC]
+    kong["API Gateway\nKong"]
+    keycloak["Keycloak\nOIDC"]
     vault[HashiCorp Vault]
     argocd[ArgoCD]
   end
@@ -198,19 +198,19 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  A[Developer<br/>git push] --> B[GitHub Actions<br/>CI Pipeline]
-  B --> C{All checks<br/>green?}
+  A["Developer\ngit push"] --> B["GitHub Actions\nCI Pipeline"]
+  B --> C{"All checks\ngreen?"}
   C -->|No| D[❌ Fail — notify]
-  C -->|Yes| E[Build & Push<br/>Docker image to GHCR]
-  E --> F[Update Helm values<br/>values-staging.yaml]
-  F --> G[ArgoCD detects<br/>drift in Git]
-  G --> H[ArgoCD syncs<br/>Staging cluster]
+  C -->|Yes| E["Build & Push\nDocker image to GHCR"]
+  E --> F["Update Helm values\nvalues-staging.yaml"]
+  F --> G["ArgoCD detects\ndrift in Git"]
+  G --> H["ArgoCD syncs\nStaging cluster"]
   H --> I[Health checks pass?]
   I -->|No| J[Auto-rollback]
   I -->|Yes| K[Smoke tests pass]
-  K --> L[Manual approval<br/>2 reviewers]
-  L --> M[Update<br/>values-production.yaml]
-  M --> N[ArgoCD syncs<br/>Production cluster]
+  K --> L["Manual approval\n2 reviewers"]
+  L --> M["Update\nvalues-production.yaml"]
+  M --> N["ArgoCD syncs\nProduction cluster"]
   N --> O[Blue-Green switch]
   O --> P[✅ Deployed]
 ```
