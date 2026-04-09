@@ -29,3 +29,7 @@ export * from './pricing/barrier-option-pricer.js';
 export * from './pricing/bermudan-swaption-pricer.js';
 export * from './pricing/ts-exotic-pricer.js';
 export * from './pricing/wasm-exotic-pricer-pool.js';
+
+// ── Sprint 8.4 — FX Volatility Surface + Vanna-Volga Pricer ─────────────────
+export * from './pricing/vol-surface.js';
+export * from './pricing/vanna-volga-pricer.js';

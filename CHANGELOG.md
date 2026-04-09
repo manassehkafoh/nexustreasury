@@ -1,3 +1,32 @@
+## [1.2.0] — 2026-04-09 — Sprint 8: Bloomberg B-PIPE, AI/ML ECL, BERT Recon, SVI Vol Surface
+
+### Added — Sprint 8.1 (Bloomberg B-PIPE Real-Time Integration)
+- `BloombergBPIPEAdapter` — B-PIPE SAPI subscription with circuit breaker (CLOSED→OPEN→HALF_OPEN), exponential backoff reconnect, tick-staleness heartbeat monitor
+- `AdaptiveMarketDataAdapter` — Bloomberg primary + Refinitiv/Mock fallover with 1s circuit probe, failover event log
+- 11 unit tests: circuit state, rate emission, multi-instrument, disconnect, failover, config defaults
+
+### Added — Sprint 8.2 (AI/ML ECL Enhancement)
+- `XGBoostPDModelAdapter` — injectable PDModelAdapter with 5-tree gradient boosting ensemble; SHAP TreeSHAP approximation per prediction (9 feature attributions); regulatory explainability
+- `ModelDriftDetector` — Kolmogorov-Smirnov two-sample test; PSI (Population Stability Index); rolling 500-sample window; STABLE/WARNING/ALERT/CRITICAL severity classification
+- 22 unit tests: rating ordering, SHAP values, SHAP sum invariant, drift levels, PSI, feature names
+
+### Added — Sprint 8.3 (AI-Powered Reconciliation Break Resolution)
+- `BERTBreakClassifier` — injectable BreakClassifierModel backed by FinBERT inference endpoint; auto-resolve if confidence > 0.92; REVIEW_QUEUE if ≥ 0.70; MANUAL_REVIEW below
+- SWIFT gpi Tracker integration for MISSING_PAYMENT breaks: extracts UETR from description, locates payment in correspondent chain
+- Rule-based fallback when ML endpoint unavailable; classifier metrics (auto-resolve rate, fallback rate)
+
+### Added — Sprint 8.4 (FX Options Volatility Surface)
+- `SVIVolatilitySurface` — Gatheral (2004) parameterisation: w(k,τ) = a + b[ρ(k-m) + √((k-m)²+σ²)]; per-slice calibration from ATM/RR/BF quotes; calendar-spread arbitrage check; Dupire local vol; linear slice interpolation
+- `VannaVolgaPricer` — Castagna-Mercurio (2007) smile adjustment for FX exotics; 25Δ replication using ATM + 25C + 25P vanillas; survival-probability-adjusted weights for barrier options; integrates with Sprint 7 `BarrierOptionPricer`
+- 20 unit tests: SVI positivity, calendar AF, grid dimensions, VV price ≥ BS, barrier ≤ vanilla, flat-vol correction
+
+### Fixed
+- `fast-jwt` CVE pinned via pnpm overrides — `pnpm audit --prod` restored to 0 vulnerabilities
+
+### Tests
+- Total unit: **602** (+51 Sprint 8)  |  E2E: **31**  |  Grand total: **633** (+51)
+- CVEs (prod): **0** (`pnpm audit --prod`)
+
 ## [1.1.0] — 2026-04-09 — Sprint 7: Exotic Pricer, Contract Tests, Performance
 
 ### Added — Sprint 7.4 (QuantLib WASM Injectable Pricer, ADR-008)
