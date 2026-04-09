@@ -6,60 +6,69 @@ Covers liquidity gap, LCR/NSFR (Basel III), IRRBB (BCBS 368), and FTP.
 ## Diagram
 
 ```mermaid
-C4Component
-  title ALM Service — Component Diagram
+flowchart TB
+  subgraph almSvc["ALM Service  :4004"]
+    routes["ALM Routes
+Fastify / OpenAPI 3
+GET /alm/liquidity-gap, /lcr, /nsfr, /irrbb, /ftp"]
+    gapCalc["LiquidityGapCalculator
+Domain Service
+Cash ladder by tenor bucket O/N to 5Y+"]
+    lcrCalc["LCRCalculator
+Regulatory Domain Service
+LCR = HQLA / Net 30-day Outflows (BCBS 238)"]
+    nsfrCalc["NSFRCalculator
+Regulatory Domain Service
+NSFR = ASF / RSF (BCBS 295)"]
+    irrbbEngine["IRRBBEngine
+Regulatory Domain Service
+EVE & NII under 6 BCBS 368 shock scenarios"]
+    ftpEngine["FTPEngine
+Domain Service
+Funds Transfer Pricing by tenor/currency"]
+    stressEngine["StressEngine
+Domain Service
+Bank-specific + market-wide stress, survival days"]
+    gapAgg["LiquidityGapAggregate
+DDD Aggregate Root
+Immutable report per legalEntity + date"]
+    gapRepo["GapReportRepository
+Repository — Prisma
+Persists gap reports, LCR/NSFR results"]
+    posConsumer["PositionEventConsumer
+Kafka Consumer
+nexus.positions.updated"]
+    cfConsumer["CashFlowConsumer
+Kafka Consumer
+nexus.alm.cashflow-updated"]
+    rateConsumer["RateEventConsumer
+Kafka Consumer
+nexus.marketdata.curves"]
+  end
 
-  Container_Boundary(almSvc, "ALM Service  :4004") {
+  subgraph external["External"]
+    kafka[("Apache Kafka")]
+    pg[("PostgreSQL")]
+    webApp[("Web App")]
+  end
 
-    Component(routes,       "ALM Routes",           "Fastify / OpenAPI 3",
-      "GET /alm/liquidity-gap, GET /alm/lcr, GET /alm/nsfr, GET /alm/irrbb, GET /alm/ftp")
-    Component(gapCalc,      "LiquidityGapCalculator","Domain Service",
-      "Builds contractual and behavioural cash flow ladder by time bucket (O/N to 5Y+).")
-    Component(lcrCalc,      "LCRCalculator",        "Regulatory Domain Service",
-      "LCR = HQLA / Net 30-day Outflows. Level 1/2A/2B HQLA haircuts (BCBS 238).")
-    Component(nsfrCalc,     "NSFRCalculator",       "Regulatory Domain Service",
-      "NSFR = ASF / RSF. Required Stable Funding by asset/liability category (BCBS 295).")
-    Component(irrbbEngine,  "IRRBBEngine",          "Regulatory Domain Service",
-      "EVE and NII sensitivity under 6 BCBS 368 shock scenarios (+/-200bp, twist, steepen).")
-    Component(ftpEngine,    "FTPEngine",            "Domain Service",
-      "Funds Transfer Pricing. Assigns internal funding cost to each trade by tenor/currency.")
-    Component(stressEngine, "StressEngine",         "Domain Service",
-      "Bank-specific and market-wide stress scenarios. Survival period calculation.")
-    Component(gapAgg,       "LiquidityGapAggregate","DDD Aggregate Root",
-      "LiquidityGapReport aggregate. Immutable once generated. Stores by legalEntityId + date.")
-    Component(gapRepo,      "GapReportRepository",  "Repository (Prisma)",
-      "Persists liquidity gap reports and LCR/NSFR results.")
-    Component(posConsumer,  "PositionEventConsumer","Kafka Consumer",
-      "Consumes nexus.positions.updated. Triggers gap report refresh.")
-    Component(cfConsumer,   "CashFlowConsumer",     "Kafka Consumer",
-      "Consumes nexus.alm.cashflow-updated from Trade Service.")
-    Component(rateConsumer, "RateEventConsumer",    "Kafka Consumer",
-      "Consumes nexus.marketdata.curves. Updates yield curves for IRRBB.")
-    Component(otelTrace,    "OTel Tracer",          "Observability",
-      "Traces LCR run time, stress scenario duration, FTP calculation performance.")
-  }
-
-  Container(kafka,   "Apache Kafka",  "", "Event bus")
-  ContainerDb(pg,    "PostgreSQL",    "", "gap_reports, lcr_results, nsfr_results tables")
-  Container(webApp,  "Web App",       "", "ALM dashboard, gap chart")
-
-  Rel(kafka,       posConsumer,   "nexus.positions.updated",       "SASL")
-  Rel(kafka,       cfConsumer,    "nexus.alm.cashflow-updated",    "SASL")
-  Rel(kafka,       rateConsumer,  "nexus.marketdata.curves",       "SASL")
-  Rel(posConsumer, gapCalc,       "refreshGap(legalEntityId)",     "in-process")
-  Rel(cfConsumer,  gapCalc,       "updateCashFlow(flow)",          "in-process")
-  Rel(rateConsumer,irrbbEngine,   "updateCurves(curves)",          "in-process")
-  Rel(gapCalc,     lcrCalc,       "computeLCR(hqla, outflows)",    "in-process")
-  Rel(gapCalc,     nsfrCalc,      "computeNSFR(asf, rsf)",        "in-process")
-  Rel(gapCalc,     stressEngine,  "runStress(scenario)",           "in-process")
-  Rel(gapCalc,     gapAgg,        "buildReport()",                 "in-process")
-  Rel(gapAgg,      gapRepo,       "save(report)",                  "in-process")
-  Rel(gapRepo,     pg,            "INSERT gap_reports",            "pg-wire")
-  Rel(routes,      gapCalc,       "GET /alm/liquidity-gap",        "in-process")
-  Rel(routes,      lcrCalc,       "GET /alm/lcr",                  "in-process")
-  Rel(routes,      nsfrCalc,      "GET /alm/nsfr",                 "in-process")
-  Rel(routes,      irrbbEngine,   "GET /alm/irrbb",                "in-process")
-  Rel(routes,      ftpEngine,     "GET /alm/ftp",                  "in-process")
+  kafka       -->|"nexus.positions.updated"| posConsumer
+  kafka       -->|"nexus.alm.cashflow-updated"| cfConsumer
+  kafka       -->|"nexus.marketdata.curves"| rateConsumer
+  posConsumer -->|"refreshGap(legalEntityId)"| gapCalc
+  cfConsumer  -->|"updateCashFlow(flow)"| gapCalc
+  rateConsumer -->|"updateCurves(curves)"| irrbbEngine
+  gapCalc     -->|"computeLCR(hqla, outflows)"| lcrCalc
+  gapCalc     -->|"computeNSFR(asf, rsf)"| nsfrCalc
+  gapCalc     -->|"runStress(scenario)"| stressEngine
+  gapCalc     -->|"buildReport()"| gapAgg
+  gapAgg      -->|"save(report)"| gapRepo
+  gapRepo     -->|"INSERT gap_reports"| pg
+  routes      -->|"GET /alm/liquidity-gap"| gapCalc
+  routes      -->|"GET /alm/lcr"| lcrCalc
+  routes      -->|"GET /alm/nsfr"| nsfrCalc
+  routes      -->|"GET /alm/irrbb"| irrbbEngine
+  routes      -->|"GET /alm/ftp"| ftpEngine
 ```
 
 ## LCR Calculation Flow

@@ -6,60 +6,71 @@ Covers VaR, FRTB SA/IMA, XVA, and counterparty limit management.
 ## Diagram
 
 ```mermaid
-C4Component
-  title Risk Service — Component Diagram
+flowchart TB
+  subgraph riskSvc["Risk Service  :4003"]
+    routes["Risk Routes
+Fastify / OpenAPI 3
+GET /risk/var, /risk/limits, /risk/xva, /risk/frtb"]
+    varCalc["VaR Calculator
+Domain Service
+Historical 250-day + Monte Carlo 10k paths · 99% CI"]
+    frtbEngine["FRTB SA/IMA Engine
+Regulatory Domain Service
+Basel IV capital calculation"]
+    xvaEngine["XVA Engine
+Domain Service
+CVA, DVA, FVA, MVA per counterparty"]
+    limitMgr["LimitManager
+Domain Service
+Pre-deal orchestrator — FX, credit, DV01, VaR"]
+    limitAgg["Limit Aggregate
+DDD Aggregate Root
+Type, amount, utilised, status"]
+    limitRepo["LimitRepository
+Repository — Prisma
+Optimistic locking, tenant scope"]
+    posConsumer["PositionEventConsumer
+Kafka Consumer
+nexus.positions.updated"]
+    rateConsumer["RateEventConsumer
+Kafka Consumer
+nexus.marketdata.rates"]
+    limitPub["LimitBreachPublisher
+Kafka Producer
+nexus.risk.limit-breach"]
+    varPub["VaRResultPublisher
+Kafka Producer
+nexus.risk.var-calculated"]
+    otelTrace["OTel Tracer
+Observability
+VaR duration, limit check latency"]
+  end
 
-  Container_Boundary(riskSvc, "Risk Service  :4003") {
+  subgraph external["External"]
+    kafka[("Apache Kafka")]
+    pg[("PostgreSQL")]
+    notifSvc[("Notification Svc")]
+    webApp[("Web App")]
+  end
 
-    Component(routes,       "Risk Routes",           "Fastify / OpenAPI 3",
-      "GET /risk/var, GET /risk/limits, GET /risk/xva, POST /risk/limits, GET /risk/frtb")
-    Component(varCalc,      "VaR Calculator",        "Domain Service",
-      "Historical simulation (250-day window) and Monte Carlo (10,000 paths) at 99% confidence.")
-    Component(frtbEngine,   "FRTB SA/IMA Engine",   "Regulatory Domain Service",
-      "Basel IV FRTB Standardised Approach + Internal Models Approach capital calculation.")
-    Component(xvaEngine,    "XVA Engine",            "Domain Service",
-      "CVA (Credit Valuation Adjustment), DVA, FVA, MVA calculations per counterparty.")
-    Component(limitMgr,     "LimitManager",          "Domain Service",
-      "Pre-deal limit check orchestrator. Checks FX, MM, credit, DV01, and FRTB bucket limits.")
-    Component(limitAgg,     "Limit Aggregate",       "DDD Aggregate Root",
-      "Limit entity: type, counterparty/book, amount, currency, utilised, status.")
-    Component(limitRepo,    "LimitRepository",       "Repository (Prisma)",
-      "Persists limit state. Optimistic locking. Tenant-scoped reads.")
-    Component(posConsumer,  "PositionEventConsumer", "Kafka Consumer",
-      "Consumes nexus.positions.updated. Triggers VaR recalculation and limit re-check.")
-    Component(rateConsumer, "RateEventConsumer",     "Kafka Consumer",
-      "Consumes nexus.marketdata.rates. Updates market risk factor cache.")
-    Component(limitPub,     "LimitBreachPublisher",  "Kafka Producer",
-      "Publishes LimitBreachEvent to nexus.risk.limit-breach when utilisation > 100%.")
-    Component(varPub,       "VaRResultPublisher",    "Kafka Producer",
-      "Publishes VaRResultEvent to nexus.risk.var-calculated after each calculation.")
-    Component(otelTrace,    "OTel Tracer",           "Observability",
-      "Traces VaR calculation duration, limit check latency, FRTB run time.")
-  }
-
-  Container(kafka,      "Apache Kafka",     "", "Event bus")
-  ContainerDb(pg,       "PostgreSQL",       "", "limits, var_results tables")
-  Container(notifSvc,   "Notification Svc", "", "Consumes LimitBreachEvent")
-  Container(webApp,     "Next.js Web App",  "", "Risk dashboard")
-
-  Rel(kafka,        posConsumer,   "nexus.positions.updated",        "SASL")
-  Rel(kafka,        rateConsumer,  "nexus.marketdata.rates",         "SASL")
-  Rel(posConsumer,  limitMgr,      "checkLimits(position)",          "in-process")
-  Rel(posConsumer,  varCalc,       "recalculate(bookId)",            "in-process")
-  Rel(rateConsumer, varCalc,       "updateRiskFactors(rates)",       "in-process")
-  Rel(limitMgr,     limitAgg,      "evaluate(utilisation)",          "in-process")
-  Rel(limitMgr,     limitPub,      "publish(LimitBreachEvent)",       "in-process")
-  Rel(varCalc,      frtbEngine,    "computeCapital(positions)",      "in-process")
-  Rel(varCalc,      varPub,        "publish(VaRResultEvent)",         "in-process")
-  Rel(limitAgg,     limitRepo,     "save(limit)",                    "in-process")
-  Rel(limitRepo,    pg,            "SELECT/UPDATE limits",           "pg-wire")
-  Rel(limitPub,     kafka,         "nexus.risk.limit-breach",        "SASL")
-  Rel(varPub,       kafka,         "nexus.risk.var-calculated",      "SASL")
-  Rel(kafka,        notifSvc,      "nexus.risk.limit-breach",        "SASL")
-  Rel(routes,       varCalc,       "GET /risk/var",                  "in-process")
-  Rel(routes,       limitMgr,      "GET/POST /risk/limits",          "in-process")
-  Rel(routes,       xvaEngine,     "GET /risk/xva",                  "in-process")
-  Rel(routes,       frtbEngine,    "GET /risk/frtb",                 "in-process")
+  kafka        -->|"nexus.positions.updated"| posConsumer
+  kafka        -->|"nexus.marketdata.rates"| rateConsumer
+  posConsumer  -->|"checkLimits(position)"| limitMgr
+  posConsumer  -->|"recalculate(bookId)"| varCalc
+  rateConsumer -->|"updateRiskFactors(rates)"| varCalc
+  limitMgr     -->|"evaluate(utilisation)"| limitAgg
+  limitMgr     -->|"publish(LimitBreachEvent)"| limitPub
+  varCalc      -->|"computeCapital(positions)"| frtbEngine
+  varCalc      -->|"publish(VaRResultEvent)"| varPub
+  limitAgg     -->|"save(limit)"| limitRepo
+  limitRepo    -->|"SELECT/UPDATE limits"| pg
+  limitPub     -->|"nexus.risk.limit-breach"| kafka
+  varPub       -->|"nexus.risk.var-calculated"| kafka
+  kafka        -->|"nexus.risk.limit-breach"| notifSvc
+  routes       -->|"GET /risk/var"| varCalc
+  routes       -->|"GET/POST /risk/limits"| limitMgr
+  routes       -->|"GET /risk/xva"| xvaEngine
+  routes       -->|"GET /risk/frtb"| frtbEngine
 ```
 
 ## Limit Types Supported

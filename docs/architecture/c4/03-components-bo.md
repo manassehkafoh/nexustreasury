@@ -6,61 +6,68 @@ Handles SWIFT MX/MT message processing, confirmation matching, and settlement.
 ## Diagram
 
 ```mermaid
-C4Component
-  title Back Office Service — Component Diagram
+flowchart TB
+  subgraph boSvc["Back Office Service  :4005"]
+    routes["BO Routes
+Fastify / OpenAPI 3
+POST /bo/swift/inbound, GET /bo/exceptions"]
+    mxParser["ISO20022Parser
+Application Service — MX
+fxtr/pacs/camt XML parsing · UTI · LEI · BIC"]
+    mtParser["MT FIN Parser
+Application Service — Legacy
+Colon-tagged field extraction :20: :32B:"]
+    matcher["SWIFTMatcher
+Application Service
+Weighted scoring: UTI(40%) LEI(20%) date(15%) amt(15%) rate(10%)"]
+    confirmSvc["ConfirmationService
+Domain Service
+Auto-match · STP target ≥ 95% in 15 min"]
+    settleSvc["SettlementService
+Domain Service
+CLS settlement instructions · Nostro management"]
+    reconSvc["ReconciliationService
+Domain Service
+Daily nostro recon · Breaks identification"]
+    tradeConsumer["TradeEventConsumer
+Kafka Consumer
+nexus.trading.trades.created"]
+    confPub["ConfirmationPublisher
+Kafka Producer
+nexus.bo.confirmation-received"]
+    settlePub["SettlementPublisher
+Kafka Producer
+nexus.bo.settlement-instruction"]
+    s3Client["S3ArchiveClient
+Infrastructure
+SWIFT message archive 7 years"]
+  end
 
-  Container_Boundary(boSvc, "Back Office Service  :4005") {
+  subgraph external["External"]
+    swift[("SWIFT Alliance")]
+    kafka[("Apache Kafka")]
+    pg[("PostgreSQL")]
+    s3[("Object Storage")]
+    cls[("CLS Bank")]
+  end
 
-    Component(routes,       "BO Routes",             "Fastify / OpenAPI 3",
-      "POST /bo/swift/inbound, GET /bo/exceptions, GET /bo/settlement-ladder, GET /health")
-    Component(mxParser,     "ISO20022Parser",        "Application Service — MX",
-      "Parses ISO 20022 XML (fxtr.008/014, pacs.002/008/009/028, camt.053/054/056). Extracts UTI, LEI, BIC.")
-    Component(matcher,      "SWIFTMatcher",          "Application Service",
-      "Field-level matching engine. Weighted scoring: UTI/LEI(40%), BIC(20%), date(15%), amount(15%), rate(10%).")
-    Component(mtParser,     "MT FIN Parser",         "Application Service — Legacy",
-      "Parses legacy MT FIN messages (MT300, MT320, MT360, MT940). Colon-tagged field extraction.")
-    Component(confirmSvc,   "ConfirmationService",   "Domain Service",
-      "Auto-matches SWIFT confirmations to booked trades. STP target ≥ 95% within 15 minutes.")
-    Component(settleSvc,    "SettlementService",     "Domain Service",
-      "Generates CLS settlement instructions. Nostro account management. PvP coordination.")
-    Component(reconSvc,     "ReconciliationService", "Domain Service",
-      "Daily nostro reconciliation. Breaks identification and exception management.")
-    Component(tradeConsumer,"TradeEventConsumer",    "Kafka Consumer",
-      "Consumes nexus.trading.trades.created. Creates pending confirmation record.")
-    Component(confPub,      "ConfirmationPublisher", "Kafka Producer",
-      "Publishes ConfirmationMatchedEvent to nexus.bo.confirmation-received.")
-    Component(settlePub,    "SettlementPublisher",   "Kafka Producer",
-      "Publishes SettlementInstructionEvent to nexus.bo.settlement-instruction.")
-    Component(s3Client,     "S3ArchiveClient",       "Infrastructure",
-      "Archives SWIFT MX/MT messages to S3 for regulatory retention (7 years).")
-    Component(otelTrace,    "OTel Tracer",           "Observability",
-      "Traces SWIFT parse latency, matching score, settlement instruction processing time.")
-  }
-
-  Container(kafka,  "Apache Kafka", "", "Event bus")
-  ContainerDb(pg,   "PostgreSQL",   "", "confirmations, settlements, reconciliations")
-  ContainerDb(s3,   "Object Storage","","SWIFT message archive")
-  System_Ext(swift, "SWIFT Alliance","","MX/MT messages inbound")
-  System_Ext(cls,   "CLS Bank",     "", "FX settlement PvP")
-
-  Rel(swift,        routes,       "POST /bo/swift/inbound (MX XML / MT FIN)", "HTTPS/mTLS")
-  Rel(routes,       mxParser,     "parse(xmlContent, messageType)",             "in-process")
-  Rel(routes,       mtParser,     "parseMT(finContent, messageType)",           "in-process")
-  Rel(mxParser,     matcher,      "match(parsedFields, tradeRef)",              "in-process")
-  Rel(mtParser,     matcher,      "match(parsedFields, tradeRef)",              "in-process")
-  Rel(matcher,      confirmSvc,   "onMatchResult(result)",                      "in-process")
-  Rel(confirmSvc,   confPub,      "publish(ConfirmationMatchedEvent)",           "in-process")
-  Rel(confirmSvc,   s3Client,     "archive(swiftMessage)",                      "in-process")
-  Rel(kafka,        tradeConsumer,"nexus.trading.trades.created",               "SASL")
-  Rel(tradeConsumer,confirmSvc,   "createPendingConfirmation(trade)",            "in-process")
-  Rel(routes,       settleSvc,    "GET /bo/settlement-ladder",                  "in-process")
-  Rel(settleSvc,    settlePub,    "publish(SettlementInstructionEvent)",         "in-process")
-  Rel(settlePub,    kafka,        "nexus.bo.settlement-instruction",            "SASL")
-  Rel(confPub,      kafka,        "nexus.bo.confirmation-received",             "SASL")
-  Rel(settleSvc,    cls,          "FX settlement instruction",                  "HTTPS/mTLS")
-  Rel(confirmSvc,   pg,           "INSERT/UPDATE confirmations",                "pg-wire")
-  Rel(settleSvc,    pg,           "INSERT settlements, cash_flows",             "pg-wire")
-  Rel(s3Client,     s3,           "PUT swift/{year}/{msgId}.xml",               "S3 API")
+  swift        -->|"POST /bo/swift/inbound (MX XML / MT FIN)"| routes
+  routes       -->|"parse(xmlContent, messageType)"| mxParser
+  routes       -->|"parseMT(finContent, messageType)"| mtParser
+  mxParser     -->|"match(parsedFields, tradeRef)"| matcher
+  mtParser     -->|"match(parsedFields, tradeRef)"| matcher
+  matcher      -->|"onMatchResult(result)"| confirmSvc
+  confirmSvc   -->|"publish(ConfirmationMatchedEvent)"| confPub
+  confirmSvc   -->|"archive(swiftMessage)"| s3Client
+  kafka        -->|"nexus.trading.trades.created"| tradeConsumer
+  tradeConsumer -->|"createPendingConfirmation(trade)"| confirmSvc
+  settleSvc    -->|"publish(SettlementInstructionEvent)"| settlePub
+  settlePub    -->|"nexus.bo.settlement-instruction"| kafka
+  confPub      -->|"nexus.bo.confirmation-received"| kafka
+  settleSvc    -->|"FX settlement instruction"| cls
+  confirmSvc   -->|"INSERT/UPDATE confirmations"| pg
+  settleSvc    -->|"INSERT settlements, cash_flows"| pg
+  s3Client     -->|"PUT swift/{year}/{msgId}.xml"| s3
 ```
 
 ## SWIFT MX Message Support Matrix

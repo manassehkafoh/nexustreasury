@@ -5,58 +5,66 @@ Internal architecture of the **Market Data Service** (`packages/market-data-serv
 ## Diagram
 
 ```mermaid
-C4Component
-  title Market Data Service — Component Diagram
+flowchart TB
+  subgraph mdSvc["Market Data Service  :4006"]
+    routes["Market Data Routes
+Fastify / OpenAPI 3
+GET /marketdata/rates, /curves, /vol-surface"]
+    rateAdapter["MockRateAdapter
+Infrastructure Adapter
+CI/test: synthetic rates
+Prod: replaced by Bloomberg/LSEG adapter"]
+    bloombergAdp["BloombergAdapter
+Infrastructure Adapter (Prod)
+B-PIPE subscription · FX spots · deposit rates"]
+    lsegAdp["LSEGAdapter
+Infrastructure Adapter (Prod)
+RMDS subscription · Vol surfaces · OIS curves"]
+    curveBuilder["YieldCurveBuilder
+Domain Service
+Bootstraps OIS/IBOR curves · Nelson-Siegel-Svensson"]
+    volSurface["VolatilitySurface
+Domain Service
+FX implied vol surface · SABR model"]
+    ratePub["RatePublisher
+Kafka Producer
+nexus.marketdata.rates · target < 10ms"]
+    curvePub["CurvePublisher
+Kafka Producer
+nexus.marketdata.curves · every 5 min"]
+    rateCache["RateCache
+Infrastructure — Redis
+nexus:rate:{pair} TTL 5s"]
+  end
 
-  Container_Boundary(mdSvc, "Market Data Service  :4006") {
+  subgraph external["External"]
+    bloomberg[("Bloomberg B-PIPE")]
+    lseg[("LSEG Refinitiv")]
+    kafka[("Apache Kafka")]
+    redis[("Redis Cluster")]
+    tradeSvc[("Trade Service")]
+    riskSvc[("Risk Service")]
+    almSvc[("ALM Service")]
+  end
 
-    Component(routes,       "Market Data Routes",   "Fastify / OpenAPI 3",
-      "GET /marketdata/rates, GET /marketdata/curves, GET /marketdata/vol-surface")
-    Component(rateAdapter,  "MockRateAdapter",      "Infrastructure Adapter",
-      "In CI/test: generates synthetic FX/MM rates. Production: replaced by BloombergAdapter or LSEGAdapter.")
-    Component(bloombergAdp, "BloombergAdapter",     "Infrastructure Adapter (Prod)",
-      "Connects to Bloomberg B-PIPE. Subscribes to FX spots, deposit rates, bond yields.")
-    Component(lsegAdp,      "LSEGAdapter",          "Infrastructure Adapter (Prod)",
-      "Connects to LSEG Refinitiv RMDS. Volatility surfaces and OIS curves.")
-    Component(curveBuilder, "YieldCurveBuilder",    "Domain Service",
-      "Bootstraps OIS and IBOR curves from deposit/swap rates. Nelson-Siegel-Svensson parameterisation.")
-    Component(volSurface,   "VolatilitySurface",    "Domain Service",
-      "Builds FX implied vol surface (SABR model). Calculates smile/skew for option pricing.")
-    Component(ratePub,      "RatePublisher",        "Kafka Producer",
-      "Publishes RateTickEvent to nexus.marketdata.rates on every tick (target < 10ms latency).")
-    Component(curvePub,     "CurvePublisher",       "Kafka Producer",
-      "Publishes YieldCurveEvent to nexus.marketdata.curves on curve rebuild (every 5 minutes).")
-    Component(rateCache,    "RateCache",            "Infrastructure — Redis",
-      "Caches latest rate per currency pair. TTL 5 seconds. Used by Trade Service pre-deal checks.")
-    Component(otelTrace,    "OTel Tracer",          "Observability",
-      "Traces feed latency, curve build time, cache hit/miss ratio.")
-  }
-
-  Container(kafka,     "Apache Kafka",    "", "Event bus")
-  ContainerDb(redis,   "Redis Cluster",   "", "Rate cache: nexus:rate:{pair}")
-  System_Ext(bloomberg,"Bloomberg B-PIPE","", "Real-time market data")
-  System_Ext(lseg,     "LSEG Refinitiv", "", "Volatility surfaces, OIS curves")
-  Container(tradeSvc,  "Trade Service",   "", "Reads rates via Redis cache")
-  Container(riskSvc,   "Risk Service",    "", "Consumes rate events for VaR")
-  Container(almSvc,    "ALM Service",     "", "Consumes curve events for IRRBB")
-
-  Rel(bloomberg,   bloombergAdp, "B-PIPE subscription feed",            "TCP/TLS")
-  Rel(lseg,        lsegAdp,      "RMDS subscription feed",              "TCP/TLS")
-  Rel(bloombergAdp,curveBuilder, "raw rates",                           "in-process")
-  Rel(lsegAdp,     volSurface,   "vol quotes",                         "in-process")
-  Rel(bloombergAdp,ratePub,      "tick data",                           "in-process")
-  Rel(rateAdapter, ratePub,      "synthetic tick (CI/dev)",             "in-process")
-  Rel(ratePub,     kafka,        "nexus.marketdata.rates",              "SASL")
-  Rel(ratePub,     rateCache,    "SET nexus:rate:{pair} EX 5",          "Redis")
-  Rel(curveBuilder,curvePub,     "rebuilt curve",                       "in-process")
-  Rel(curvePub,    kafka,        "nexus.marketdata.curves",             "SASL")
-  Rel(rateCache,   redis,        "GET/SET",                             "Redis protocol")
-  Rel(tradeSvc,    rateCache,    "GET nexus:rate:{pair}",               "Redis protocol")
-  Rel(kafka,       riskSvc,      "nexus.marketdata.rates (VaR RF)",     "SASL")
-  Rel(kafka,       almSvc,       "nexus.marketdata.curves (IRRBB)",     "SASL")
-  Rel(routes,      rateAdapter,  "GET /marketdata/rates",               "in-process")
-  Rel(routes,      curveBuilder, "GET /marketdata/curves",              "in-process")
-  Rel(routes,      volSurface,   "GET /marketdata/vol-surface",         "in-process")
+  bloomberg   -->|"B-PIPE subscription feed (TCP/TLS)"| bloombergAdp
+  lseg        -->|"RMDS subscription feed (TCP/TLS)"| lsegAdp
+  bloombergAdp -->|"raw rates"| curveBuilder
+  lsegAdp     -->|"vol quotes"| volSurface
+  bloombergAdp -->|"tick data"| ratePub
+  lsegAdp     -->|"curve data"| curvePub
+  rateAdapter -->|"synthetic tick (CI/dev)"| ratePub
+  ratePub     -->|"nexus.marketdata.rates"| kafka
+  ratePub     -->|"SET nexus:rate:{pair} EX 5"| rateCache
+  curveBuilder -->|"rebuilt curve"| curvePub
+  curvePub    -->|"nexus.marketdata.curves"| kafka
+  rateCache   -->|"GET/SET"| redis
+  tradeSvc    -->|"GET nexus:rate:{pair}"| redis
+  kafka       -->|"nexus.marketdata.rates (VaR RF)"| riskSvc
+  kafka       -->|"nexus.marketdata.curves (IRRBB)"| almSvc
+  routes      -->|"GET /marketdata/rates"| rateAdapter
+  routes      -->|"GET /marketdata/curves"| curveBuilder
+  routes      -->|"GET /marketdata/vol-surface"| volSurface
 ```
 
 ## Rate Cache Strategy

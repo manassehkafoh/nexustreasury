@@ -5,67 +5,116 @@ Kubernetes topology, namespace layout, and GitOps pipeline for NexusTreasury.
 ## Kubernetes Cluster Topology
 
 ```mermaid
-C4Deployment
-  title NexusTreasury — Kubernetes Deployment Architecture
+flowchart TB
+  subgraph cloud["☁️ Cloud Provider — Managed Kubernetes"]
+    subgraph cluster["Kubernetes Cluster (EKS / AKS / GKE)"]
 
-  Deployment_Node(cloud, "Cloud Provider (AWS/Azure/GCP)", "Managed Kubernetes") {
+      subgraph nsApp["nexus-prod namespace — Application Workloads"]
+        tradeDeploy["trade-service
+Deployment · 3 replicas
+node:24-alpine3.21 · Port 4001
+HPA: 3–20 pods"]
+        posDeploy["position-service
+Deployment · 3 replicas
+Port 4002 · HPA: 3–10"]
+        riskDeploy["risk-service
+Deployment · 2 replicas
+Port 4003 · HPA: 2–8"]
+        almDeploy["alm-service
+Deployment · 2 replicas
+Port 4004 · HPA: 2–6"]
+        boDeploy["bo-service
+Deployment · 2 replicas
+Port 4005 · HPA: 2–6"]
+        mdDeploy["market-data-service
+Deployment · 2 replicas
+Port 4006 · HPA: 2–6"]
+        webDeploy["web (Next.js)
+Deployment · 2 replicas
+Standalone output · Port 3000"]
+      end
 
-    Deployment_Node(cluster, "Kubernetes Cluster", "EKS/AKS/GKE") {
+      subgraph nsPlatform["nexus-platform namespace — Platform Services"]
+        keycloakDeploy["keycloak
+StatefulSet · 2 replicas
+OIDC/OAuth2 · Port 8080"]
+        kongDeploy["api-gateway
+Deployment · 2 replicas
+Kong / Nginx · Port 443"]
+        argoCD["argocd
+GitOps controller
+Port 8080"]
+        vaultDeploy["vault
+StatefulSet · 3 replicas
+HA Raft · Port 8200"]
+      end
 
-      Deployment_Node(nsApp, "nexus-prod namespace", "Application workloads") {
-        Container(tradeDeploy,    "trade-service",         "Deployment: 3 replicas\nnode:24-alpine3.21\nHPA: 3-20 pods\nPort: 4001")
-        Container(posDeploy,      "position-service",      "Deployment: 3 replicas\nHPA: 3-10 pods\nPort: 4002")
-        Container(riskDeploy,     "risk-service",          "Deployment: 2 replicas\nHPA: 2-8 pods\nPort: 4003")
-        Container(almDeploy,      "alm-service",           "Deployment: 2 replicas\nHPA: 2-6 pods\nPort: 4004")
-        Container(boDeploy,       "bo-service",            "Deployment: 2 replicas\nHPA: 2-6 pods\nPort: 4005")
-        Container(mdDeploy,       "market-data-service",   "Deployment: 2 replicas\nHPA: 2-6 pods\nPort: 4006")
-        Container(webDeploy,      "web",                   "Deployment: 2 replicas\nNext.js standalone\nPort: 3000")
-      }
+      subgraph nsData["nexus-data namespace — Data Stores"]
+        pgCluster[("postgresql-patroni
+StatefulSet · 3 nodes
+1 primary + 2 standby")]
+        kafkaCluster[("kafka
+StatefulSet · 3 brokers
+KRaft mode · Port 9092")]
+        redisCluster[("redis
+StatefulSet · 6 nodes
+3 primary + 3 replica")]
+        elasticDeploy[("elasticsearch
+StatefulSet · 3 nodes
+Port 9200")]
+      end
 
-      Deployment_Node(nsPlatform, "nexus-platform namespace", "Platform services") {
-        Container(keycloakDeploy, "keycloak",               "StatefulSet: 2 replicas\nOIDC/OAuth2\nPort: 8080")
-        Container(kongDeploy,     "api-gateway",            "Deployment: 2 replicas\nKong / Nginx Ingress\nPort: 443/80")
-        Container(argoCD,         "argocd",                 "ArgoCD\nGitOps controller\nPort: 8080")
-        Container(vaultDeploy,    "vault",                  "StatefulSet: 3 replicas\nHA Raft\nPort: 8200")
-      }
+      subgraph nsObs["nexus-observability namespace"]
+        promDeploy["prometheus
+Deployment · 30d retention"]
+        grafanaDeploy["grafana
+Deployment · Port 3000"]
+        jaegerDeploy["jaeger
+Deployment · Port 16686"]
+        otelDeploy["otel-collector
+DaemonSet · 1 per node"]
+      end
 
-      Deployment_Node(nsData, "nexus-data namespace", "Data stores") {
-        ContainerDb(pgCluster,    "postgresql-patroni",     "StatefulSet: 3 nodes\nPatroni HA\n1 primary, 2 standby")
-        ContainerDb(kafkaCluster, "kafka",                  "StatefulSet: 3 brokers\nKRaft mode\nPort: 9092")
-        ContainerDb(redisCluster, "redis",                  "StatefulSet: 6 nodes\n3 primary, 3 replica\nPort: 6379")
-        ContainerDb(elasticDeploy,"elasticsearch",          "StatefulSet: 3 nodes\nPort: 9200")
-      }
+      subgraph nsSec["nexus-security namespace"]
+        opaDeploy["opa-gatekeeper
+DaemonSet · Policy enforcement"]
+        trivyDeploy["trivy-operator
+DaemonSet · Runtime CVE scan"]
+        ciliumDeploy["cilium
+DaemonSet · 1 per node
+eBPF L7 networking"]
+      end
+    end
 
-      Deployment_Node(nsObs, "nexus-observability namespace", "Observability") {
-        Container(promDeploy,     "prometheus",             "Deployment: 1 replica\n30-day retention")
-        Container(grafanaDeploy,  "grafana",                "Deployment: 1 replica\nPort: 3000")
-        Container(jaegerDeploy,   "jaeger",                 "Deployment: 1 replica\nPort: 16686")
-        Container(otelDeploy,     "otel-collector",         "DaemonSet: 1 per node")
-      }
+    subgraph ingress["Ingress Layer"]
+      nlb["NLB / ALB
+TLS 1.3 + WAF
+Port 443"]
+    end
+  end
 
-      Deployment_Node(nsSec, "nexus-security namespace", "Security") {
-        Container(opaDeploy,      "opa-gatekeeper",         "DaemonSet\nPolicy enforcement")
-        Container(trivyDeploy,    "trivy-operator",         "DaemonSet\nRuntime CVE scan")
-        Container(ciliumDeploy,   "cilium",                 "DaemonSet: 1 per node\neBPF networking")
-      }
-    }
+  subgraph github["GitHub"]
+    ghActions["GitHub Actions
+CI Pipeline"]
+    ghcr["GHCR
+ghcr.io/manassehkafoh/nexustreasury/*"]
+  end
 
-    Deployment_Node(ingress, "Ingress Layer", "Cloud Load Balancer") {
-      Container(nlb, "Network Load Balancer", "AWS ALB / Azure AppGW", "TLS termination. WAF. Port 443.")
-    }
-  }
-
-  Deployment_Node(github, "GitHub", "Source Control + CI") {
-    Container(ghActions, "GitHub Actions", "CI Pipeline", "lint, test, build, scan, push")
-    Container(ghcr,      "GHCR",           "Container Registry", "ghcr.io/manassehkafoh/nexustreasury/*")
-  }
-
-  Rel(nlb,       kongDeploy,   "HTTPS",         "443")
-  Rel(kongDeploy,tradeDeploy,  "HTTP/2 mTLS",   "4001")
-  Rel(kongDeploy,webDeploy,    "HTTP/2",        "3000")
-  Rel(argoCD,    ghcr,         "Pull images",   "HTTPS")
-  Rel(ghActions, ghcr,         "Push images",   "HTTPS")
-  Rel(argoCD,    github,       "Watch main branch", "HTTPS")
+  nlb         -->|"HTTPS"| kongDeploy
+  kongDeploy  -->|"HTTP/2 mTLS"| tradeDeploy
+  kongDeploy  -->|"HTTP/2"| webDeploy
+  argoCD      -->|"Pull images"| ghcr
+  ghActions   -->|"Push images"| ghcr
+  argoCD      -->|"Watch main branch"| github
+  tradeDeploy -->|"pg-wire/TLS"| pgCluster
+  tradeDeploy -->|"SASL"| kafkaCluster
+  tradeDeploy -->|"AUTH+TLS"| redisCluster
+  posDeploy   -->|"pg-wire/TLS"| pgCluster
+  posDeploy   -->|"SASL"| kafkaCluster
+  otelDeploy  -->|"gRPC"| promDeploy
+  otelDeploy  -->|"gRPC"| jaegerDeploy
+  promDeploy  -->|"Query"| grafanaDeploy
+  tradeDeploy -->|"mTLS Vault"| vaultDeploy
 ```
 
 ## Namespace Isolation (Cilium Zero Trust)
