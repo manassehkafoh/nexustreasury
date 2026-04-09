@@ -193,6 +193,11 @@ jobs:
           - alm-service
           - bo-service
           - market-data-service
+          - accounting-service
+          - audit-service
+          - notification-service
+          - collateral-service
+          - reporting-service
           - web
     steps:
       - uses: actions/checkout@v4
@@ -234,6 +239,35 @@ jobs:
           wait-for-processing: true
 
   # ── E2E Tests ─────────────────────────────────────────────
+  # ── In-Memory E2E Integration Tests ─────────────────────
+  e2e-integration:
+    name: E2E Integration Tests (in-memory, no containers)
+    needs: [lint, typecheck, test]
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ci-e2e-secret-not-for-production
+      AUDIT_HMAC_KEY: ci-e2e-hmac-key-32-chars-minimum!!!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        run: pnpm exec prisma generate --schema=prisma/schema.prisma
+      - run: pnpm build
+      - name: Run E2E integration tests
+        run: pnpm --filter @nexustreasury/e2e exec vitest run --reporter=verbose
+      - name: Upload E2E results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-integration-results
+          path: tests/e2e/coverage/
+          retention-days: 7
+
   e2e:
     name: E2E Tests (Playwright)
     needs: build-images
