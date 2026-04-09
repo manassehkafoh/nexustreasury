@@ -1,102 +1,183 @@
 # Branding System
 
-NexusTreasury supports white-label deployment. Each bank tenant can configure
-its own visual identity — colours, fonts, logo, locale, and feature flags.
-All branding is applied at runtime with zero code changes.
+NexusTreasury supports white-label deployment. Each bank tenant can apply its own brand — colours, fonts, logo, and locale — without rebuilding the application.
 
 ---
 
-## Brand Configuration
+## Architecture
 
-Brands are defined in `packages/web/src/lib/branding.ts`:
+The branding system uses a configuration-driven approach. The `web` package reads brand configuration at build-time (static generation) and runtime (CSS custom properties), keeping bundle sizes minimal.
+
+```
+packages/web/src/lib/branding.ts    ← Brand configuration types + resolver
+public/brands/                      ← Per-tenant brand assets (logo SVG, favicon)
+  nexustreasury/
+    logo.svg
+    favicon.ico
+  republic-bank/
+    logo.svg
+    favicon.ico
+```
+
+---
+
+## Brand Configuration Schema
+
+Each tenant's brand config is stored in the `brand_config` table (PostgreSQL, RLS-isolated per tenant) and injected into the Next.js layout at request time:
 
 ```typescript
-export const BRANDS: Record<string, BrandConfig> = {
-  'nexustreasury': {
-    name:        'NexusTreasury',
-    primaryColor: '#1a56db',
-    accentColor:  '#7e3af2',
-    logoUrl:      '/brands/nexustreasury/logo.svg',
-    faviconUrl:   '/brands/nexustreasury/favicon.ico',
-    fontFamily:   'Inter, system-ui, sans-serif',
-    locale:       'en-GB',
-    currency:     'USD',
+interface BrandConfig {
+  tenantId:    string;
+  displayName: string;
+
+  // Colours (CSS custom property values)
+  colors: {
+    primary:     string;  // Main brand colour   — e.g. '#0A5F9E'
+    secondary:   string;  // Accent colour       — e.g. '#F5A623'
+    background:  string;  // App background      — e.g. '#F8FAFC'
+    surface:     string;  // Card/panel bg       — e.g. '#FFFFFF'
+    text:        string;  // Primary text        — e.g. '#1A1A2E'
+  };
+
+  // Typography
+  fonts: {
+    heading: string;   // Google Fonts family name — e.g. 'Inter'
+    body:    string;   // Body font               — e.g. 'Inter'
+  };
+
+  // Assets
+  logoUrl:    string;  // Path to SVG logo
+  faviconUrl: string;  // Path to favicon
+
+  // Locale
+  locale:   string;   // BCP 47 locale          — e.g. 'en-US', 'ar-AE'
+  currency: string;   // Default ISO 4217 code  — e.g. 'USD', 'TTD', 'AED'
+  timezone: string;   // IANA timezone          — e.g. 'America/Port_of_Spain'
+
+  // Feature flags
+  features: {
+    fxEDealing:       boolean;
+    irrbbReporting:   boolean;
+    collateralMgmt:   boolean;
+    islamicFinance:   boolean;
+    aiInsights:       boolean;
+    marketData:       boolean;
+  };
+}
+```
+
+---
+
+## Built-in Themes
+
+NexusTreasury ships with two brand profiles out of the box:
+
+### `nexustreasury` (default)
+
+```typescript
+{
+  colors: {
+    primary:    '#0A5F9E',   // NexusTreasury Blue
+    secondary:  '#F5A623',   // Amber accent
+    background: '#F0F4F8',
+    surface:    '#FFFFFF',
+    text:       '#1A1A2E',
   },
-  'republic-bank': {
-    name:         'Republic Bank',
-    primaryColor: '#c8102e',   // Republic Bank red
-    accentColor:  '#003087',
-    logoUrl:      '/brands/republic-bank/logo.svg',
-    faviconUrl:   '/brands/republic-bank/favicon.ico',
-    fontFamily:   'Montserrat, system-ui, sans-serif',
-    locale:       'en-TT',
-    currency:     'TTD',
+  fonts: { heading: 'Inter', body: 'Inter' },
+}
+```
+
+### `republic-bank`
+
+```typescript
+{
+  displayName: 'Republic Bank Ltd',
+  colors: {
+    primary:    '#C8102E',   // Republic Red
+    secondary:  '#FFD700',   // Gold accent
+    background: '#F8F8F8',
+    surface:    '#FFFFFF',
+    text:       '#1A1A1A',
   },
-};
+  currency: 'TTD',
+  timezone: 'America/Port_of_Spain',
+  locale:   'en-TT',
+}
 ```
 
 ---
 
 ## Applying a Brand
 
-The brand is set via the `NEXT_PUBLIC_BRAND` environment variable:
+### During tenant provisioning
 
 ```bash
-# Development
-NEXT_PUBLIC_BRAND=republic-bank pnpm --filter @nexustreasury/web dev
+pnpm tsx scripts/provision-tenant.ts \
+  --tenantId   republic-bank \
+  --displayName "Republic Bank Ltd" \
+  --brand      republic-bank
+```
 
-# Kubernetes (per-tenant Deployment patch in Kustomize overlay)
-env:
-  - name: NEXT_PUBLIC_BRAND
-    valueFrom:
-      configMapKeyRef:
-        name: nexustreasury-tenant-config
-        key: brandId
+The provisioning script reads `public/brands/republic-bank/` for assets and stores the config in the `brand_config` table.
+
+### Updating an existing tenant's brand
+
+```sql
+UPDATE brand_config
+SET colors = '{"primary": "#C8102E", "secondary": "#FFD700", ...}'::jsonb,
+    updated_at = NOW()
+WHERE tenant_id = 'republic-bank';
+```
+
+Or via the Platform Admin API:
+
+```bash
+curl -X PATCH https://admin.nexustreasury.io/api/v1/tenants/republic-bank/brand \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"colors": {"primary": "#C8102E"}}'
 ```
 
 ---
 
 ## Adding a New Brand
 
-1. Create `public/brands/<brand-id>/logo.svg` and `favicon.ico`
-2. Add the brand config to `BRANDS` in `packages/web/src/lib/branding.ts`
-3. Pass `--brand <brand-id>` to `scripts/provision-tenant.ts`
-4. Update the Kustomize overlay for the tenant's namespace
+1. Create the brand directory:
+   ```bash
+   mkdir -p packages/web/public/brands/my-bank
+   cp my-bank-logo.svg packages/web/public/brands/my-bank/logo.svg
+   cp my-bank-favicon.ico packages/web/public/brands/my-bank/favicon.ico
+   ```
+
+2. Add the brand config to `packages/web/src/lib/branding.ts`:
+   ```typescript
+   export const BRAND_CONFIGS: Record<string, BrandConfig> = {
+     'my-bank': {
+       displayName: 'My Bank Ltd',
+       colors: { primary: '#005B99', ... },
+       currency: 'USD',
+       timezone: 'America/New_York',
+       features: { fxEDealing: true, islamicFinance: false, ... },
+     },
+   };
+   ```
+
+3. Provision the tenant (see above).
 
 ---
 
-## Feature Flags
+## Runtime Behaviour
 
-Each brand config can include feature flags to enable/disable modules:
+CSS custom properties are injected into the `<html>` element by the Next.js layout server component:
 
-```typescript
-features: {
-  fxEDealing:      true,   // FX eDealing blotter
-  irrbbReporting:  true,   // BCBS 368 IRRBB reports
-  collateralMgmt:  true,   // ISDA CSA margin calls
-  islamicFinance:  false,  // Murabaha / Sukuk (MENA markets)
-  aiInsights:      true,   // RAG-powered treasury assistant (Sprint 11)
-  marketData:      true,   // Bloomberg / LSEG live rates
-}
+```html
+<html style="
+  --color-primary: #C8102E;
+  --color-secondary: #FFD700;
+  --font-heading: 'Inter', sans-serif;
+">
 ```
 
-Feature-flagged components are excluded from the Next.js bundle at build time
-via `NEXT_PUBLIC_FEATURES` environment variables — not just hidden in the UI.
+All Tailwind utility classes reference these CSS variables, so the entire UI theme updates without any JavaScript.
 
----
-
-## Tenant Provisioning
-
-Brand assignment is part of the tenant provisioning flow:
-
-```bash
-pnpm tsx scripts/provision-tenant.ts \
-  --tenantId   republic-bank \
-  --displayName "Republic Bank Ltd" \
-  --adminEmail admin@republicbank.tt \
-  --currency   TTD \
-  --brand      republic-bank
-
-# Or via the Postman collection:
-# 🏗️ Provision New Tenant (Platform Admin)
-```
+The logo is served from `/brands/{tenantId}/logo.svg` — cached at the CDN edge with a 30-day `Cache-Control: max-age=2592000, immutable` header.

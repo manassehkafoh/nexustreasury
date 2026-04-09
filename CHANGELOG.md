@@ -40,6 +40,56 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [1.0.0] — 2026-04-09 · Production Ready
 
+### Added — Post-Production (9 April 2026)
+
+**Documentation completeness pass**
+- `docs/wiki/Testing-Strategy.md` — Complete rewrite: 5-layer testing pyramid covering 502 unit tests, 31 E2E tests, 7 benchmark suites, k6 performance tests, Pact contract tests, and Stryker mutation testing. Previous version described an outdated Playwright/Docker-Compose pyramid.
+- `docs/architecture/c4/05-deployment.md` — Multi-region active-active section: Region topology diagram, RPO/RTO targets, ArgoCD ApplicationSet flow, Kafka MirrorMaker 2 details, Route53 failover sequence.
+- `docs/runbooks/developer-onboarding.md` — Complete rewrite: VS Code Dev Container (Option A, < 5 min), manual setup (Option B), full Makefile quick reference (25 targets), Postman/Newman API testing, environment variable table, tenant provisioning, common issues.
+- `docs/wiki/branding-system.md` — New wiki: BrandConfig schema, built-in themes (nexustreasury + republic-bank), runtime CSS custom properties, adding a new brand, Platform Admin API for brand updates.
+- `docs/adr/README.md` — Complete register of all 10 ADRs with links, dates, and statuses.
+
+**Architecture Decision Records (ADR-001 through ADR-007)**
+- ADR-001: Monorepo with pnpm Workspaces + Turborepo
+- ADR-002: Fastify 5 vs Express vs NestJS
+- ADR-003: PostgreSQL + TimescaleDB vs Cassandra
+- ADR-004: Apache Kafka vs RabbitMQ vs NATS
+- ADR-005: Keycloak vs Auth0 vs AWS Cognito
+- ADR-006: TypeScript Strict Mode Throughout
+- ADR-007: Vitest vs Jest
+
+**Infrastructure**
+- `infra/argocd/nexustreasury-multiregion.yaml` — ArgoCD ApplicationSet (eu-west-1 + us-east-1), Kafka MirrorMaker 2, Route53 health check ConfigMap
+- `infra/kubernetes/overlays/production-eu-west-1/` + `production-us-east-1/` — Multi-region Kustomize overlays with replica patches
+- `infra/kubernetes/base/accounting-service.yaml` — Missing K8s base manifest added
+- `infra/kubernetes/base/reporting-service.yaml` — Missing K8s base manifest added
+- `infra/kubernetes/base/pdb.yaml` — 12 PodDisruptionBudgets for all workloads
+- `infra/kubernetes/base/resource-quotas.yaml` — ResourceQuota + LimitRange for nexustreasury namespace
+- `infra/kubernetes/base/kustomization.yaml` — Updated to include all 13 services, PDB, and ResourceQuota
+
+**Developer Experience**
+- `.devcontainer/devcontainer.json` — VS Code Dev Container: Node.js 22, Docker-in-Docker, kubectl, Helm, GitHub CLI, 10 extensions, all ports forwarded
+- `.devcontainer/setup.sh` — Post-create setup: installs pnpm, builds all services, runs migrations, smoke tests. First green build < 5 minutes.
+- `Makefile` — 25 developer targets: `make test`, `make dev`, `make infra-up`, `make api-test`, `make k6`, `make provision-tenant`, etc.
+- `stryker.config.ts` — Mutation testing config: vitest runner, 5 source packages, kill score thresholds (break=65%, low=70%, high=80%)
+
+**Performance & Quality**
+- `tests/performance/trade-booking.k6.js` — 3 scenarios (steady 50 VUs, ramp 100 VUs, spike 200 RPS), custom metrics, SLA thresholds
+- `tests/performance/lcr-report.k6.js` — 10 VUs × 2 min regulatory batch load test
+- `tests/contract/trades-booked.consumer.pact.ts` — accounting-service consumer contract
+- `tests/contract/limit-breach.consumer.pact.ts` — notification-service consumer contract
+- `tests/contract/README.md` — Contract test documentation, Pact Broker workflow
+
+**CI/CD**
+- `.github/workflows/contract-tests.yml` — Pact consumer/provider + can-i-deploy gate
+- `.github/workflows/performance-tests.yml` — k6 post-staging SLA validation
+- `scripts/run-api-tests.sh` — Newman API test runner (local/staging/production)
+
+**API Documentation**
+- `docs/api/openapi.yaml` — Updated v1.1.0: 20 → 29 paths; added collateral (3), notifications (2), market-data (2), risk limits (2) endpoints; 5 new schemas
+- Postman workspace: 14 → 17 live requests; collection pre-request auth guard; OpenAPI spec updated to v1.1.0
+
+
 ### Platform Statistics
 - **13** microservices (all TypeScript strict, Clean Architecture + DDD)
 - **533** automated tests (502 unit + 31 E2E) — 0 failures
