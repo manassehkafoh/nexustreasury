@@ -1,0 +1,506 @@
+asyncapi: 2.6.0
+info:
+  title: NexusTreasury Event Bus
+  version: 1.0.0
+  description: |
+    AsyncAPI specification for all NexusTreasury Kafka topics.
+
+    The event bus is the backbone of inter-service communication.
+    All state changes are published as domain events; services
+    subscribe independently (choreography over orchestration).
+
+    **Kafka cluster**: 3 brokers, replication factor 3, min.insync.replicas 2
+    **Schema registry**: Confluent Schema Registry (Avro + JSON Schema)
+    **Retention**: 7 days default; `nexus.security.*` topics: 90 days
+    **Partitioning**: by tenantId (key) for ordered per-tenant processing
+
+  contact:
+    name: NexusTreasury Platform Engineering
+    url: https://github.com/manassehkafoh/nexustreasury
+  license:
+    name: Proprietary
+
+servers:
+  local:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka (Docker Compose)
+  staging:
+    url: kafka.staging.nexustreasury.io:9092
+    protocol: kafka
+    security:
+      - sasl-scram: []
+  production:
+    url: kafka.nexustreasury.io:9092
+    protocol: kafka
+    security:
+      - sasl-scram: []
+
+defaultContentType: application/json
+
+channels:
+  # ── Trading ──────────────────────────────────────────────────────────────────
+
+  nexus.trading.trades.booked:
+    description: |
+      Published when a trade is successfully booked after passing
+      all pre-deal checks (sanctions screening + credit limit check).
+      Consumed by: position-service, accounting-service, audit-service,
+      notification-service.
+    subscribe:
+      operationId: onTradeBooked
+      summary: Trade has been booked
+      message:
+        $ref: '#/components/messages/TradeBooked'
+    bindings:
+      kafka:
+        topic: nexus.trading.trades.booked
+        partitions: 12
+        replicas: 3
+        configs:
+          retention.ms: 604800000   # 7 days
+          cleanup.policy: delete
+
+  nexus.trading.trades.amended:
+    description: Published when a validated trade is amended.
+    subscribe:
+      operationId: onTradeAmended
+      message:
+        $ref: '#/components/messages/TradeAmended'
+    bindings:
+      kafka:
+        topic: nexus.trading.trades.amended
+        partitions: 12
+        replicas: 3
+
+  nexus.trading.trades.cancelled:
+    description: Published when a trade is cancelled.
+    subscribe:
+      operationId: onTradeCancelled
+      message:
+        $ref: '#/components/messages/TradeCancelled'
+    bindings:
+      kafka:
+        topic: nexus.trading.trades.cancelled
+        partitions: 12
+        replicas: 3
+
+  # ── Position ─────────────────────────────────────────────────────────────────
+
+  nexus.position.updated:
+    description: |
+      Published by position-service after each position MTM recalculation.
+      Frequency: real-time on trade events, plus scheduled EOD full revaluation.
+      Consumed by: risk-service, audit-service.
+    subscribe:
+      operationId: onPositionUpdated
+      message:
+        $ref: '#/components/messages/PositionUpdated'
+    bindings:
+      kafka:
+        topic: nexus.position.updated
+        partitions: 6
+        replicas: 3
+
+  # ── Market Data ───────────────────────────────────────────────────────────────
+
+  nexus.market.rates-updated:
+    description: |
+      Published by market-data-service on each rate snapshot received from
+      Bloomberg BLPAPI or LSEG Refinitiv RDP.
+      Frequency: real-time tick data (typically 100-500ms intervals for FX).
+      Consumed by: position-service, risk-service.
+    subscribe:
+      operationId: onRatesUpdated
+      message:
+        $ref: '#/components/messages/RatesUpdated'
+    bindings:
+      kafka:
+        topic: nexus.market.rates-updated
+        partitions: 6
+        replicas: 3
+        configs:
+          retention.ms: 86400000    # 1 day (rate data has short useful life)
+
+  # ── Risk ──────────────────────────────────────────────────────────────────────
+
+  nexus.risk.limit-breach:
+    description: |
+      Published when a position MTM update causes a credit or market limit
+      to be breached. Triggers CRITICAL notification to risk managers.
+      Consumed by: notification-service, audit-service.
+    subscribe:
+      operationId: onLimitBreach
+      message:
+        $ref: '#/components/messages/LimitBreach'
+    bindings:
+      kafka:
+        topic: nexus.risk.limit-breach
+        partitions: 3
+        replicas: 3
+        configs:
+          retention.ms: 604800000
+
+  nexus.risk.greeks-calculated:
+    description: |
+      Published after book-level Greeks aggregation by risk-service.
+      Frequency: triggered by position updates.
+    subscribe:
+      operationId: onGreeksCalculated
+      message:
+        $ref: '#/components/messages/GreeksCalculated'
+    bindings:
+      kafka:
+        topic: nexus.risk.greeks-calculated
+        partitions: 6
+        replicas: 3
+
+  nexus.risk.var-result:
+    description: |
+      Published after VaR/sVaR recalculation (typically EOD).
+      Consumed by: collateral-service (triggers margin call recomputation),
+      reporting-service, audit-service.
+    subscribe:
+      operationId: onVaRResult
+      message:
+        $ref: '#/components/messages/VaRResult'
+    bindings:
+      kafka:
+        topic: nexus.risk.var-result
+        partitions: 3
+        replicas: 3
+
+  # ── Accounting ────────────────────────────────────────────────────────────────
+
+  nexus.accounting.journal-entries:
+    description: |
+      Published by accounting-service after each journal entry is posted.
+      Consumed by: audit-service, reporting-service.
+    subscribe:
+      operationId: onJournalEntryPosted
+      message:
+        $ref: '#/components/messages/JournalEntryPosted'
+    bindings:
+      kafka:
+        topic: nexus.accounting.journal-entries
+        partitions: 6
+        replicas: 3
+
+  # ── Back Office ───────────────────────────────────────────────────────────────
+
+  nexus.bo.settlement-instructions:
+    description: |
+      Published by bo-service after generating SWIFT MT/MX settlement instructions.
+      Consumed by: audit-service, notification-service.
+    subscribe:
+      operationId: onSettlementInstructionGenerated
+      message:
+        $ref: '#/components/messages/SettlementInstruction'
+    bindings:
+      kafka:
+        topic: nexus.bo.settlement-instructions
+        partitions: 6
+        replicas: 3
+
+  nexus.bo.reconciliation-break:
+    description: |
+      Published when nostro reconciliation detects a break (unmatched entry).
+      Triggers WARNING/CRITICAL notification to Back Office supervisors.
+      Break types: TIMING_DIFFERENCE, AMOUNT_MISMATCH, MISSING_PAYMENT,
+      UNRECOGNISED, DUPLICATE.
+      Consumed by: notification-service, audit-service.
+    subscribe:
+      operationId: onReconciliationBreak
+      message:
+        $ref: '#/components/messages/ReconciliationBreak'
+    bindings:
+      kafka:
+        topic: nexus.bo.reconciliation-break
+        partitions: 3
+        replicas: 3
+
+  # ── ALM ───────────────────────────────────────────────────────────────────────
+
+  nexus.alm.lcr-calculated:
+    description: |
+      Published after each LCR calculation (typically daily at 08:00 local).
+      Triggers CRITICAL notification if LCR < 110% (early warning threshold).
+      Consumed by: audit-service, notification-service, reporting-service.
+    subscribe:
+      operationId: onLCRCalculated
+      message:
+        $ref: '#/components/messages/LCRCalculated'
+    bindings:
+      kafka:
+        topic: nexus.alm.lcr-calculated
+        partitions: 3
+        replicas: 3
+
+  # ── Security ─────────────────────────────────────────────────────────────────
+
+  nexus.security.login-failed:
+    description: |
+      Published on every failed authentication attempt.
+      Rate: if > 3 failures in 60s for the same userId → CRITICAL alert.
+      Consumed by: notification-service, audit-service.
+    subscribe:
+      operationId: onLoginFailed
+      message:
+        $ref: '#/components/messages/LoginFailed'
+    bindings:
+      kafka:
+        topic: nexus.security.login-failed
+        partitions: 3
+        replicas: 3
+        configs:
+          retention.ms: 7776000000  # 90 days (security events)
+
+components:
+  messages:
+    TradeBooked:
+      name: TradeBooked
+      title: Trade Booked Event
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TradeBookedPayload'
+      examples:
+        - name: FX Forward
+          payload:
+            eventId: evt-550e8400-e29b-41d4-a716-446655440000
+            tenantId: bank-001
+            tradeId: trade-550e8400-e29b-41d4-a716-446655440001
+            reference: FX-20260409-A1B2C3
+            assetClass: FX
+            instrumentType: FORWARD
+            direction: BUY
+            notional: 1000000
+            currency: EUR
+            counterpartyCurrency: USD
+            price: 1.0842
+            counterpartyId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+            bookId: fx-prop-desk
+            traderId: trader-alex-01
+            valueDate: "2026-04-11"
+            status: PENDING_VALIDATION
+            occurredAt: "2026-04-09T09:30:00.000Z"
+
+    TradeAmended:
+      name: TradeAmended
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:     { type: string }
+          tenantId:    { type: string }
+          tradeId:     { type: string }
+          amendmentReason: { type: string }
+          previousNotional: { type: number }
+          newNotional:  { type: number }
+          previousPrice: { type: number }
+          newPrice:     { type: number }
+          occurredAt:  { type: string, format: date-time }
+
+    TradeCancelled:
+      name: TradeCancelled
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:     { type: string }
+          tenantId:    { type: string }
+          tradeId:     { type: string }
+          reason:      { type: string }
+          cancelledBy: { type: string }
+          occurredAt:  { type: string, format: date-time }
+
+    PositionUpdated:
+      name: PositionUpdated
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:     { type: string }
+          tenantId:    { type: string }
+          positionId:  { type: string }
+          bookId:      { type: string }
+          mtmValue:    { type: number }
+          unrealisedPnL: { type: number }
+          currency:    { type: string }
+          revaluedAt:  { type: string, format: date-time }
+
+    RatesUpdated:
+      name: RatesUpdated
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          snapshotId:   { type: string }
+          tenantId:     { type: string }
+          rates:
+            type: array
+            items:
+              type: object
+              properties:
+                pair:   { type: string, example: EUR/USD }
+                bid:    { type: number }
+                ask:    { type: number }
+                mid:    { type: number }
+                source: { type: string }
+          snapshotAt: { type: string, format: date-time }
+
+    LimitBreach:
+      name: LimitBreach
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:        { type: string }
+          tenantId:       { type: string }
+          limitId:        { type: string }
+          limitType:      { type: string, enum: [CREDIT, MARKET, CONCENTRATION] }
+          counterpartyId: { type: string }
+          utilisationPct: { type: number, description: "Current utilisation as % of limit" }
+          hardLimitAmount: { type: number }
+          currentExposure: { type: number }
+          currency:        { type: string }
+          breachedAt:      { type: string, format: date-time }
+
+    GreeksCalculated:
+      name: GreeksCalculated
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          bookId:   { type: string }
+          tenantId: { type: string }
+          delta:    { type: number }
+          gamma:    { type: number }
+          vega:     { type: number }
+          theta:    { type: number }
+          dv01:     { type: number }
+          fxDelta:  { type: number }
+          calculatedAt: { type: string, format: date-time }
+
+    VaRResult:
+      name: VaRResult
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          portfolioId:       { type: string }
+          tenantId:          { type: string }
+          method:            { type: string, enum: [HISTORICAL, STRESSED, MONTE_CARLO] }
+          var1Day:           { type: number }
+          var10Day:          { type: number }
+          expectedShortfall: { type: number }
+          confidenceLevel:   { type: number }
+          currency:          { type: string }
+          computedAt:        { type: string, format: date-time }
+
+    JournalEntryPosted:
+      name: JournalEntryPosted
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          id:            { type: string }
+          tenantId:      { type: string }
+          sourceTradeId: { type: string }
+          valueDate:     { type: string, format: date }
+          drTotal:       { type: number }
+          crTotal:       { type: number }
+          currency:      { type: string }
+          ifrs9Category: { type: string }
+          postedAt:      { type: string, format: date-time }
+
+    SettlementInstruction:
+      name: SettlementInstruction
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          id:          { type: string }
+          tenantId:    { type: string }
+          tradeRef:    { type: string }
+          messageType: { type: string, enum: [MT202, MT103, MT210, MX_PAIN001] }
+          valueDate:   { type: string, format: date }
+          amount:      { type: number }
+          currency:    { type: string }
+          beneficiaryBic: { type: string }
+          status:      { type: string }
+          createdAt:   { type: string, format: date-time }
+
+    ReconciliationBreak:
+      name: ReconciliationBreak
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          statementEntryId: { type: string }
+          tenantId:         { type: string }
+          nostroAccount:    { type: string }
+          breakType:
+            type: string
+            enum: [TIMING_DIFFERENCE, AMOUNT_MISMATCH, MISSING_PAYMENT, UNRECOGNISED, DUPLICATE]
+          breakAmount:      { type: number }
+          currency:         { type: string }
+          detectedAt:       { type: string, format: date-time }
+
+    LCRCalculated:
+      name: LCRCalculated
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          reportId:        { type: string }
+          tenantId:        { type: string }
+          lcrRatio:        { type: number, description: "LCR ratio (e.g. 1.45 = 145%)" }
+          totalHQLA:       { type: number }
+          netCashOutflows: { type: number }
+          isCompliant:     { type: boolean }
+          currency:        { type: string }
+          calculatedAt:    { type: string, format: date-time }
+
+    LoginFailed:
+      name: LoginFailed
+      contentType: application/json
+      payload:
+        type: object
+        properties:
+          eventId:    { type: string }
+          tenantId:   { type: string }
+          userId:     { type: string }
+          username:   { type: string }
+          ipAddress:  { type: string }
+          userAgent:  { type: string }
+          failureReason: { type: string }
+          attemptCount:  { type: integer, description: "Number of consecutive failures" }
+          occurredAt: { type: string, format: date-time }
+
+    # Shared payload schema for TradeBooked
+    TradeBookedPayload:
+      type: object
+      required: [eventId, tenantId, tradeId, assetClass, direction, notional, currency, counterpartyId, occurredAt]
+      properties:
+        eventId:            { type: string, format: uuid }
+        tenantId:           { type: string }
+        tradeId:            { type: string, format: uuid }
+        reference:          { type: string, example: FX-20260409-A1B2C3 }
+        assetClass:         { type: string, enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE, EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE] }
+        instrumentType:     { type: string }
+        direction:          { type: string, enum: [BUY, SELL] }
+        notional:           { type: number }
+        currency:           { type: string }
+        counterpartyCurrency: { type: string }
+        price:              { type: number }
+        counterpartyId:     { type: string, format: uuid }
+        bookId:             { type: string }
+        traderId:           { type: string }
+        valueDate:          { type: string, format: date }
+        status:             { type: string }
+        occurredAt:         { type: string, format: date-time }
+
+  securitySchemes:
+    sasl-scram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 authentication for Kafka brokers in staging/production

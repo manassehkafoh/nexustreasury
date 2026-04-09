@@ -1,298 +1,232 @@
 {
   "info": {
-    "_postman_id": "nexustreasury-v1",
-    "name": "NexusTreasury API Collection",
-    "description": "Complete API collection for NexusTreasury — Trade Service, ALM Service, Risk Service, Back Office Service.\n\nBase URL: {{baseUrl}}\nAuth: Bearer {{jwtToken}}\n\n## Setup\n1. Set `baseUrl` variable to your environment (e.g. http://localhost:4001)\n2. Call POST /auth/token to get a JWT and set `jwtToken`",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "auth": {
-    "type": "bearer",
-    "bearer": [{ "key": "token", "value": "{{jwtToken}}", "type": "string" }]
+    "name": "NexusTreasury Platform API — Complete Collection",
+    "description": "Production-ready collection for all 11 NexusTreasury REST microservices.\nIncludes realistic request bodies, pre-request auth scripts, and test assertions.\n\nQuick Start:\n1. Set environment: baseUrl, accessToken, tenantId\n2. Run Authentication request first\n3. Use folders in sequence for full lifecycle test",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "nexustreasury-api-collection-v1"
   },
   "variable": [
-    { "key": "baseUrl",         "value": "http://localhost:4001", "type": "string" },
-    { "key": "almBaseUrl",      "value": "http://localhost:4004", "type": "string" },
-    { "key": "riskBaseUrl",     "value": "http://localhost:4003", "type": "string" },
-    { "key": "boBaseUrl",       "value": "http://localhost:4005", "type": "string" },
-    { "key": "jwtToken",        "value": "", "type": "string" },
-    { "key": "lastTradeId",     "value": "", "type": "string" }
+    {"key": "baseUrl",         "value": "http://localhost:4001/api/v1", "description": "Trade Service base URL"},
+    {"key": "baseUrl_risk",    "value": "http://localhost:4003/api/v1", "description": "Risk Service"},
+    {"key": "baseUrl_alm",     "value": "http://localhost:4004/api/v1", "description": "ALM Service"},
+    {"key": "baseUrl_bo",      "value": "http://localhost:4005/api/v1", "description": "BO Service"},
+    {"key": "baseUrl_accounting", "value": "http://localhost:4007/api/v1", "description": "Accounting Service"},
+    {"key": "baseUrl_audit",   "value": "http://localhost:4008/api/v1", "description": "Audit Service"},
+    {"key": "baseUrl_reporting","value": "http://localhost:4011/api/v1", "description": "Reporting Service"},
+    {"key": "accessToken",     "value": "", "description": "JWT from Keycloak — run Auth request first"},
+    {"key": "tradeId",         "value": "", "description": "Auto-populated by Book Trade"},
+    {"key": "tenantId",        "value": "bank-001"}
   ],
+  "auth": {"type": "bearer", "bearer": [{"key": "token", "type": "string", "value": "{{accessToken}}"}]},
   "item": [
     {
-      "name": "Health",
+      "name": "🔐 Authentication",
+      "item": [{
+        "name": "Get JWT Token (Keycloak)",
+        "event": [{"listen": "test", "script": {"exec": [
+          "pm.test('Status 200', () => pm.response.to.have.status(200));",
+          "const body = pm.response.json();",
+          "pm.collectionVariables.set('accessToken', body.access_token);",
+          "console.log('Token acquired. Expires in:', body.expires_in, 'seconds');"
+        ], "type": "text/javascript"}}],
+        "request": {
+          "method": "POST",
+          "url": "{{keycloakUrl}}/realms/nexustreasury-{{tenantId}}/protocol/openid-connect/token",
+          "header": [{"key": "Content-Type", "value": "application/x-www-form-urlencoded"}],
+          "body": {"mode": "urlencoded", "urlencoded": [
+            {"key": "grant_type", "value": "password"},
+            {"key": "client_id", "value": "nexustreasury-web"},
+            {"key": "username", "value": "{{adminEmail}}"},
+            {"key": "password", "value": "{{adminPassword}}"}
+          ]}
+        }
+      }]
+    },
+    {
+      "name": "📈 Trades",
       "item": [
         {
-          "name": "Trade Service — Liveness",
+          "name": "Book FX Forward Trade",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('201 — trade booked', () => pm.response.to.have.status(201));",
+            "pm.test('Reference starts with FX-', () => {",
+            "  const b = pm.response.json();",
+            "  pm.expect(b.reference).to.match(/^FX-/);",
+            "  pm.collectionVariables.set('tradeId', b.tradeId);",
+            "});",
+            "pm.test('Status is PENDING_VALIDATION', () => pm.expect(pm.response.json().status).to.equal('PENDING_VALIDATION'));",
+            "pm.test('Response time < 200ms', () => pm.expect(pm.response.responseTime).to.be.below(200));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/health/live",
-            "description": "Kubernetes liveness probe — is the process alive?"
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Service is ok', () => pm.expect(pm.response.json().status).to.eq('ok'));"
-            ]}
-          }]
+            "method": "POST",
+            "url": "{{baseUrl}}/trades",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "X-Idempotency-Key", "value": "{{$guid}}"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"assetClass\": \"FX\",\n  \"instrumentType\": \"FORWARD\",\n  \"direction\": \"BUY\",\n  \"notional\": 1000000,\n  \"currency\": \"EUR\",\n  \"counterpartyCurrency\": \"USD\",\n  \"price\": 1.0842,\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"bookId\": \"fx-prop-desk\",\n  \"traderId\": \"trader-alex-01\",\n  \"valueDate\": \"2026-04-11\"\n}"}
+          }
         },
         {
-          "name": "Trade Service — Readiness",
-          "request": {
-            "auth": { "type": "noauth" },
-            "method": "GET",
-            "url": "{{baseUrl}}/health/ready",
-            "description": "Readiness probe — checks PostgreSQL, Kafka, Redis connectivity. Returns 503 if any dep is down."
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200 or 503', () => [200, 503].includes(pm.response.code));",
-              "pm.test('Has checks object', () => { const b = pm.response.json(); pm.expect(b).to.have.property('checks'); });"
-            ]}
-          }]
+          "name": "List Trades (Blotter)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "pm.test('Returns trades array', () => pm.expect(pm.response.json().trades).to.be.an('array'));"
+          ], "type": "text/javascript"}}],
+          "request": {"method": "GET", "url": {"raw": "{{baseUrl}}/trades?assetClass=FX&limit=50", "host": ["{{baseUrl}}"], "path": ["trades"], "query": [{"key": "assetClass", "value": "FX"}, {"key": "limit", "value": "50"}]}}
         }
       ]
     },
     {
-      "name": "Trade Service",
+      "name": "⚡ Risk",
       "item": [
         {
-          "name": "Book Trade — FX Spot",
+          "name": "Pre-Deal Check (P99 < 5ms)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 or 422', () => pm.expect([200, 422]).to.include(pm.response.code));",
+            "pm.test('Has approved boolean', () => pm.expect(pm.response.json()).to.have.property('approved'));",
+            "pm.test('Response time < 10ms', () => pm.expect(pm.response.responseTime).to.be.below(10));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assetClass\": \"FX\",\n  \"direction\": \"BUY\",\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"instrumentId\": \"7a1b2c3d-4e5f-6789-abcd-ef0123456789\",\n  \"bookId\": \"1234abcd-ab12-1234-1234-123412341234\",\n  \"traderId\": \"abcd1234-1234-abcd-abcd-abcd12341234\",\n  \"notionalAmount\": 12500000,\n  \"notionalCurrency\": \"USD\",\n  \"price\": 1.0842,\n  \"tradeDate\": \"2026-04-07\",\n  \"valueDate\": \"2026-04-09\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Has tradeId', () => pm.expect(pm.response.json()).to.have.property('tradeId'));",
-              "pm.test('Reference starts with FX-', () => pm.expect(pm.response.json().reference).to.match(/^FX-/));",
-              "pm.environment.set('lastTradeId', pm.response.json().tradeId);"
-            ]}
-          }]
-        },
-        {
-          "name": "Book Trade — Fixed Income",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assetClass\": \"FIXED_INCOME\",\n  \"direction\": \"BUY\",\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"instrumentId\": \"7a1b2c3d-4e5f-6789-abcd-ef0123456789\",\n  \"bookId\": \"1234abcd-ab12-1234-1234-123412341234\",\n  \"traderId\": \"abcd1234-1234-abcd-abcd-abcd12341234\",\n  \"notionalAmount\": 5000000,\n  \"notionalCurrency\": \"USD\",\n  \"price\": 98.25,\n  \"tradeDate\": \"2026-04-07\",\n  \"valueDate\": \"2026-04-09\",\n  \"maturityDate\": \"2031-04-07\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
+            "method": "POST", "url": "{{baseUrl_risk}}/risk/pre-deal-check",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"requestedAmount\": 5000000,\n  \"requestedCurrency\": \"USD\"\n}"}
           }
         },
         {
-          "name": "Get Trade by ID",
+          "name": "Historical VaR (Basel III 99%)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('var1Day > 0', () => pm.expect(b.var1Day).to.be.greaterThan(0));",
+            "pm.test('var10Day ≈ var1Day × √10', () => pm.expect(b.var10Day).to.be.closeTo(b.var1Day * Math.sqrt(10), 0.1));",
+            "pm.test('ES ≥ VaR', () => pm.expect(b.expectedShortfall).to.be.at.least(b.var1Day));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "method": "GET",
-            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}"
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('TradeId matches', () => pm.expect(pm.response.json().tradeId).to.eq(pm.environment.get('lastTradeId')));"
-            ]}
-          }]
-        },
-        {
-          "name": "Amend Trade",
-          "request": {
-            "method": "PATCH",
-            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"newNotionalAmount\": 15000000,\n  \"newNotionalCurrency\": \"USD\",\n  \"newPrice\": 1.0855\n}",
-              "options": { "raw": { "language": "json" } }
-            }
+            "method": "POST", "url": "{{baseUrl_risk}}/risk/var/historical",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"pnlHistory\": [\n    {\"date\": \"2026-01-02\", \"pnl\": 12500, \"currency\": \"USD\"},\n    {\"date\": \"2026-01-03\", \"pnl\": -82000, \"currency\": \"USD\"},\n    {\"date\": \"2026-01-04\", \"pnl\": 31000, \"currency\": \"USD\"}\n  ],\n  \"confidence\": 0.99,\n  \"currency\": \"USD\"\n}"}
           }
         },
         {
-          "name": "Cancel Trade",
+          "name": "FRTB SA Capital (BCBS 457)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('totalCapital ≥ 0', () => pm.expect(b.totalCapital).to.be.at.least(0));",
+            "pm.test('5 risk classes', () => pm.expect(b.byRiskClass).to.have.lengthOf(5));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "method": "DELETE",
-            "url": "{{baseUrl}}/api/v1/trades/{{lastTradeId}}",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{ \"reason\": \"Dealer error — wrong counterparty\" }",
-              "options": { "raw": { "language": "json" } }
-            }
-          }
-        },
-        {
-          "name": "Book Trade — Validation Error (zero notional)",
-          "request": {
-            "method": "POST",
-            "url": "{{baseUrl}}/api/v1/trades",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{ \"assetClass\": \"FX\", \"direction\": \"BUY\", \"notionalAmount\": 0 }",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
-            ]}
-          }]
-        }
-      ]
-    },
-    {
-      "name": "ALM Service",
-      "item": [
-        {
-          "name": "Get LCR",
-          "request": {
-            "method": "GET",
-            "url": "{{almBaseUrl}}/api/v1/alm/lcr"
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Has lcrRatio', () => pm.expect(pm.response.json()).to.have.property('lcrRatio'));",
-              "pm.test('LCR above 100%', () => pm.expect(pm.response.json().lcrRatio).to.be.above(100));"
-            ]}
-          }]
-        },
-        {
-          "name": "Get NSFR",
-          "request": {
-            "method": "GET",
-            "url": "{{almBaseUrl}}/api/v1/alm/nsfr"
-          }
-        },
-        {
-          "name": "Generate Liquidity Gap Report",
-          "request": {
-            "method": "POST",
-            "url": "{{almBaseUrl}}/api/v1/alm/liquidity-gap",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"scenario\": \"CONTRACTUAL\",\n  \"currency\": \"USD\",\n  \"cashFlows\": [\n    { \"bucket\": \"OVERNIGHT\",   \"inflowAmount\": 850000000, \"outflowAmount\": 200000000 },\n    { \"bucket\": \"ONE_WEEK\",    \"inflowAmount\": 300000000, \"outflowAmount\": 400000000 },\n    { \"bucket\": \"ONE_MONTH\",   \"inflowAmount\": 200000000, \"outflowAmount\": 600000000 },\n    { \"bucket\": \"THREE_MONTH\", \"inflowAmount\": 400000000, \"outflowAmount\": 350000000 },\n    { \"bucket\": \"SIX_MONTH\",   \"inflowAmount\": 250000000, \"outflowAmount\": 300000000 },\n    { \"bucket\": \"ONE_YEAR\",    \"inflowAmount\": 180000000, \"outflowAmount\": 150000000 }\n  ],\n  \"lcr\": {\n    \"hqlaLevel1\": 1200000000,\n    \"hqlaLevel2A\": 200000000,\n    \"hqlaLevel2B\": 50000000,\n    \"netCashOutflows30d\": 1000000000\n  },\n  \"nsfr\": {\n    \"availableStableFunding\": 2000000000,\n    \"requiredStableFunding\": 1700000000\n  }\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('LCR is compliant', () => pm.expect(pm.response.json().lcr.isCompliant).to.be.true);",
-              "pm.test('Has buckets array', () => pm.expect(pm.response.json().buckets).to.be.an('array'));",
-              "pm.test('Bucket count matches input', () => pm.expect(pm.response.json().buckets.length).to.eq(6));"
-            ]}
-          }]
-        }
-      ]
-    },
-    {
-      "name": "Risk Service",
-      "item": [
-        {
-          "name": "Pre-Deal Check — Approved",
-          "request": {
-            "method": "POST",
-            "url": "{{riskBaseUrl}}/api/v1/risk/pre-deal-check",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"counterpartyId\": \"3fa85f64-5717-4562-b3fc-2c963f66afa6\",\n  \"requestedAmount\": 5000000,\n  \"requestedCurrency\": \"USD\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Check has approved field', () => pm.expect(pm.response.json()).to.have.property('approved'));",
-              "pm.test('Response time < 50ms', () => pm.expect(pm.response.json().responseTimeMs).to.be.below(50));"
-            ]}
-          }]
-        },
-        {
-          "name": "Get VaR",
-          "request": {
-            "method": "GET",
-            "url": {
-              "raw": "{{riskBaseUrl}}/api/v1/risk/var?bookId=1234abcd-ab12-1234-1234-123412341234",
-              "host": ["{{riskBaseUrl}}"],
-              "path": ["api", "v1", "risk", "var"],
-              "query": [{ "key": "bookId", "value": "1234abcd-ab12-1234-1234-123412341234" }]
-            }
-          }
-        },
-        {
-          "name": "Get Limits",
-          "request": {
-            "method": "GET",
-            "url": "{{riskBaseUrl}}/api/v1/risk/limits"
+            "method": "POST", "url": "{{baseUrl_risk}}/risk/frtb/sa",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"sensitivities\": [\n    {\"positionId\": \"p1\", \"riskClass\": \"GIRR\", \"bucket\": \"USD\", \"riskFactor\": \"5Y\", \"sensitivity\": -5000, \"currency\": \"USD\"},\n    {\"positionId\": \"p2\", \"riskClass\": \"FX\", \"bucket\": \"1\", \"riskFactor\": \"EURUSD\", \"sensitivity\": 500000, \"currency\": \"USD\"},\n    {\"positionId\": \"p3\", \"riskClass\": \"EQUITY\", \"bucket\": \"1\", \"riskFactor\": \"SPOT\", \"sensitivity\": 200000, \"currency\": \"USD\"}\n  ],\n  \"currency\": \"USD\"\n}"}
           }
         }
       ]
     },
     {
-      "name": "Back Office Service",
+      "name": "📊 Accounting",
       "item": [
         {
-          "name": "Submit SWIFT MT300 Confirmation",
+          "name": "IFRS9 ECL (Stage 1/2/3)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('Stage in [1,2,3]', () => pm.expect([1,2,3]).to.include(b.stage));",
+            "pm.test('ECL > 0', () => pm.expect(b.ecl).to.be.greaterThan(0));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "method": "POST",
-            "url": "{{boBaseUrl}}/api/v1/bo/swift/inbound",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"messageId\": \"MSG-2026040700001\",\n  \"messageType\": \"MT300\",\n  \"senderBIC\": \"BARCLONDON\",\n  \"receiverBIC\": \"NEXUSGB2L\",\n  \"content\": \":20:FX-0407-A3B2\\n:32A:260409USD12500000\\n:33B:EUR11535000\\n:57A:BARCLONDON\\n:58A:NEXUSGB2L\"\n}",
-              "options": { "raw": { "language": "json" } }
-            }
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Has match status', () => pm.expect(pm.response.json()).to.have.property('status'));"
-            ]}
-          }]
-        },
-        {
-          "name": "Get Exceptions Queue",
-          "request": {
-            "method": "GET",
-            "url": "{{boBaseUrl}}/api/v1/bo/exceptions"
+            "method": "POST", "url": "{{baseUrl_accounting}}/accounting/ecl",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"instrumentId\": \"bond-001\",\n  \"originationDate\": \"2024-01-15\",\n  \"reportingDate\": \"2026-04-09\",\n  \"outstandingPrincipal\": 10000000,\n  \"currency\": \"USD\",\n  \"accruedInterest\": 0,\n  \"originationRating\": \"BBB\",\n  \"currentRating\": \"BBB\",\n  \"daysPastDue\": 0,\n  \"onWatchList\": false,\n  \"effectiveInterestRate\": 0.05,\n  \"recoveryRate\": 0.40\n}"}
           }
         },
         {
-          "name": "Get Settlement Ladder",
+          "name": "Post Journal Entry",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const b = pm.response.json();",
+            "pm.test('DR = CR (double-entry)', () => pm.expect(b.drTotal).to.equal(b.crTotal));"
+          ], "type": "text/javascript"}}],
           "request": {
-            "method": "GET",
-            "url": "{{boBaseUrl}}/api/v1/bo/settlement-ladder"
-          },
-          "event": [{
-            "listen": "test",
-            "script": { "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Has ladder array', () => pm.expect(pm.response.json().ladder).to.be.an('array'));"
-            ]}
-          }]
+            "method": "POST", "url": "{{baseUrl_accounting}}/accounting/journal-entries",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"valueDate\": \"2026-04-09\",\n  \"description\": \"FX Forward MTM — EUR/USD 1M\",\n  \"sourceSystem\": \"TRADE_SERVICE\",\n  \"sourceTradeId\": \"{{tradeId}}\",\n  \"lines\": [\n    {\"accountCode\": \"1500\", \"accountName\": \"FX Derivatives — FVPL Assets\", \"direction\": \"DR\", \"amount\": 8420, \"currency\": \"USD\"},\n    {\"accountCode\": \"4100\", \"accountName\": \"Trading Revenue — FX\", \"direction\": \"CR\", \"amount\": 8420, \"currency\": \"USD\"}\n  ]\n}"}
+          }
         }
       ]
+    },
+    {
+      "name": "🏦 Back Office",
+      "item": [{
+        "name": "Reconcile Nostro Statement",
+        "event": [{"listen": "test", "script": {"exec": [
+          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+          "const b = pm.response.json();",
+          "pm.test('stpRate 0–1', () => pm.expect(b.stpRate).to.be.within(0, 1));",
+          "console.log('STP Rate:', (b.stpRate * 100).toFixed(1) + '% | Breaks:', b.breakCount);"
+        ], "type": "text/javascript"}}],
+        "request": {
+          "method": "POST", "url": "{{baseUrl_bo}}/bo/reconciliation",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"statementId\": \"stmt-20260409\",\n  \"nostroAccount\": \"EUR-CITI-001\",\n  \"currency\": \"EUR\",\n  \"statementDate\": \"2026-04-09\",\n  \"openingBalance\": 0,\n  \"closingBalance\": 1000000,\n  \"entries\": [{\"entryId\": \"e-001\", \"valueDate\": \"2026-04-09\", \"bookingDate\": \"2026-04-09\", \"amount\": 1000000, \"currency\": \"EUR\", \"reference\": \"FX-20260409-A1B2C3\", \"description\": \"EUR/USD FWD\", \"nostroAccount\": \"EUR-CITI-001\"}],\n  \"expectedFlows\": [{\"flowId\": \"f-001\", \"tradeRef\": \"FX-20260409-A1B2C3\", \"valueDate\": \"2026-04-09\", \"amount\": 1000000, \"currency\": \"EUR\", \"nostroAccount\": \"EUR-CITI-001\"}]\n}"}
+        }
+      }]
+    },
+    {
+      "name": "📋 Regulatory Reporting",
+      "item": [
+        {
+          "name": "LCR Daily Report (BCBS 238)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('lcrRatio present', () => pm.expect(b.lcrRatio).to.be.a('number'));",
+            "pm.test('isCompliant boolean', () => pm.expect(b.isCompliant).to.be.a('boolean'));",
+            "console.log('LCR:', (b.lcrRatio * 100).toFixed(1) + '%', b.isCompliant ? '✅' : '❌');"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST", "url": "{{baseUrl_reporting}}/reporting/lcr",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"reportDate\": \"2026-04-09\",\n  \"currency\": \"USD\",\n  \"hqlaItems\": [{\"category\": \"LEVEL_1\", \"description\": \"US Treasuries\", \"marketValue\": 500000000, \"haircut\": 0, \"adjustedValue\": 500000000, \"currency\": \"USD\"}],\n  \"outflowItems\": [{\"category\": \"Retail stable\", \"balance\": 1000000000, \"runoffRate\": 0.03, \"outflow\": 30000000, \"currency\": \"USD\"}],\n  \"inflowItems\": []\n}"}
+          }
+        },
+        {
+          "name": "IRRBB Outlier Test (BCBS 368)",
+          "event": [{"listen": "test", "script": {"exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const b = pm.response.json();",
+            "pm.test('6 scenarios', () => pm.expect(b.scenarios).to.have.lengthOf(6));",
+            "pm.test('hasOutlierBank boolean', () => pm.expect(b.hasOutlierBank).to.be.a('boolean'));"
+          ], "type": "text/javascript"}}],
+          "request": {
+            "method": "POST", "url": "{{baseUrl_reporting}}/reporting/irrbb",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "options": {"raw": {"language": "json"}}, "raw": "{\n  \"tenantId\": \"{{tenantId}}\",\n  \"reportDate\": \"2026-04-09\",\n  \"currency\": \"USD\",\n  \"tier1Capital\": 500000000,\n  \"eveDeltas\": {\"PARALLEL_UP\": -65000000, \"PARALLEL_DOWN\": 25000000, \"STEEPENER\": -30000000, \"FLATTENER\": 15000000, \"SHORT_RATE_UP\": -45000000, \"SHORT_RATE_DOWN\": 10000000},\n  \"niiSensitivity200Up\": -22000000,\n  \"niiSensitivity200Down\": 18000000\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔍 Audit Trail",
+      "item": [{
+        "name": "Search Audit Records (SOC 2)",
+        "event": [{"listen": "test", "script": {"exec": [
+          "pm.test('200 OK', () => pm.response.to.have.status(200));",
+          "const b = pm.response.json();",
+          "pm.test('Has records array', () => pm.expect(b.records).to.be.an('array'));",
+          "pm.test('Each record has 64-char HMAC checksum', () => { b.records.forEach(r => pm.expect(r.checksum).to.match(/^[0-9a-f]{64}$/)); });"
+        ], "type": "text/javascript"}}],
+        "request": {"method": "GET", "url": {"raw": "{{baseUrl_audit}}/audit/records?category=TRADE&severity=CRITICAL&limit=20", "host": ["{{baseUrl_audit}}"], "path": ["audit", "records"], "query": [{"key": "category", "value": "TRADE"}, {"key": "severity", "value": "CRITICAL"}, {"key": "limit", "value": "20"}]}}
+      }]
+    },
+    {
+      "name": "❤️ Health Checks",
+      "item": [{
+        "name": "Trade Service — Readiness",
+        "event": [{"listen": "test", "script": {"exec": [
+          "pm.test('Ready (200)', () => pm.response.to.have.status(200));",
+          "pm.test('Response time < 1000ms', () => pm.expect(pm.response.responseTime).to.be.below(1000));"
+        ], "type": "text/javascript"}}],
+        "request": {"method": "GET", "url": "{{baseUrl}}/ready"}
+      }]
     }
   ]
 }
