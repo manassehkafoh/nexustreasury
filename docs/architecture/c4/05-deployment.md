@@ -229,3 +229,135 @@ flowchart LR
 | postgresql (primary) | 2000m       | 4000m     | 4Gi            | 8Gi          | Fixed: 1    |
 | kafka broker         | 1000m       | 2000m     | 2Gi            | 4Gi          | Fixed: 3    |
 | redis                | 250m        | 500m      | 256Mi          | 1Gi          | Fixed: 6    |
+
+---
+
+## Multi-Region Active-Active Deployment (Sprint 7)
+
+NexusTreasury runs in two AWS regions simultaneously. Traffic is routed by Route53
+latency-based routing with health checks. If a region fails, Route53 removes it
+from rotation within 5 minutes (3 failed health checks × 30s interval).
+
+```
+                    ┌─────────────────────────────┐
+                    │  Route53 Latency Routing    │
+                    │  Health checks every 30s    │
+                    │  Failover: RTO < 5 minutes  │
+                    └──────────┬──────────────────┘
+                               │
+              ┌────────────────┴─────────────────┐
+              │                                  │
+   ┌──────────▼───────────┐         ┌───────────▼────────────┐
+   │  PRIMARY             │         │  SECONDARY             │
+   │  eu-west-1 (London)  │         │  us-east-1 (N. Virginia)│
+   │  EMEA trading hours  │         │  Americas trading hours │
+   │  trade-service: 3    │◄───────►│  trade-service: 2      │
+   │  risk-service: 3     │  Kafka  │  risk-service: 2       │
+   │  All others: 2       │  MM2    │  All others: 2         │
+   └──────────────────────┘         └────────────────────────┘
+              │                                  │
+   ┌──────────▼──────────┐           ┌──────────▼──────────┐
+   │  Kafka Cluster      │◄──────────│  Kafka Cluster      │
+   │  eu-west-1          │ MirrorMkr │  us-east-1          │
+   │  Lag: < 30s RPO     │    2      │  Consumer failover  │
+   └─────────────────────┘           └─────────────────────┘
+```
+
+### ArgoCD ApplicationSet
+
+`infra/argocd/nexustreasury-multiregion.yaml` deploys to both clusters via a list
+generator. Progressive delivery (10% canary → 100%) via Argo Rollouts on each deploy.
+
+### Kafka MirrorMaker 2
+
+All `nexus.*` topics are replicated eu-west-1 → us-east-1 with:
+- Lag target: < 30 seconds (RPO)
+- Consumer group offset sync: every 60 seconds
+- 3 MirrorMaker replicas for HA
+
+### SLAs
+
+| Metric | Target |
+|---|---|
+| RPO (data loss on failure) | < 1 minute |
+| RTO (traffic failover time) | < 5 minutes |
+| Health check interval | 30 seconds |
+| Failover threshold | 3 consecutive failures |
+
+
+---
+
+## Multi-Region Active-Active Deployment (Production)
+
+> Added: Sprint 7 — see `infra/argocd/nexustreasury-multiregion.yaml`
+
+NexusTreasury runs in two AWS regions simultaneously using active-active architecture.
+
+### Region topology
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Global Traffic Layer                      │
+│          Route53 Latency-Based Routing + Health Checks      │
+│          (30s check interval, 3-failure failover threshold)  │
+└──────────────────┬──────────────────────┬───────────────────┘
+                   │                      │
+    ┌──────────────▼──────────────┐  ┌────▼──────────────────────┐
+    │  PRIMARY: eu-west-1 (London) │  │ SECONDARY: us-east-1 (N.Va)│
+    │  EMEA trading hours          │  │ Americas trading hours      │
+    │  08:00–18:00 BST             │  │ 08:00–17:00 EST             │
+    │                              │  │                             │
+    │  EKS cluster                 │  │  EKS cluster                │
+    │  trade-service  ×3           │  │  trade-service  ×2          │
+    │  risk-service   ×3           │  │  risk-service   ×2          │
+    │  All services   ×2+          │  │  All services   ×2          │
+    │                              │  │                             │
+    │  PostgreSQL 16 (primary)     │  │  PostgreSQL 16 (read replica│
+    │  Kafka brokers ×3            │  │  Kafka brokers ×3           │
+    └──────────────────────────────┘  └─────────────────────────────┘
+                   │                                │
+                   └──────────────┬─────────────────┘
+                                  │
+                    ┌─────────────▼────────────┐
+                    │   Kafka MirrorMaker 2    │
+                    │   All nexus.* topics     │
+                    │   Lag target: < 30s      │
+                    │   Offset sync: 60s       │
+                    └──────────────────────────┘
+```
+
+### RPO / RTO targets
+
+| Metric | Target | Mechanism |
+|---|---|---|
+| RPO (Recovery Point Objective) | < 1 minute | Kafka MirrorMaker 2 lag |
+| RTO (Recovery Time Objective) | < 5 minutes | Route53 health-check failover |
+
+### Deployment mechanism
+
+ArgoCD `ApplicationSet` (list generator) deploys to both clusters from the same Git commit. Region-specific replica counts are applied via Kustomize overlay patches:
+
+```
+infra/kubernetes/
+  base/                    ← Shared manifests (all 13 services)
+  overlays/
+    production-eu-west-1/  ← Primary: replicas=3 for critical services
+    production-us-east-1/  ← Secondary: replicas=2 (scales on failover)
+```
+
+### Failover sequence
+
+1. Route53 health check detects `/api/v1/ready` returning 503 (3 consecutive failures)
+2. Route53 removes the failing region from latency routing within 90 seconds
+3. All traffic routes to the healthy region automatically
+4. PagerDuty alert fires → on-call engineer notified
+5. KEDA autoscaler in the surviving region detects increased Kafka lag and scales up
+6. Root cause fixed, region restored → Route53 re-adds it after 3 consecutive 200 OKs
+
+### Kafka MirrorMaker 2 details
+
+See `infra/argocd/nexustreasury-multiregion.yaml` — `KafkaMirrorMaker2` Strimzi CRD:
+- Replicates: all `nexus.*` topics (trades, positions, risk, settlement, audit)
+- `nexus.security.*` topics replicated with higher-priority connector
+- Consumer group offsets synced every 60 seconds — minimal re-processing on failover
+- 3 MirrorMaker replicas for HA

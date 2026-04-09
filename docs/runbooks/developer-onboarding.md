@@ -1,10 +1,32 @@
 # NexusTreasury Developer Onboarding Guide
 
 > **Audience**: New engineers joining the NexusTreasury platform team  
-> **Time to first green build**: ~15 minutes  
-> **Time to first test passing**: ~20 minutes
+> **Time to first green build (devcontainer)**: < 5 minutes  
+> **Time to first green build (manual)**: ~15 minutes
 
 ---
+
+## Option A — VS Code Dev Container (Recommended, < 5 minutes)
+
+The fastest path. Everything is pre-configured — Node.js 22, Docker-in-Docker,
+kubectl, Helm, GitHub CLI, all 13 service ports forwarded, and 10 VS Code extensions
+pre-installed.
+
+**Prerequisites**: VS Code + [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) + Docker Desktop.
+
+```bash
+git clone https://github.com/manassehkafoh/nexustreasury.git
+code nexustreasury
+# VS Code prompts: "Reopen in Container" — click it
+# The setup.sh post-create hook runs automatically:
+#   pnpm install → prisma generate → docker-compose up → migrate → build → smoke test
+```
+
+When the container is ready, the dashboard opens at `http://localhost:3000` automatically.
+
+---
+
+## Option B — Manual Setup
 
 ## 1. Prerequisites
 
@@ -333,3 +355,51 @@ docker exec -it nexustreasury-kafka kafka-console-consumer.sh \
 - **Regulatory questions**: The wiki files include worked examples with Basel III formulas
 
 > **Rotate the GitHub PAT** after cloning: `github.com/settings/tokens`
+
+---
+
+## Developer Makefile (25 targets)
+
+All common tasks are wrapped in `make`. Run `make help` for the full list.
+
+```
+make install          Install all workspace dependencies
+make build            Build all 13 services
+make test             Run 502 unit tests
+make test-e2e         Run 31 E2E tests
+make bench            Run 7 SLA benchmark suites
+make coverage         Generate coverage report
+make dev              Start all 13 services
+make infra-up         Start PostgreSQL + Kafka + Redis via Docker Compose
+make infra-down       Stop all infrastructure
+make db-migrate       Apply Prisma migrations
+make db-studio        Open visual DB browser
+make api-test         Run Postman collection via Newman (local)
+make api-test-staging Run Postman collection against staging
+make k6               Quick k6 load test (10 VUs, 30s)
+make audit            pnpm security audit (must be 0 CVEs)
+make provision-tenant Dry-run tenant provisioning
+make postman-import   Show Postman import instructions + mock server URL
+make deploy-staging   Trigger staging deployment via GitHub Actions CLI
+make help             Show all 25 targets with descriptions
+```
+
+## Newman API Tests
+
+After services are running, validate all 17 API endpoints:
+
+```bash
+# Obtain a JWT token first
+export NEXUS_ACCESS_TOKEN=$(curl -s -X POST \
+  http://localhost:8080/realms/nexustreasury-bank-001/protocol/openid-connect/token \
+  -d 'grant_type=password&client_id=nexustreasury-web&username=admin@bank.com&password=changeme' \
+  | jq -r .access_token)
+
+make api-test
+# Report: reports/newman/report_local_<timestamp>.html
+```
+
+Or use the mock server (no running services required):
+```
+https://eeed7962-2b7b-495b-b197-03bb48aaae11.mock.pstmn.io
+```

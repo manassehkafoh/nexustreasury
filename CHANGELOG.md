@@ -5,6 +5,39 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.1.0] — 2026-04-09 · Sprint 7 Foundations
+
+### Added — Testing Quality
+- **Stryker mutation testing** — `stryker.config.ts`, targets domain + accounting + risk + collateral
+- **Pact consumer contract tests** — `tests/contract/` — accounting-service + notification-service consumers
+- **k6 performance test suite** — `tests/performance/` — 500 TPS trade booking + LCR batch load
+- **Newman API smoke test runner** — `scripts/run-api-tests.sh` — local/staging/production
+- **`performance-tests.yml`** GitHub Actions workflow — auto-fires post-staging-deploy
+- **`contract-tests.yml`** GitHub Actions workflow — Pact consumer/provider + can-i-deploy gate
+
+### Added — Infrastructure
+- **Multi-region ArgoCD ApplicationSet** — eu-west-1 (primary) + us-east-1 (secondary) active-active
+- **Kafka MirrorMaker 2** — cross-region topic replication, RPO < 1 minute
+- **Route53 health check config** — latency routing, RTO < 5 minutes
+- **12 PodDisruptionBudgets** — node drain protection for all production workloads
+- **ResourceQuota + LimitRange** — namespace-level resource governance
+- **K8s base manifests** complete for all 13 services (accounting + reporting added)
+
+### Added — Developer Experience
+- **VS Code Dev Container** — `.devcontainer/devcontainer.json` + `setup.sh`, < 5min to first green build
+- **Makefile** (25 targets) — `make test`, `make dev`, `make infra-up`, `make k6`, `make api-test`, etc.
+
+### Added — API Documentation
+- **OpenAPI 3.1 v1.1.0** — expanded from 20 → 29 paths (collateral, notifications, market-data, risk limits)
+- **Postman collection** expanded — 14 → 17 live requests (margin call, FX rates, tenant provisioning)
+- **ADR-001 through ADR-007** — foundational architectural decisions documented
+
+### Updated — Documentation
+- **README.md** — corrected to 13 services, updated tech stack versions, full capabilities table
+- **Testing-Strategy.md** — complete rewrite covering all 5 layers
+- **C4 deployment diagram** — multi-region active-active architecture documented
+- **Developer onboarding guide** — devcontainer option, Makefile reference, Newman smoke tests
+
 ## [1.0.0] — 2026-04-09 · Production Ready
 
 ### Platform Statistics
