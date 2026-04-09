@@ -1,0 +1,46 @@
+# NexusTreasury CODEOWNERS
+# Format: <pattern> <owner1> <owner2>
+# GitHub enforces approval from the matching owner(s) before merge.
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Global fallback ──────────────────────────────────────────────────────────
+*                                   @nexustreasury/platform-engineers
+
+# ── Domain model (highest scrutiny — any change here affects all services) ───
+/packages/domain/                   @nexustreasury/principal-engineers @nexustreasury/quant-finance
+
+# ── Pricing / risk engines ────────────────────────────────────────────────────
+/packages/domain/src/pricing/       @nexustreasury/quant-finance @nexustreasury/principal-engineers
+/packages/risk-service/             @nexustreasury/quant-finance @nexustreasury/risk-team
+
+# ── Regulatory compliance ─────────────────────────────────────────────────────
+/packages/alm-service/              @nexustreasury/risk-team @nexustreasury/compliance
+/packages/reporting-service/        @nexustreasury/risk-team @nexustreasury/compliance
+
+# ── Accounting / IFRS9 ────────────────────────────────────────────────────────
+/packages/accounting-service/       @nexustreasury/finance-team @nexustreasury/principal-engineers
+
+# ── Security-sensitive services ───────────────────────────────────────────────
+/packages/audit-service/            @nexustreasury/security @nexustreasury/principal-engineers
+/packages/trade-service/src/application/services/sanctions-screening.service.ts  @nexustreasury/compliance @nexustreasury/security
+
+# ── Back office / SWIFT ───────────────────────────────────────────────────────
+/packages/bo-service/               @nexustreasury/bo-team @nexustreasury/platform-engineers
+
+# ── Infrastructure ────────────────────────────────────────────────────────────
+/.github/workflows/                 @nexustreasury/platform-engineers @nexustreasury/security
+/infra/                             @nexustreasury/platform-engineers
+/docker-compose.yml                 @nexustreasury/platform-engineers
+
+# ── API specifications ────────────────────────────────────────────────────────
+/docs/api/                          @nexustreasury/principal-engineers @nexustreasury/platform-engineers
+
+# ── ADRs (require principal sign-off) ────────────────────────────────────────
+/docs/adr/                          @nexustreasury/principal-engineers
+
+# ── Web / branding ────────────────────────────────────────────────────────────
+/packages/web/                      @nexustreasury/frontend-engineers
+/packages/web/src/lib/branding.ts   @nexustreasury/frontend-engineers @nexustreasury/platform-engineers
+
+# ── Tenant provisioning scripts ───────────────────────────────────────────────
+/scripts/                           @nexustreasury/platform-engineers @nexustreasury/security

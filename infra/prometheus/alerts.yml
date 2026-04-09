@@ -1,0 +1,191 @@
+# NexusTreasury — Prometheus Alerting Rules
+# Aligned to SLOs defined in docs/runbooks/production-runbook.md
+# Loaded by Prometheus via: rule_files: ['alerts.yml']
+groups:
+
+  # ── Trade Service Availability ─────────────────────────────────────────────
+  - name: nexustreasury.trade-service
+    rules:
+      - alert: TradeServiceDown
+        expr: up{job="trade-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Trade Service is DOWN"
+          description: "trade-service has been unreachable for 1 minute. All trade booking is blocked."
+          runbook: "https://github.com/manassehkafoh/nexustreasury/blob/main/docs/runbooks/production-runbook.md#p1-trade-booking-unavailable"
+
+      - alert: TradeBookingHighLatency
+        expr: histogram_quantile(0.99, rate(nexus_trade_booking_duration_ms_bucket[5m])) > 150
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Trade booking P99 latency > 150ms (SLO: 100ms)"
+          description: "P99 booking latency is {{ $value | humanizeDuration }}. SLO threshold is 100ms."
+
+      - alert: TradeBookingErrorRate
+        expr: rate(nexus_http_requests_total{job="trade-service", status=~"5.."}[5m]) / rate(nexus_http_requests_total{job="trade-service"}[5m]) > 0.005
+        for: 5m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Trade Service error rate > 0.5% (SLO: 0.1%)"
+          description: "Error rate is {{ $value | humanizePercentage }}. Immediate investigation required."
+
+  # ── Pre-Deal Check SLA ─────────────────────────────────────────────────────
+  - name: nexustreasury.risk-service
+    rules:
+      - alert: PreDealCheckLatencyBreached
+        expr: histogram_quantile(0.99, rate(nexus_predeal_check_duration_ms_bucket[5m])) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: risk
+        annotations:
+          summary: "Pre-deal check P99 > 10ms (SLO: 5ms)"
+          description: "P99 is {{ $value }}ms. Risk limit cache may have been evicted."
+
+      - alert: VaRCalculationTimeout
+        expr: histogram_quantile(0.99, rate(nexus_var_calculation_duration_ms_bucket[15m])) > 8000
+        for: 15m
+        labels:
+          severity: warning
+          team: risk
+        annotations:
+          summary: "EOD VaR P99 > 8s (SLO: 5s)"
+          description: "VaR P99 latency is {{ $value | humanizeDuration }}."
+
+  # ── Kafka Consumer Lag ─────────────────────────────────────────────────────
+  - name: nexustreasury.kafka
+    rules:
+      - alert: KafkaConsumerLagHigh
+        expr: kafka_consumer_group_lag{group=~"nexustreasury-.*"} > 5000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Kafka consumer lag > 5000 messages for {{ $labels.group }}"
+          description: "Consumer group {{ $labels.group }} on topic {{ $labels.topic }} has lag of {{ $value }} messages."
+
+      - alert: KafkaConsumerLagCritical
+        expr: kafka_consumer_group_lag{group=~"nexustreasury-.*"} > 20000
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "CRITICAL: Kafka consumer lag > 20,000 — {{ $labels.group }}"
+          description: "Lag of {{ $value }} messages. Service may be down or overwhelmed."
+          runbook: "https://github.com/manassehkafoh/nexustreasury/blob/main/docs/runbooks/production-runbook.md#p3-audit-service-lag"
+
+  # ── Audit Trail Health ─────────────────────────────────────────────────────
+  - name: nexustreasury.audit-service
+    rules:
+      - alert: AuditWriteLatencyHigh
+        expr: histogram_quantile(0.99, rate(nexus_audit_write_duration_ms_bucket[5m])) > 200
+        for: 5m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Audit write P99 > 200ms (SLO: 100ms)"
+          description: "SOC 2 audit trail write latency is degraded."
+
+      - alert: AuditHMACTamperDetected
+        expr: increase(nexus_audit_hmac_verify_failures_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "🚨 AUDIT TAMPER DETECTED — HMAC verification failed"
+          description: "{{ $value }} HMAC verification failure(s) in the last 5 minutes. Possible audit log tampering. CISO must be notified immediately."
+          runbook: "https://github.com/manassehkafoh/nexustreasury/blob/main/docs/runbooks/production-runbook.md#hmac-tamper-detection"
+
+  # ── ALM / LCR ─────────────────────────────────────────────────────────────
+  - name: nexustreasury.alm-service
+    rules:
+      - alert: LCRBelowEarlyWarning
+        expr: nexus_lcr_ratio < 1.10
+        for: 0m
+        labels:
+          severity: warning
+          team: risk
+        annotations:
+          summary: "LCR {{ $value | humanizePercentage }} below 110% early warning"
+          description: "Regulatory minimum is 100%. Early warning at 110%. Current: {{ $value | humanizePercentage }}."
+
+      - alert: LCRBelowMinimum
+        expr: nexus_lcr_ratio < 1.00
+        for: 0m
+        labels:
+          severity: critical
+          team: risk
+        annotations:
+          summary: "🚨 LCR BREACH — below 100% regulatory minimum"
+          description: "LCR is {{ $value | humanizePercentage }}. Immediate escalation to Head of Treasury and Regulator required."
+          runbook: "https://github.com/manassehkafoh/nexustreasury/blob/main/docs/runbooks/production-runbook.md#p2-lcr-calculation-failure"
+
+  # ── Sanctions Screening ───────────────────────────────────────────────────
+  - name: nexustreasury.sanctions
+    rules:
+      - alert: SanctionsScreeningFailure
+        expr: increase(nexus_sanctions_screening_errors_total[5m]) > 3
+        for: 0m
+        labels:
+          severity: critical
+          team: compliance
+        annotations:
+          summary: "🚨 Sanctions screening failing — {{ $value }} errors in 5 minutes"
+          description: "All trade bookings may be unscreened. Contact Compliance immediately."
+          runbook: "https://github.com/manassehkafoh/nexustreasury/blob/main/docs/runbooks/production-runbook.md#p1-sanctions-screening-failure"
+
+  # ── Nostro Reconciliation ─────────────────────────────────────────────────
+  - name: nexustreasury.bo-service
+    rules:
+      - alert: NostroBreakRateHigh
+        expr: nexus_nostro_break_rate > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          team: bo
+        annotations:
+          summary: "Nostro break rate > 5% ({{ $value | humanizePercentage }})"
+          description: "Reconciliation break rate is elevated. Check SWIFT network status."
+
+  # ── SLO Burn Rate Alerts ──────────────────────────────────────────────────
+  - name: nexustreasury.slo
+    rules:
+      - alert: ErrorBudgetBurnRateFast
+        expr: |
+          (
+            rate(nexus_http_requests_total{status=~"5.."}[1h]) /
+            rate(nexus_http_requests_total[1h])
+          ) > (5 * 0.001)
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Error budget burning at 5× rate — {{ $labels.job }}"
+          description: "At current burn rate, monthly error budget will be exhausted in {{ 720 | div $value | humanizeDuration }}."
+
+      - alert: ErrorBudgetBurnRateSlow
+        expr: |
+          (
+            rate(nexus_http_requests_total{status=~"5.."}[6h]) /
+            rate(nexus_http_requests_total[6h])
+          ) > (2 * 0.001)
+        for: 15m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Error budget burning at 2× rate — {{ $labels.job }}"
+          description: "Sustained elevated error rate over 6h window."

@@ -353,3 +353,156 @@ services:
       kafka:
         condition: service_healthy
     networks: [nexus-net]
+
+  # ── Sprint 2: Accounting Service ──────────────────────────────────────────────
+  accounting-service:
+    build:
+      context: .
+      dockerfile: packages/accounting-service/Dockerfile
+    container_name: nexus-accounting-service
+    ports:
+      - "4007:4007"
+      - "9097:9090"
+    environment:
+      NODE_ENV: development
+      PORT: "4007"
+      DATABASE_URL: postgresql://nexus:nexus@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: dev-jwt-secret-min-32-chars-for-local
+      AUDIT_HMAC_KEY: dev-hmac-key-for-local-dev-only-!!!
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4007/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Sprint 5: Audit Service ────────────────────────────────────────────────────
+  audit-service:
+    build:
+      context: .
+      dockerfile: packages/audit-service/Dockerfile
+    container_name: nexus-audit-service
+    ports:
+      - "4008:4008"
+      - "9098:9090"
+    environment:
+      NODE_ENV: development
+      PORT: "4008"
+      KAFKA_BROKERS: kafka:29092
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      AUDIT_HMAC_KEY: dev-hmac-key-for-local-dev-only-!!!
+      JWT_SECRET: dev-jwt-secret-min-32-chars-for-local
+    depends_on:
+      kafka:         { condition: service_healthy }
+      elasticsearch: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4008/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Sprint 5: Notification Service ────────────────────────────────────────────
+  notification-service:
+    build:
+      context: .
+      dockerfile: packages/notification-service/Dockerfile
+    container_name: nexus-notification-service
+    ports:
+      - "4009:4009"
+      - "9099:9090"
+    environment:
+      NODE_ENV: development
+      PORT: "4009"
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: dev-jwt-secret-min-32-chars-for-local
+      # SMTP: use Mailhog for local dev (localhost:1025)
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+    depends_on:
+      kafka: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4009/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Sprint 6: Collateral Service ──────────────────────────────────────────────
+  collateral-service:
+    build:
+      context: .
+      dockerfile: packages/collateral-service/Dockerfile
+    container_name: nexus-collateral-service
+    ports:
+      - "4010:4010"
+      - "9100:9090"
+    environment:
+      NODE_ENV: development
+      PORT: "4010"
+      DATABASE_URL: postgresql://nexus:nexus@postgres:5432/nexustreasury
+      KAFKA_BROKERS: kafka:29092
+      JWT_SECRET: dev-jwt-secret-min-32-chars-for-local
+    depends_on:
+      postgres: { condition: service_healthy }
+      kafka:    { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4010/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Sprint 6: Reporting Service ───────────────────────────────────────────────
+  reporting-service:
+    build:
+      context: .
+      dockerfile: packages/reporting-service/Dockerfile
+    container_name: nexus-reporting-service
+    ports:
+      - "4011:4011"
+      - "9101:9090"
+    environment:
+      NODE_ENV: development
+      PORT: "4011"
+      DATABASE_URL: postgresql://nexus:nexus@postgres:5432/nexustreasury
+      JWT_SECRET: dev-jwt-secret-min-32-chars-for-local
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:4011/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Web Dashboard ─────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: packages/web/Dockerfile
+    container_name: nexus-web
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_BRAND_ID: nexustreasury
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:4001/api/v1
+      NEXT_PUBLIC_WS_URL: ws://localhost:4001
+    depends_on:
+      - trade-service
+      - risk-service
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Mailhog (local SMTP for notifications) ────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: nexus-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI: http://localhost:8025
