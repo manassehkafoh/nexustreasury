@@ -82,12 +82,14 @@ export class LCRCalculator {
     const l2a = raw.level2A * 0.85; // 15% haircut
     const l2b = raw.level2B * 0.75; // 25% haircut (conservative)
 
-    const totalBeforeCap = l1 + l2a + l2b;
-    const maxL2 = totalBeforeCap * 0.4;
-    const maxL2b = totalBeforeCap * 0.15;
-
+    // Basel III LCR correct caps (BCBS 238 §21):
+    //   Level 2B ≤ 15% of total HQLA  →  L2B ≤ (15/85) × (L1 + L2A_adj)
+    //   Level 2  ≤ 40% of total HQLA  →  L2  ≤ (2/3)  × L1  (per §22)
+    // We apply the simpler iterative form: cap each level against (L1 + adj others)
+    const maxL2b = (l1 + l2a) * (15 / 85);   // L2B ≤ 15/(1-15) × (L1 + L2A)
     const adjL2b = Math.min(l2b, maxL2b);
-    const adjL2a = Math.min(l2a, maxL2 - adjL2b);
+    const maxL2a = (l1) * (2 / 3);            // L2  ≤ (2/3) × L1; L2A ≤ this − L2B
+    const adjL2a = Math.min(l2a, Math.max(0, maxL2a - adjL2b));
 
     return {
       level1: l1,

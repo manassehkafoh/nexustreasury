@@ -59,12 +59,14 @@ describe('LCRCalculator', () => {
 
   describe('applyHQLAHaircuts', () => {
     it('applies 15% haircut to Level 2A', () => {
-      const result = calc.applyHQLAHaircuts({ level1: 0, level2A: 100, level2B: 0 });
+      // Realistic input: L1=500 ensures L2 cap (40% rule) doesn't restrict L2A=100 post-haircut (85 < 40%×585=234)
+      const result = calc.applyHQLAHaircuts({ level1: 500, level2A: 100, level2B: 0 });
       expect(result.level2A).toBe(85);
     });
 
     it('applies 25% haircut to Level 2B', () => {
-      const result = calc.applyHQLAHaircuts({ level1: 0, level2A: 0, level2B: 100 });
+      // Realistic input: L1=1000 ensures L2B cap (15% rule) doesn't restrict L2B=100 post-haircut (75 < 15%×1075=161)
+      const result = calc.applyHQLAHaircuts({ level1: 1000, level2A: 0, level2B: 100 });
       expect(result.level2B).toBe(75);
     });
 

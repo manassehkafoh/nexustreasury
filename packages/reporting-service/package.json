@@ -1,0 +1,27 @@
+{
+  "name": "@nexustreasury/reporting-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@nexustreasury/domain": "workspace:*",
+    "@fastify/jwt": "^8.0.0",
+    "fastify": "^4.26.0",
+    "kafkajs": "^2.2.4",
+    "pino": "^8.18.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.0.0",
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "vitest": "^1.0.0"
+  }
+}
