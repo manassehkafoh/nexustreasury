@@ -9,7 +9,18 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],
       thresholds: { lines: 80, functions: 80, branches: 70, statements: 80 },
-      exclude: ['src/**/*.test.ts', 'src/server.ts', 'dist/**'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.spec.ts',
+        // Entry points — covered by E2E, not unit tests
+        'src/server.ts',
+        'src/index.ts',
+        // Route adapters — thin HTTP wrappers, covered by E2E
+        'src/routes/**',
+        // Infrastructure adapters — require live DB/Kafka/ML endpoint
+        'src/infrastructure/**',
+        'dist/**',
+      ],
     },
   },
 });

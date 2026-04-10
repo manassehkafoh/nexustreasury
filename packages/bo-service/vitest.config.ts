@@ -25,6 +25,8 @@ export default defineConfig({
         'src/server.ts',
         'src/routes/**',
         'src/infrastructure/**',
+        // ML inference adapters — require live TorchServe endpoint
+        'src/application/reconciliation/bert-break-classifier.ts',
         'dist/**',
       ],
     },
