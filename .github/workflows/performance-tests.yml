@@ -23,6 +23,11 @@ on:
         required: false
         default: '50'
 
+# Least-privilege: read-only content access
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   k6-trade-booking:
     name: k6 — Trade Booking SLA (${{ inputs.target_env || 'staging' }})

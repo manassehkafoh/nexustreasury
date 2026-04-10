@@ -33,7 +33,7 @@ jobs:
     name: Blue-Green Deploy to Production
     needs: validate
     runs-on: ubuntu-latest
-    environment: production   # Requires 2 approvers (configured in GitHub Environments)
+    environment: production # Requires 2 approvers (configured in GitHub Environments)
     steps:
       - uses: actions/checkout@v4
         with:

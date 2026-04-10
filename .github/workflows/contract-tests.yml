@@ -15,6 +15,11 @@ env:
   PACT_BROKER_BASE_URL: https://pact.nexustreasury.io
   # PACT_BROKER_TOKEN is stored in GitHub Secrets
 
+# Least-privilege: read-only content access
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   # ── Consumer: accounting-service ─────────────────────────────────────
   consumer-accounting:
