@@ -3,6 +3,17 @@ import jwt from '@fastify/jwt';
 import { healthRoutes } from './routes/health.routes.js';
 import { boRoutes } from './routes/bo.routes.js';
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+
 const PORT = Number(process.env['PORT'] ?? 4005);
 const log = (msg: string): void => {
   process.stdout.write(

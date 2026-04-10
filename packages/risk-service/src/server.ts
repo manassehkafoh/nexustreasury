@@ -5,6 +5,17 @@ import { healthRoutes } from './routes/health.routes.js';
 import { riskRoutes } from './routes/risk.routes.js';
 import { PrismaLimitRepository } from './infrastructure/postgres/limit.repository.js';
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+
 const PORT = Number(process.env['PORT'] ?? 4003);
 const log = (msg: string, data?: object): void => {
   process.stdout.write(

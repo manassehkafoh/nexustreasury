@@ -5,6 +5,7 @@
  * @see Sprint 11.2
  */
 
+import { randomUUID } from 'crypto';
 export const ReportTemplate = {
   BLOTTER:        'BLOTTER',        // Trade blotter with live positions
   PNL:            'PNL',           // P&L summary by book/trader
@@ -78,8 +79,8 @@ export interface ReportRun {
   readonly errorMessage?:   string;
 }
 
-let reportCounter = 1;
-let runCounter    = 1;
+
+
 
 // Default metrics per template
 const TEMPLATE_METRICS: Record<ReportTemplate, string[]> = {
@@ -110,7 +111,7 @@ export class ReportBuilder {
     schedule?:  ReportSchedule;
     delivery?:  ReportDelivery;
   }): ReportDefinition {
-    const id = `RPT-${String(reportCounter++).padStart(6,'0')}`;
+    const id = `RPT-${randomUUID().split('-')[0].toUpperCase()}`;
     const def: ReportDefinition = {
       id, name: params.name, tenantId: params.tenantId, createdBy: params.createdBy,
       template: params.template, dimensions: params.dimensions,
@@ -128,7 +129,7 @@ export class ReportBuilder {
     const report = this._reports.get(reportId);
     if (!report) throw new Error(`Report ${reportId} not found`);
 
-    const runId  = `RUN-${String(runCounter++).padStart(6,'0')}`;
+    const runId  = `RUN-${randomUUID().split('-')[0].toUpperCase()}`;
     const run: ReportRun = {
       runId, reportId, tenantId: report.tenantId, triggeredBy,
       status: 'COMPLETED',

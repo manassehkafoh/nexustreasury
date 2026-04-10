@@ -18,6 +18,7 @@
  * @see Sprint 9-A
  */
 
+import { randomUUID } from 'crypto';
 export const BudgetScenario = {
   BASE: 'BASE', OPTIMISTIC: 'OPTIMISTIC', STRESS: 'STRESS', CUSTOM: 'CUSTOM',
 } as const;
@@ -104,7 +105,7 @@ export interface BudgetReport {
   readonly generatedAt:           string;
 }
 
-let budgetCounter = 1;
+
 
 export class BudgetEngine {
   private readonly _plans = new Map<string, BudgetPlan>();
@@ -115,7 +116,7 @@ export class BudgetEngine {
     scenario:   BudgetScenario;
     entries:    BudgetEntry[];
   }): BudgetPlan {
-    const budgetId = `BPLM-${params.fiscalYear}-${params.scenario}-${String(budgetCounter++).padStart(4,'0')}`;
+    const budgetId = `BPLM-${params.fiscalYear}-${params.scenario}-${randomUUID().split('-')[0].toUpperCase()}`;
     const plan: BudgetPlan = {
       budgetId, tenantId: params.tenantId, fiscalYear: params.fiscalYear,
       scenario: params.scenario, status: BudgetStatus.DRAFT,

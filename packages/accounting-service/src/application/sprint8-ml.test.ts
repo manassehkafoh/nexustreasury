@@ -51,11 +51,11 @@ describe('XGBoostPDModelAdapter', () => {
     expect(r.shapValues).toHaveLength(FEATURE_NAMES.length);
   });
 
-  it('SHAP values approximately sum to predicted logit minus baseline', async () => {
+  it('SHAP values sum equals predictedLogit (additive log-odds decomposition)', async () => {
     const r = await model.predictWithSHAP({ currentRating: 'BB', tenorYears: 3 });
+    // shapValues are additive: baseline + adjustments = predictedLogit
     const shapSum = r.shapValues.reduce((s, v) => s + v.shapValue, 0);
-    const expectedDiff = r.predictedLogit - r.baselineLogit;
-    expect(Math.abs(shapSum - expectedDiff)).toBeLessThan(0.5); // approximate
+    expect(Math.abs(shapSum - r.predictedLogit)).toBeLessThan(0.01);
   });
 
   it('SHAP impact labels are POSITIVE/NEGATIVE/NEUTRAL', async () => {

@@ -24,6 +24,7 @@
  * @see Sprint 10-B (FIS gap closure)
  */
 
+import { randomUUID } from 'crypto';
 export const HedgeStrategy = {
   FULL_COVER:  'FULL_COVER',
   THRESHOLD:   'THRESHOLD',
@@ -98,7 +99,7 @@ const CUSTOMER_SPREAD_BPS: Record<string, number> = {
 };
 const DEFAULT_SPREAD_BPS = 30;
 
-let dealCounter = 9000;
+
 
 export class FXAutoHedger {
   private readonly _strategy:    HedgeStrategy;
@@ -172,7 +173,7 @@ export class FXAutoHedger {
     });
 
     const hedgeRef = this._shouldHedgeNow(netExposure)
-      ? `HLDG-${++dealCounter}-${pair.replace('/','')}`
+      ? `HLDG-${randomUUID().split('-')[0].toUpperCase()}-${pair.replace('/','')}`
       : undefined;
 
     return {

@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 /**
  * @module SSEStreamPublisher
  * @description Real-Time Dashboard Streaming via Server-Sent Events — Sprint 11.3.
@@ -51,8 +52,8 @@ function formatSSEEvent(event: StreamEvent): string {
   ].join('\n');
 }
 
-let subCounter   = 1;
-let eventCounter = 1;
+
+
 
 export class SSEStreamPublisher {
   private readonly _subscriptions = new Map<string, StreamSubscription>();
@@ -66,7 +67,7 @@ export class SSEStreamPublisher {
     eventTypes?: StreamEventType[];
   }): StreamSubscription {
     const sub: StreamSubscription = {
-      subscriptionId: `SSE-${String(subCounter++).padStart(6,'0')}`,
+      subscriptionId: `SSE-${randomUUID().split('-')[0].toUpperCase()}`,
       tenantId:       params.tenantId,
       userId:         params.userId,
       eventTypes:     params.eventTypes ?? Object.values(StreamEventType),
@@ -85,7 +86,7 @@ export class SSEStreamPublisher {
 
   /** Publish an event to all matching subscriptions. Returns SSE-formatted strings. */
   publish(event: Omit<StreamEvent, 'id'>): { subscriptionId: string; ssePayload: string }[] {
-    const id        = `EVT-${String(eventCounter++).padStart(8,'0')}`;
+    const id        = `EVT-${randomUUID().split('-')[0].toUpperCase()}`;
     const fullEvent = { ...event, id };
 
     // Append to log

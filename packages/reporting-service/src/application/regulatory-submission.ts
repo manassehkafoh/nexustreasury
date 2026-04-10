@@ -5,6 +5,7 @@
  * @see Sprint 10.4
  */
 
+import { randomUUID } from 'crypto';
 export const RegulatorCode = {
   EBA_COREP:    'EBA_COREP',
   EBA_FINREP:   'EBA_FINREP',
@@ -32,13 +33,13 @@ export interface SubmissionRecord {
   readonly xbrlPackage?:    string;
 }
 
-let subCounter = 1;
+
 
 export class RegulatorySubmissionEngine {
   private readonly _submissions = new Map<string, SubmissionRecord>();
 
   submit(params: { tenantId:string; regulator:RegulatorCode; reportingPeriod:string; fileSize:number; xbrlPackage?:string }): SubmissionRecord {
-    const id = `SUB-${params.regulator}-${String(subCounter++).padStart(6,'0')}`;
+    const id = `SUB-${params.regulator}-${randomUUID().split('-')[0].toUpperCase()}`;
     const rec: SubmissionRecord = {
       id, tenantId:params.tenantId, regulator:params.regulator,
       reportingPeriod:params.reportingPeriod, status:SubmissionStatus.SUBMITTED,

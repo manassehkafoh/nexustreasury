@@ -11,6 +11,17 @@ import { registerTelemetry } from './infrastructure/telemetry.js';
 import { KafkaProducer } from './infrastructure/kafka/producer.js';
 import { logger } from './infrastructure/logger.js';
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+
 const PORT = Number(process.env['PORT'] ?? 4001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 
