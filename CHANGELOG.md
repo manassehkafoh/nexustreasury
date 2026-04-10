@@ -230,3 +230,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Initial QA closure report: 8.7/10
 - Gaps identified: test coverage (4/10), API documentation (0/10)
 - 12-week remediation plan vs Calypso feature parity documented
+
+## [1.5.0] — 2026-04-10 — Sprint 11: AI Treasury Assistant, Report Builder, SSE Streaming
+
+### Added — Sprint 11.1 (AI Treasury Insights Assistant)
+- `TreasuryAIAssistant` in `reporting-service`: Claude claude-sonnet-4-20250514 RAG pipeline with 8 query categories
+- PII redaction (IBAN/BIC patterns) before API call; tenant-isolated context; graceful rule-based fallback
+- `AssistantResponse` with confidence, citedMetrics, followUpQuestions, disclaimers
+
+### Added — Sprint 11.2 (Self-Service Report Builder)
+- `ReportBuilder` in `reporting-service`: 8 pre-built templates (BLOTTER, PNL, LCR, IRRBB, CAPITAL, COLLATERAL, POSITION, CUSTOM)
+- 7 dimensions, schedule (cron), delivery (EMAIL/SFTP/API webhook), run history
+
+### Added — Sprint 11.3 (Real-Time Dashboard Streaming)
+- `SSEStreamPublisher` in `notification-service`: RFC 8895 SSE fan-out with tenant isolation
+- 5 event types: position.mtm.updated, limit.utilisation.tick, rate.feed.tick, lcr.intraday.updated, heartbeat
+- Event log buffer (last 1000), active subscription count, per-tenant scoping
+
+### Documentation
+- C4 component diagrams for Sprints 8, 9–10, and 11 (`docs/architecture/c4/`)
+- Learner modules 09–12 (Islamic Finance, Capital/RAROC, Financial Planning, AI Assistant)
+- Full SE onboarding guide `docs/onboarding/` (6 modules, Days 1–5 + first-week checklist)
+- OpenAPI spec updated to v1.5.0 with 9 new endpoint paths
+- Postman collection updated: 15 top-level folders, Sprint 9-11 examples
+
+### Tests
+- Total: **819 tests** (788 unit + 31 E2E), 0 failures
+- CVEs (prod): **0** (`pnpm audit --prod`)
+
