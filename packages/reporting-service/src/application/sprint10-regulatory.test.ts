@@ -179,3 +179,60 @@ describe('FINREPEngine — Sprint 10.2 (EBA FINREP Taxonomy v3.3)', () => {
     expect(r.ebaTemplate).toContain('FINREP');
   });
 });
+
+// ── Branch coverage additions ──────────────────────────────────────────────────
+
+describe('COREPEngine — branch coverage (zero RWA edge case)', () => {
+  const engine = new COREPEngine();
+
+  it('returns 0 ratios when totalRWA is 0', () => {
+    const input: COREPInput = {
+      ...COREP_INPUT,
+      creditRiskExposures: [],
+      marketRiskPositions: [],
+      opRisk: { avgGrossIncome: 0, bicMultiplier: 0.15, lossComponent: 0 },
+    };
+    const r = engine.generate(input);
+    expect(r.totalRWA).toBe(0);
+    expect(r.cet1RatioPct).toBe(0);
+    expect(r.totalCapRatioPct).toBe(0);
+    expect(r.tier1RatioPct).toBe(0);
+  });
+
+  it('non-compliant bank: totalCapPct < overallMinimum', () => {
+    const weak: COREPInput = {
+      ...COREP_INPUT,
+      cet1Gross: 10_000_000,
+      at1Capital: 0,
+      tier2Capital: 0,
+    };
+    const r = engine.generate(weak);
+    expect(r.isCompliant).toBe(false);
+    expect(r.capitalHeadroom).toBeLessThan(0);
+  });
+});
+
+describe('FINREPEngine — branch coverage (zero loans edge case)', () => {
+  const engine = new FINREPEngine();
+
+  it('returns 0 NPL ratio when total loans are 0', () => {
+    const bs: FinrepBalanceSheetInput = {
+      ...BS_INPUT,
+      loansAMC: 0,
+      loansNonPerform: 0,
+    };
+    const r = engine.generateReport(bs, PL_INPUT);
+    expect(r.nplRatioPct).toBe(0);
+  });
+
+  it('handles zero revenue for cost-to-income ratio', () => {
+    const zeroPL: FinrepPLInput = {
+      ...PL_INPUT,
+      netInterestIncome: 0,
+      feeIncome: 0,
+      tradingIncome: 0,
+    };
+    const r = engine.generateReport(BS_INPUT, zeroPL);
+    expect(r.costToIncomePct).toBe(0);
+  });
+});

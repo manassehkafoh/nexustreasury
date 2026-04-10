@@ -238,7 +238,7 @@ export class TreasuryAIAssistant {
     if (/fx|foreign exchange|eur|gbp|usd|jpy/.test(lower)) return QueryCategory.FX_EXPOSURE;
     if (/limit|utilisation|counterparty|headroom/.test(lower))
       return QueryCategory.LIMIT_UTILISATION;
-    if (/irrbb|nii|eve|rate risk|nmd/.test(lower)) return QueryCategory.IRRBB_ANALYSIS;
+    if (/irrbb|nii|\beve\b|rate risk|nmd/.test(lower)) return QueryCategory.IRRBB_ANALYSIS;
     if (/lcr|nsfr|liquidity|survival/.test(lower)) return QueryCategory.LIQUIDITY_RATIOS;
     if (/cet1|capital|raroc|roe|rwa/.test(lower)) return QueryCategory.CAPITAL_POSITION;
     if (/trade|blotter|position|p&l|pnl/.test(lower)) return QueryCategory.TRADE_BLOTTER;

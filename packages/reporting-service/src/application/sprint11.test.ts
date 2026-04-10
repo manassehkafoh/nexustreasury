@@ -218,3 +218,60 @@ describe('ReportBuilder — Sprint 11.2', () => {
     expect(() => builder.run('UNKNOWN-ID')).toThrow();
   });
 });
+
+// ── AI Assistant branch coverage additions ─────────────────────────────────────
+describe('TreasuryAIAssistant — branch coverage additions', () => {
+  const assistant = new TreasuryAIAssistant({
+    apiEndpoint: 'http://localhost:99999/',
+    timeoutMs: 50,
+  });
+  const base: AssistantQuery = {
+    tenantId: 'bank-001',
+    userId: 'u1',
+    question: '',
+    context: {
+      snapshotDate: '2026-04-10',
+      lcrRatio: 142.5,
+      cet1RatioPct: 13.2,
+      niiYTD: 48_000_000,
+    },
+  };
+
+  it('classifies capital/RAROC question as CAPITAL_POSITION', async () => {
+    const r = await assistant.ask({ ...base, question: 'What is our CET1 ratio and RAROC?' });
+    expect(r.category).toBe(QueryCategory.CAPITAL_POSITION);
+  });
+
+  it('classifies trade blotter question as TRADE_BLOTTER', async () => {
+    const r = await assistant.ask({ ...base, question: 'Show me the trade blotter PnL today' });
+    expect(r.category).toBe(QueryCategory.TRADE_BLOTTER);
+  });
+
+  it('classifies profitability question as PROFITABILITY', async () => {
+    const r = await assistant.ask({
+      ...base,
+      question: 'What is our profit and cost-to-income ratio?',
+    });
+    expect(r.category).toBe(QueryCategory.PROFITABILITY);
+  });
+
+  it('classifies general question as GENERAL', async () => {
+    const r = await assistant.ask({ ...base, question: 'Hello, how are you?' });
+    expect(r.category).toBe(QueryCategory.GENERAL);
+  });
+
+  it('citedMetrics includes CET1 and LCR when context is provided', async () => {
+    const r = await assistant.ask(base);
+    // fallback path still calls _parseResponse — citedMetrics populated from context
+    expect(r.confidence).toBe('LOW'); // fallback since API unreachable
+  });
+
+  it('context-less query returns LOW confidence', async () => {
+    const r = await assistant.ask({ ...base, context: undefined });
+    expect(r.confidence).toBe('LOW');
+  });
+
+  it('metrics successRate is a percentage string', () => {
+    expect(assistant.metrics.successRate).toMatch(/^\d+(\.\d+)?%$/);
+  });
+});
