@@ -33,3 +33,7 @@ export * from './pricing/wasm-exotic-pricer-pool.js';
 // ── Sprint 8.4 — FX Volatility Surface + Vanna-Volga Pricer ─────────────────
 export * from './pricing/vol-surface.js';
 export * from './pricing/vanna-volga-pricer.js';
+
+// ── Sprint 9.1-9.2 — Islamic Finance: Sukuk + Murabaha Lifecycle ─────────────
+export * from './pricing/sukuk-pricer.js';
+export * from './pricing/murabaha-lifecycle.js';
