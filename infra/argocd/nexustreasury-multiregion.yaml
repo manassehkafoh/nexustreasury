@@ -24,20 +24,20 @@ spec:
   generators:
     - list:
         elements:
-          - cluster:  eks-nexustreasury-eu-west-1
-            region:   eu-west-1
-            url:      https://eks-eu-west-1.nexustreasury.io
-            overlay:  production-eu-west-1
-            primary:  "true"
-          - cluster:  eks-nexustreasury-us-east-1
-            region:   us-east-1
-            url:      https://eks-us-east-1.nexustreasury.io
-            overlay:  production-us-east-1
-            primary:  "false"
+          - cluster: eks-nexustreasury-eu-west-1
+            region: eu-west-1
+            url: https://eks-eu-west-1.nexustreasury.io
+            overlay: production-eu-west-1
+            primary: 'true'
+          - cluster: eks-nexustreasury-us-east-1
+            region: us-east-1
+            url: https://eks-us-east-1.nexustreasury.io
+            overlay: production-us-east-1
+            primary: 'false'
 
   template:
     metadata:
-      name: "nexustreasury-{{region}}"
+      name: 'nexustreasury-{{region}}'
       annotations:
         notifications.argoproj.io/subscribe.on-sync-failed.slack: platform-alerts
         notifications.argoproj.io/subscribe.on-health-degraded.slack: platform-alerts
@@ -47,15 +47,15 @@ spec:
       source:
         repoURL: https://github.com/manassehkafoh/nexustreasury
         targetRevision: main
-        path: "infra/kubernetes/overlays/{{overlay}}"
+        path: 'infra/kubernetes/overlays/{{overlay}}'
 
       destination:
-        server:    "{{url}}"
+        server: '{{url}}'
         namespace: nexustreasury
 
       syncPolicy:
         automated:
-          prune:    true
+          prune: true
           selfHeal: true
         syncOptions:
           - CreateNamespace=true
@@ -64,8 +64,8 @@ spec:
         retry:
           limit: 5
           backoff:
-            duration:    5s
-            factor:      2
+            duration: 5s
+            factor: 2
             maxDuration: 3m
 
       # Progressive delivery: 10% canary → 100% via Argo Rollouts
@@ -73,7 +73,7 @@ spec:
         - group: apps
           kind: Deployment
           jsonPointers:
-            - /spec/replicas  # KEDA manages replicas; ignore drift
+            - /spec/replicas # KEDA manages replicas; ignore drift
 ---
 # Kafka MirrorMaker 2 — Cross-Region Topic Replication
 # Replicates ALL nexus.* topics from eu-west-1 → us-east-1 with < 30s lag
@@ -85,7 +85,7 @@ metadata:
   namespace: nexustreasury
 spec:
   version: 3.7.0
-  replicas: 3  # 3 replicas for HA
+  replicas: 3 # 3 replicas for HA
   connectCluster: us-east-1
   clusters:
     - alias: eu-west-1
@@ -97,7 +97,7 @@ spec:
           secretName: nexustreasury-kafka-mm2
           password: password
       tls:
-        trustedCertificates: []  # TLS termination at load balancer
+        trustedCertificates: [] # TLS termination at load balancer
     - alias: us-east-1
       bootstrapServers: kafka.us-east-1.nexustreasury.io:9092
       authentication:
@@ -107,23 +107,23 @@ spec:
           secretName: nexustreasury-kafka-mm2
           password: password
   mirrors:
-    - sourceCluster:  eu-west-1
-      targetCluster:  us-east-1
+    - sourceCluster: eu-west-1
+      targetCluster: us-east-1
       sourceConnector:
         config:
-          replication.factor:               3
+          replication.factor: 3
           offset-syncs.topic.replication.factor: 3
-          sync.topic.acls.enabled:          "false"
-          refresh.topics.interval.seconds:  30
-      topicsPattern: "nexus\\..*"   # All nexus.* topics
-      groupsPattern:  "nexustreasury-.*"
+          sync.topic.acls.enabled: 'false'
+          refresh.topics.interval.seconds: 30
+      topicsPattern: "nexus\\..*" # All nexus.* topics
+      groupsPattern: 'nexustreasury-.*'
       heartbeatConnector:
         config:
           heartbeats.topic.replication.factor: 3
       checkpointConnector:
         config:
           checkpoints.topic.replication.factor: 3
-          sync.group.offsets.enabled:          "true"
+          sync.group.offsets.enabled: 'true'
           sync.group.offsets.interval.seconds: 60
 ---
 # Route53 Health Check for eu-west-1
@@ -137,7 +137,7 @@ metadata:
   name: route53-health-check-config
   namespace: nexustreasury
   annotations:
-    description: "Route53 health check parameters for multi-region failover"
+    description: 'Route53 health check parameters for multi-region failover'
 data:
   config.json: |
     {

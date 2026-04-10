@@ -28,6 +28,7 @@
 ```
 
 **RAG Data Flow:**
+
 ```
 1. User question → QueryClassifier → category
 2. TreasuryDataContext snapshot → ContextBuilder → grounded prompt
@@ -37,6 +38,7 @@
 ```
 
 **Guardrails enforced:**
+
 - Tenant isolation: context includes only tenantId-scoped data
 - PII: IBAN/BIC redacted from user input before API call
 - Hallucination resistance: system prompt forbids invented metrics
@@ -61,6 +63,7 @@
 ```
 
 **Report Lifecycle:**
+
 ```
 define() → DRAFT → run('MANUAL') → COMPLETED
                  → schedule(cron) → SCHEDULED run → COMPLETED
@@ -88,6 +91,7 @@ define() → DRAFT → run('MANUAL') → COMPLETED
 ```
 
 **SSE Event Types:**
+
 ```
 position.mtm.updated    → React live blotter, 500ms intervals
 limit.utilisation.tick  → Real-time limit headroom gauge
@@ -97,6 +101,7 @@ heartbeat               → Connection keepalive (every 30s)
 ```
 
 **Kafka → SSE Pipeline:**
+
 ```
 Kafka topic (nexus.position.mtm-updated)
   → KafkaConsumer [notification-service]

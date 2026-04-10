@@ -19,14 +19,14 @@ Treasury sets targets (NII, NIM, OPEX, RWA by BU)
 
 Each `BudgetEntry` captures the full P&L structure per business unit and period:
 
-| Field | Meaning |
-|---|---|
-| `targetNII` | Net interest income target |
-| `targetNIM` | Net interest margin (as decimal: 0.032 = 3.2%) |
-| `nonInterestIncome` | Fee income, FX spread, commissions |
-| `opex` | Direct operating expenses |
-| `rwa` | Risk-weighted assets for this BU |
-| `capitalAllocated` | Internal capital charge |
+| Field               | Meaning                                        |
+| ------------------- | ---------------------------------------------- |
+| `targetNII`         | Net interest income target                     |
+| `targetNIM`         | Net interest margin (as decimal: 0.032 = 3.2%) |
+| `nonInterestIncome` | Fee income, FX spread, commissions             |
+| `opex`              | Direct operating expenses                      |
+| `rwa`               | Risk-weighted assets for this BU               |
+| `capitalAllocated`  | Internal capital charge                        |
 
 ---
 

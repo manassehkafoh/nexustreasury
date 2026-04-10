@@ -8,7 +8,6 @@ import { BudgetEngine, BudgetScenario } from '../application/budget-engine.js';
 const engine = new BudgetEngine();
 
 export async function planningRoutes(app: FastifyInstance): Promise<void> {
-
   /** POST /api/v1/budgets — Create annual budget plan */
   app.post('/api/v1/budgets', async (req, reply) => {
     try {
@@ -27,7 +26,7 @@ export async function planningRoutes(app: FastifyInstance): Promise<void> {
     // Find the plan across all tenants (in production scope by tenant from JWT)
     const tenantId = (req.headers['x-tenant-id'] as string) ?? 'default';
     const plans = engine.listPlans(tenantId);
-    const plan = plans.find(p => p.budgetId === budgetId);
+    const plan = plans.find((p) => p.budgetId === budgetId);
     if (!plan) return reply.code(404).send({ error: `Budget ${budgetId} not found` });
     return reply.send(plan);
   });
@@ -80,6 +79,6 @@ export async function planningRoutes(app: FastifyInstance): Promise<void> {
 
   /** GET /health */
   app.get('/health', async (_req, reply) =>
-    reply.send({ service: 'planning-service', status: 'ok', ts: new Date().toISOString() })
+    reply.send({ service: 'planning-service', status: 'ok', ts: new Date().toISOString() }),
   );
 }

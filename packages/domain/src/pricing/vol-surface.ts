@@ -36,15 +36,15 @@ import { normCDF } from './yield-curve.js';
 /** SVI parameters for a single expiry slice τ. */
 export interface SVISlice {
   /** Expiry in years */
-  readonly tau:   number;
+  readonly tau: number;
   /** a: overall variance level. Must satisfy: a + b·σ·√(1-ρ²) ≥ 0 */
-  readonly a:     number;
+  readonly a: number;
   /** b: wings slope (b ≥ 0) */
-  readonly b:     number;
+  readonly b: number;
   /** ρ: correlation, skew direction (-1 < ρ < 1) */
-  readonly rho:   number;
+  readonly rho: number;
   /** m: ATM shift in log-moneyness */
-  readonly m:     number;
+  readonly m: number;
   /** σ: min ATM variance width (σ > 0) */
   readonly sigma: number;
 }
@@ -52,26 +52,26 @@ export interface SVISlice {
 /** Market quote for surface calibration (ATM, 25Δ, 10Δ). */
 export interface VolQuote {
   /** Expiry in years */
-  readonly tau:      number;
+  readonly tau: number;
   /** ATM implied vol */
-  readonly atmVol:   number;
+  readonly atmVol: number;
   /** 25Δ risk reversal: vol(25Δ Call) - vol(25Δ Put) */
-  readonly rr25:     number;
+  readonly rr25: number;
   /** 25Δ butterfly: [vol(25Δ Call) + vol(25Δ Put)]/2 - ATM */
-  readonly bf25:     number;
+  readonly bf25: number;
   /** Forward price */
-  readonly forward:  number;
+  readonly forward: number;
 }
 
 /** Result of volatility surface evaluation. */
 export interface VolSurfacePoint {
-  readonly strike:     number;
-  readonly expiry:     number;
-  readonly logMoney:   number;
+  readonly strike: number;
+  readonly expiry: number;
+  readonly logMoney: number;
   readonly impliedVol: number;
-  readonly totalVar:   number;
+  readonly totalVar: number;
   /** Local volatility (Dupire formula) */
-  readonly localVol?:  number;
+  readonly localVol?: number;
 }
 
 /**
@@ -88,7 +88,7 @@ export class SVIVolatilitySurface {
   private readonly _forward: number;
 
   constructor(slices: SVISlice[], forward: number) {
-    this._slices  = slices.sort((a, b) => a.tau - b.tau);
+    this._slices = slices.sort((a, b) => a.tau - b.tau);
     this._forward = forward;
     this._validateArbitrageFree();
   }
@@ -100,44 +100,42 @@ export class SVIVolatilitySurface {
    * to call/put implied vols, then fits SVI parameters per slice.
    */
   static fromQuotes(quotes: VolQuote[]): SVIVolatilitySurface {
-    const sorted  = [...quotes].sort((a, b) => a.tau - b.tau);
+    const sorted = [...quotes].sort((a, b) => a.tau - b.tau);
     const forward = sorted[0]?.forward ?? 1.0;
 
-    const slices = sorted.map(q => SVIVolatilitySurface._calibrateSlice(q));
+    const slices = sorted.map((q) => SVIVolatilitySurface._calibrateSlice(q));
     return new SVIVolatilitySurface(slices, forward);
   }
 
   /** Evaluate implied vol at a given strike and expiry. */
   impliedVol(strike: number, tau: number): number {
     const slice = this._interpolateSlice(tau);
-    const k     = Math.log(strike / this._forward);
-    const w     = this._sviTotalVar(k, slice);
+    const k = Math.log(strike / this._forward);
+    const w = this._sviTotalVar(k, slice);
     return Math.sqrt(Math.max(w / tau, 0));
   }
 
   /** Evaluate implied vol at a given log-moneyness and expiry. */
   impliedVolAtLogMoney(k: number, tau: number): number {
     const slice = this._interpolateSlice(tau);
-    const w     = this._sviTotalVar(k, slice);
+    const w = this._sviTotalVar(k, slice);
     return Math.sqrt(Math.max(w / tau, 0));
   }
 
   /** Return a grid of vol surface points for visualisation. */
-  surface(
-    strikes: number[], expiries: number[]
-  ): VolSurfacePoint[][] {
-    return expiries.map(tau =>
-      strikes.map(K => {
-        const k   = Math.log(K / this._forward);
+  surface(strikes: number[], expiries: number[]): VolSurfacePoint[][] {
+    return expiries.map((tau) =>
+      strikes.map((K) => {
+        const k = Math.log(K / this._forward);
         const vol = this.impliedVol(K, tau);
         return {
-          strike:     K,
-          expiry:     tau,
-          logMoney:   parseFloat(k.toFixed(4)),
+          strike: K,
+          expiry: tau,
+          logMoney: parseFloat(k.toFixed(4)),
           impliedVol: parseFloat(vol.toFixed(6)),
-          totalVar:   parseFloat((vol * vol * tau).toFixed(6)),
+          totalVar: parseFloat((vol * vol * tau).toFixed(6)),
         };
-      })
+      }),
     );
   }
 
@@ -161,7 +159,7 @@ export class SVIVolatilitySurface {
 
   /** Expiry tenors covered by the surface. */
   get expiries(): number[] {
-    return this._slices.map(s => s.tau);
+    return this._slices.map((s) => s.tau);
   }
 
   // ── Private: SVI formula ──────────────────────────────────────────────────
@@ -183,18 +181,18 @@ export class SVIVolatilitySurface {
     }
 
     // Linear interpolation between surrounding slices
-    const idx  = this._slices.findIndex(s => s.tau >= tau);
-    const lo   = this._slices[idx - 1];
-    const hi   = this._slices[idx];
-    const t    = (tau - lo.tau) / (hi.tau - lo.tau);
+    const idx = this._slices.findIndex((s) => s.tau >= tau);
+    const lo = this._slices[idx - 1];
+    const hi = this._slices[idx];
+    const t = (tau - lo.tau) / (hi.tau - lo.tau);
     const lerp = (a: number, b: number) => a + t * (b - a);
 
     return {
-      tau:   tau,
-      a:     lerp(lo.a,     hi.a),
-      b:     lerp(lo.b,     hi.b),
-      rho:   lerp(lo.rho,   hi.rho),
-      m:     lerp(lo.m,     hi.m),
+      tau: tau,
+      a: lerp(lo.a, hi.a),
+      b: lerp(lo.b, hi.b),
+      rho: lerp(lo.rho, hi.rho),
+      m: lerp(lo.m, hi.m),
       sigma: lerp(lo.sigma, hi.sigma),
     };
   }
@@ -209,26 +207,29 @@ export class SVIVolatilitySurface {
     const sigma = q.atmVol;
     const sqrtT = Math.sqrt(q.tau);
     // 25Δ call strike: K ≈ F × exp(0.43 × σ × √T)
-    const k25C  =  0.43 * sigma * sqrtT;
-    const k25P  = -0.43 * sigma * sqrtT;
+    const k25C = 0.43 * sigma * sqrtT;
+    const k25P = -0.43 * sigma * sqrtT;
 
     // Fit SVI to 3 points: (k25P, vol25P²×T), (0, σ²×T), (k25C, vol25C²×T)
-    const w_atm = sigma  * sigma  * q.tau;
+    const w_atm = sigma * sigma * q.tau;
     const w_25C = vol25C * vol25C * q.tau;
     const w_25P = vol25P * vol25P * q.tau;
 
     // Simplified SVI fit: set m=0, estimate a, b, ρ, σ from symmetry
-    const a     = w_atm * 0.85;
-    const b     = (w_25C + w_25P - 2 * w_atm) / (k25C * k25C + sigma * sigma * q.tau);
-    const rho   = (w_25C - w_25P) / (2 * b * k25C + 1e-8);
-    const m     = 0;
-    const sviSigma = Math.max(0.001, Math.sqrt(Math.max(1e-8, w_atm / Math.max(a + b * sigma, 1e-8) - 1) * sigma * sigma));
+    const a = w_atm * 0.85;
+    const b = (w_25C + w_25P - 2 * w_atm) / (k25C * k25C + sigma * sigma * q.tau);
+    const rho = (w_25C - w_25P) / (2 * b * k25C + 1e-8);
+    const m = 0;
+    const sviSigma = Math.max(
+      0.001,
+      Math.sqrt(Math.max(1e-8, w_atm / Math.max(a + b * sigma, 1e-8) - 1) * sigma * sigma),
+    );
 
     return {
-      tau:   q.tau,
-      a:     Math.max(0.0001, a),
-      b:     Math.max(0.0001, Math.abs(b)),
-      rho:   Math.max(-0.99, Math.min(0.99, rho)),
+      tau: q.tau,
+      a: Math.max(0.0001, a),
+      b: Math.max(0.0001, Math.abs(b)),
+      rho: Math.max(-0.99, Math.min(0.99, rho)),
       m,
       sigma: Math.max(0.001, sviSigma),
     };

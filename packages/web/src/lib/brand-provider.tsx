@@ -18,18 +18,8 @@
  *   // brand.colors.accent, brand.features.fxEDealing, etc.
  */
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
-import {
-  generateCSSVariables,
-  NEXUSTREASURY_BRAND,
-  type BrandConfig,
-} from './branding.js';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
+import { generateCSSVariables, NEXUSTREASURY_BRAND, type BrandConfig } from './branding.js';
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -44,7 +34,7 @@ const BrandContext = createContext<BrandContextValue>({
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 interface BrandProviderProps {
-  config:   BrandConfig;
+  config: BrandConfig;
   children: ReactNode;
 }
 
@@ -57,7 +47,7 @@ export function BrandProvider({ config, children }: BrandProviderProps): JSX.Ele
   const styleRef = useRef<HTMLStyleElement | null>(null);
 
   useEffect((): (() => void) => {
-    const css    = generateCSSVariables(config);
+    const css = generateCSSVariables(config);
     const styleId = `nexus-brand-${config.id}`;
 
     // Reuse or create the <style> tag
@@ -84,11 +74,7 @@ export function BrandProvider({ config, children }: BrandProviderProps): JSX.Ele
     };
   }, [config]);
 
-  return (
-    <BrandContext.Provider value={{ brand: config }}>
-      {children}
-    </BrandContext.Provider>
-  );
+  return <BrandContext.Provider value={{ brand: config }}>{children}</BrandContext.Provider>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
@@ -113,7 +99,7 @@ export function useBrand(): BrandContextValue {
 // ── Logo Component ────────────────────────────────────────────────────────────
 
 interface LogoProps {
-  variant?:  'mark' | 'wordmark';
+  variant?: 'mark' | 'wordmark';
   className?: string;
 }
 
@@ -123,12 +109,11 @@ interface LogoProps {
  */
 export function BrandLogo({ variant = 'mark', className }: LogoProps): JSX.Element {
   const { brand } = useBrand();
-  const svg       = variant === 'wordmark' && brand.logo.wordmark
-    ? brand.logo.wordmark
-    : brand.logo.mark;
-  const width = variant === 'wordmark'
-    ? (brand.logo.wordmarkWidth ?? brand.logo.markWidth)
-    : brand.logo.markWidth;
+  const svg = variant === 'wordmark' && brand.logo.wordmark ? brand.logo.wordmark : brand.logo.mark;
+  const width =
+    variant === 'wordmark'
+      ? (brand.logo.wordmarkWidth ?? brand.logo.markWidth)
+      : brand.logo.markWidth;
 
   return (
     <span

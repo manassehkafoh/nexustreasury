@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { DisasterRecoveryOrchestrator, RegionStatus, FailoverTrigger } from './disaster-recovery.js';
+import {
+  DisasterRecoveryOrchestrator,
+  RegionStatus,
+  FailoverTrigger,
+} from './disaster-recovery.js';
 import { SecretRotationManager, SecretType, RotationStatus } from './secret-rotation.js';
 import { FinOpsCostTracker } from './finops-cost-tracker.js';
 import { SOC2EvidenceCollector, EvidenceStatus, TrustCriteria } from './soc2-evidence.js';
@@ -7,17 +11,24 @@ import { SOC2EvidenceCollector, EvidenceStatus, TrustCriteria } from './soc2-evi
 // ── 12.1 Disaster Recovery ────────────────────────────────────────────────────
 describe('DisasterRecoveryOrchestrator — Sprint 12.1', () => {
   let dr: DisasterRecoveryOrchestrator;
-  beforeEach(() => { dr = new DisasterRecoveryOrchestrator({ primaryRegion:'eu-west-1', standbyRegions:['us-east-1','ap-southeast-1'] }); });
+  beforeEach(() => {
+    dr = new DisasterRecoveryOrchestrator({
+      primaryRegion: 'eu-west-1',
+      standbyRegions: ['us-east-1', 'ap-southeast-1'],
+    });
+  });
 
   it('healthy check sets status to HEALTHY', () => {
     dr.recordHealthCheck('eu-west-1', 45, 0.1);
-    const health = dr.getRegionHealth().find(r => r.region === 'eu-west-1')!;
+    const health = dr.getRegionHealth().find((r) => r.region === 'eu-west-1')!;
     expect(health.status).toBe(RegionStatus.HEALTHY);
   });
 
   it('3 consecutive failures on primary triggers failover', () => {
     let event = null;
-    for (let i = 0; i < 3; i++) { event = dr.recordHealthCheck('eu-west-1', 10_000, 20); }
+    for (let i = 0; i < 3; i++) {
+      event = dr.recordHealthCheck('eu-west-1', 10_000, 20);
+    }
     expect(event).not.toBeNull();
     expect(event!.trigger).toBe(FailoverTrigger.HEALTH_CHECK_FAILURE);
   });
@@ -54,16 +65,28 @@ describe('DisasterRecoveryOrchestrator — Sprint 12.1', () => {
 // ── 12.2 Secret Rotation ─────────────────────────────────────────────────────
 describe('SecretRotationManager — Sprint 12.2', () => {
   let mgr: SecretRotationManager;
-  beforeEach(() => { mgr = new SecretRotationManager(); });
+  beforeEach(() => {
+    mgr = new SecretRotationManager();
+  });
 
   it('register returns a secret record with fingerprint', () => {
-    const s = mgr.register({ secretType:SecretType.JWT_SIGNING, tenantId:'bank-001', rawSecretValue:'super-secret', rotationDueDays:90 });
+    const s = mgr.register({
+      secretType: SecretType.JWT_SIGNING,
+      tenantId: 'bank-001',
+      rawSecretValue: 'super-secret',
+      rotationDueDays: 90,
+    });
     expect(s.fingerprint).toBeDefined();
     expect(s.isActive).toBe(true);
   });
 
   it('JWT rotation creates dual-validation window', () => {
-    const s = mgr.register({ secretType:SecretType.JWT_SIGNING, tenantId:'bank-001', rawSecretValue:'secret-a', rotationDueDays:90 });
+    const s = mgr.register({
+      secretType: SecretType.JWT_SIGNING,
+      tenantId: 'bank-001',
+      rawSecretValue: 'secret-a',
+      rotationDueDays: 90,
+    });
     const { event } = mgr.rotateJWTSecret('bank-001', s.secretId);
     expect(event.status).toBe(RotationStatus.DUAL_VALID);
     expect(event.dualValidUntil).toBeDefined();
@@ -71,7 +94,12 @@ describe('SecretRotationManager — Sprint 12.2', () => {
   });
 
   it('completing dual validation deactivates old key', () => {
-    const s = mgr.register({ secretType:SecretType.JWT_SIGNING, tenantId:'bank-001', rawSecretValue:'secret-a', rotationDueDays:90 });
+    const s = mgr.register({
+      secretType: SecretType.JWT_SIGNING,
+      tenantId: 'bank-001',
+      rawSecretValue: 'secret-a',
+      rotationDueDays: 90,
+    });
     mgr.rotateJWTSecret('bank-001', s.secretId);
     const completed = mgr.completeDualValidation('bank-001');
     expect(completed.status).toBe(RotationStatus.COMPLETE);
@@ -79,7 +107,12 @@ describe('SecretRotationManager — Sprint 12.2', () => {
   });
 
   it('AUDIT_HMAC rotation records re-signed anchors', () => {
-    const s = mgr.register({ secretType:SecretType.AUDIT_HMAC, tenantId:'bank-001', rawSecretValue:'hmac-key', rotationDueDays:90 });
+    const s = mgr.register({
+      secretType: SecretType.AUDIT_HMAC,
+      tenantId: 'bank-001',
+      rawSecretValue: 'hmac-key',
+      rotationDueDays: 90,
+    });
     const { event } = mgr.rotateAuditHMACKey('bank-001', s.secretId, 4500);
     expect(event.reSignedRecords).toBe(4500);
   });
@@ -92,8 +125,18 @@ describe('SecretRotationManager — Sprint 12.2', () => {
   });
 
   it('getDueForRotation returns secrets expiring within 7 days', () => {
-    mgr.register({ secretType:SecretType.JWT_SIGNING, tenantId:'bank-001', rawSecretValue:'s', rotationDueDays:3 });
-    mgr.register({ secretType:SecretType.JWT_SIGNING, tenantId:'bank-001', rawSecretValue:'s2', rotationDueDays:90 });
+    mgr.register({
+      secretType: SecretType.JWT_SIGNING,
+      tenantId: 'bank-001',
+      rawSecretValue: 's',
+      rotationDueDays: 3,
+    });
+    mgr.register({
+      secretType: SecretType.JWT_SIGNING,
+      tenantId: 'bank-001',
+      rawSecretValue: 's2',
+      rotationDueDays: 90,
+    });
     expect(mgr.getDueForRotation()).toHaveLength(1);
   });
 });
@@ -102,11 +145,19 @@ describe('SecretRotationManager — Sprint 12.2', () => {
 describe('FinOpsCostTracker — Sprint 12.3', () => {
   let tracker: FinOpsCostTracker;
   const entry = {
-    service:'trade-service', namespace:'nexustreasury-bank-001', tenantId:'bank-001',
-    cpuCores:2, memoryGib:4, storageGib:50, networkGib:10,
-    periodStart:'2026-04-01T00:00:00Z', periodEnd:'2026-04-30T23:59:59Z',
+    service: 'trade-service',
+    namespace: 'nexustreasury-bank-001',
+    tenantId: 'bank-001',
+    cpuCores: 2,
+    memoryGib: 4,
+    storageGib: 50,
+    networkGib: 10,
+    periodStart: '2026-04-01T00:00:00Z',
+    periodEnd: '2026-04-30T23:59:59Z',
   };
-  beforeEach(() => { tracker = new FinOpsCostTracker(); });
+  beforeEach(() => {
+    tracker = new FinOpsCostTracker();
+  });
 
   it('generates cost report with total > 0', () => {
     tracker.addEntry(entry);
@@ -122,7 +173,8 @@ describe('FinOpsCostTracker — Sprint 12.3', () => {
   });
 
   it('budget utilisation is computed when budget is set', () => {
-    tracker.addEntry(entry); tracker.setBudget('bank-001', 1000);
+    tracker.addEntry(entry);
+    tracker.setBudget('bank-001', 1000);
     const r = tracker.generateTenantReport('bank-001', '2026-04');
     expect(r.budgetUtilPct).toBeDefined();
     expect(r.budgetUtilPct!).toBeGreaterThan(0);
@@ -137,7 +189,7 @@ describe('FinOpsCostTracker — Sprint 12.3', () => {
 
   it('summary across tenants orders by cost', () => {
     tracker.addEntry(entry);
-    tracker.addEntry({ ...entry, tenantId:'bank-002', cpuCores:0.1 });
+    tracker.addEntry({ ...entry, tenantId: 'bank-002', cpuCores: 0.1 });
     const summary = tracker.getAllTenantsSummary('2026-04');
     expect(summary[0].totalCostUSD).toBeGreaterThan(summary[1].totalCostUSD);
   });
@@ -146,10 +198,15 @@ describe('FinOpsCostTracker — Sprint 12.3', () => {
 // ── 12.4 SOC 2 ───────────────────────────────────────────────────────────────
 describe('SOC2EvidenceCollector — Sprint 12.4', () => {
   let col: SOC2EvidenceCollector;
-  beforeEach(() => { col = new SOC2EvidenceCollector(); col.collectAutomatedEvidence(); });
+  beforeEach(() => {
+    col = new SOC2EvidenceCollector();
+    col.collectAutomatedEvidence();
+  });
 
   it('collected evidence spans all 5 trust criteria', () => {
-    const criteria = new Set(col.getEvidenceByStatus(EvidenceStatus.COLLECTED).map(e => e.criteria));
+    const criteria = new Set(
+      col.getEvidenceByStatus(EvidenceStatus.COLLECTED).map((e) => e.criteria),
+    );
     const all = Object.values(TrustCriteria);
     // At least 4 of 5 criteria have automated evidence (CC1 is manual)
     expect(criteria.size).toBeGreaterThanOrEqual(4);
@@ -167,12 +224,12 @@ describe('SOC2EvidenceCollector — Sprint 12.4', () => {
 
   it('pending evidence appears in openFindings', () => {
     const r = col.generateReadinessReport('2026-Q2');
-    expect(r.openFindings.some(f => f.startsWith('PENDING'))).toBe(true);
+    expect(r.openFindings.some((f) => f.startsWith('PENDING'))).toBe(true);
   });
 
   it('Drata control IDs are set on automated evidence', () => {
     const items = col.getEvidenceByStatus(EvidenceStatus.COLLECTED);
-    expect(items.every(e => e.drataControlId)).toBe(true);
+    expect(items.every((e) => e.drataControlId)).toBe(true);
   });
 
   it('estimated audit date is in the future', () => {

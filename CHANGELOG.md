@@ -1,35 +1,42 @@
 ## [1.2.0] — 2026-04-09 — Sprint 8: Bloomberg B-PIPE, AI/ML ECL, BERT Recon, SVI Vol Surface
 
 ### Added — Sprint 8.1 (Bloomberg B-PIPE Real-Time Integration)
+
 - `BloombergBPIPEAdapter` — B-PIPE SAPI subscription with circuit breaker (CLOSED→OPEN→HALF_OPEN), exponential backoff reconnect, tick-staleness heartbeat monitor
 - `AdaptiveMarketDataAdapter` — Bloomberg primary + Refinitiv/Mock fallover with 1s circuit probe, failover event log
 - 11 unit tests: circuit state, rate emission, multi-instrument, disconnect, failover, config defaults
 
 ### Added — Sprint 8.2 (AI/ML ECL Enhancement)
+
 - `XGBoostPDModelAdapter` — injectable PDModelAdapter with 5-tree gradient boosting ensemble; SHAP TreeSHAP approximation per prediction (9 feature attributions); regulatory explainability
 - `ModelDriftDetector` — Kolmogorov-Smirnov two-sample test; PSI (Population Stability Index); rolling 500-sample window; STABLE/WARNING/ALERT/CRITICAL severity classification
 - 22 unit tests: rating ordering, SHAP values, SHAP sum invariant, drift levels, PSI, feature names
 
 ### Added — Sprint 8.3 (AI-Powered Reconciliation Break Resolution)
+
 - `BERTBreakClassifier` — injectable BreakClassifierModel backed by FinBERT inference endpoint; auto-resolve if confidence > 0.92; REVIEW_QUEUE if ≥ 0.70; MANUAL_REVIEW below
 - SWIFT gpi Tracker integration for MISSING_PAYMENT breaks: extracts UETR from description, locates payment in correspondent chain
 - Rule-based fallback when ML endpoint unavailable; classifier metrics (auto-resolve rate, fallback rate)
 
 ### Added — Sprint 8.4 (FX Options Volatility Surface)
+
 - `SVIVolatilitySurface` — Gatheral (2004) parameterisation: w(k,τ) = a + b[ρ(k-m) + √((k-m)²+σ²)]; per-slice calibration from ATM/RR/BF quotes; calendar-spread arbitrage check; Dupire local vol; linear slice interpolation
 - `VannaVolgaPricer` — Castagna-Mercurio (2007) smile adjustment for FX exotics; 25Δ replication using ATM + 25C + 25P vanillas; survival-probability-adjusted weights for barrier options; integrates with Sprint 7 `BarrierOptionPricer`
 - 20 unit tests: SVI positivity, calendar AF, grid dimensions, VV price ≥ BS, barrier ≤ vanilla, flat-vol correction
 
 ### Fixed
+
 - `fast-jwt` CVE pinned via pnpm overrides — `pnpm audit --prod` restored to 0 vulnerabilities
 
 ### Tests
-- Total unit: **602** (+51 Sprint 8)  |  E2E: **31**  |  Grand total: **633** (+51)
+
+- Total unit: **602** (+51 Sprint 8) | E2E: **31** | Grand total: **633** (+51)
 - CVEs (prod): **0** (`pnpm audit --prod`)
 
 ## [1.1.0] — 2026-04-09 — Sprint 7: Exotic Pricer, Contract Tests, Performance
 
 ### Added — Sprint 7.4 (QuantLib WASM Injectable Pricer, ADR-008)
+
 - `IExoticPricer` injectable interface in `@nexustreasury/domain` (ADR-008 pattern)
 - `BarrierOptionPricer` — Rubinstein-Reiner (1991) analytical formulas for all 4 barrier types
 - `BermudanSwaptionPricer` — Longstaff-Schwartz (2001) LSM Monte Carlo with polynomial regression
@@ -40,19 +47,23 @@
 - 49 unit tests covering all instrument types, P99 latency SLA, pool metrics, and error handling
 
 ### Added — Sprint 7.2 (Pact Contract Tests)
+
 - `tests/contract/position-service-trades-booked.consumer.pact.ts` — position-service ← trade-service contract
 - `tests/contract/collateral-service-var-result.consumer.pact.ts` — collateral-service ← risk-service contract
 - Total Pact contracts: 4 (accounting, notification, position, collateral consumers)
 
 ### Added — Sprint 7.1 (k6 Performance Tests)
+
 - `tests/performance/pre-deal-check.k6.js` — pre-deal limit check SLA: P99 < 5ms at 200 TPS
 - `tests/performance/var-calculation.k6.js` — Historical VaR EOD batch: 100 concurrent, P99 < 2000ms
 - 3 k6 scenarios per file: sustained load, spike test, ramp-up
 
 ### Fixed
+
 - `trade-service/src/server.ts` — TypeScript strict error handler typing (`error: Error & {...}`)
 
 ### Tests
+
 - Total unit tests: **551** (+49 exotic pricer)
 - Total E2E tests: **31** (unchanged)
 - CVEs: **0** (`pnpm audit --prod`)
@@ -67,6 +78,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.1.0] — 2026-04-09 · Sprint 7 Foundations
 
 ### Added — Testing Quality
+
 - **Stryker mutation testing** — `stryker.config.ts`, targets domain + accounting + risk + collateral
 - **Pact consumer contract tests** — `tests/contract/` — accounting-service + notification-service consumers
 - **k6 performance test suite** — `tests/performance/` — 500 TPS trade booking + LCR batch load
@@ -75,6 +87,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **`contract-tests.yml`** GitHub Actions workflow — Pact consumer/provider + can-i-deploy gate
 
 ### Added — Infrastructure
+
 - **Multi-region ArgoCD ApplicationSet** — eu-west-1 (primary) + us-east-1 (secondary) active-active
 - **Kafka MirrorMaker 2** — cross-region topic replication, RPO < 1 minute
 - **Route53 health check config** — latency routing, RTO < 5 minutes
@@ -83,15 +96,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **K8s base manifests** complete for all 13 services (accounting + reporting added)
 
 ### Added — Developer Experience
+
 - **VS Code Dev Container** — `.devcontainer/devcontainer.json` + `setup.sh`, < 5min to first green build
 - **Makefile** (25 targets) — `make test`, `make dev`, `make infra-up`, `make k6`, `make api-test`, etc.
 
 ### Added — API Documentation
+
 - **OpenAPI 3.1 v1.1.0** — expanded from 20 → 29 paths (collateral, notifications, market-data, risk limits)
 - **Postman collection** expanded — 14 → 17 live requests (margin call, FX rates, tenant provisioning)
 - **ADR-001 through ADR-007** — foundational architectural decisions documented
 
 ### Updated — Documentation
+
 - **README.md** — corrected to 13 services, updated tech stack versions, full capabilities table
 - **Testing-Strategy.md** — complete rewrite covering all 5 layers
 - **C4 deployment diagram** — multi-region active-active architecture documented
@@ -102,6 +118,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added — Post-Production (9 April 2026)
 
 **Documentation completeness pass**
+
 - `docs/wiki/Testing-Strategy.md` — Complete rewrite: 5-layer testing pyramid covering 502 unit tests, 31 E2E tests, 7 benchmark suites, k6 performance tests, Pact contract tests, and Stryker mutation testing. Previous version described an outdated Playwright/Docker-Compose pyramid.
 - `docs/architecture/c4/05-deployment.md` — Multi-region active-active section: Region topology diagram, RPO/RTO targets, ArgoCD ApplicationSet flow, Kafka MirrorMaker 2 details, Route53 failover sequence.
 - `docs/runbooks/developer-onboarding.md` — Complete rewrite: VS Code Dev Container (Option A, < 5 min), manual setup (Option B), full Makefile quick reference (25 targets), Postman/Newman API testing, environment variable table, tenant provisioning, common issues.
@@ -109,6 +126,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `docs/adr/README.md` — Complete register of all 10 ADRs with links, dates, and statuses.
 
 **Architecture Decision Records (ADR-001 through ADR-007)**
+
 - ADR-001: Monorepo with pnpm Workspaces + Turborepo
 - ADR-002: Fastify 5 vs Express vs NestJS
 - ADR-003: PostgreSQL + TimescaleDB vs Cassandra
@@ -118,6 +136,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - ADR-007: Vitest vs Jest
 
 **Infrastructure**
+
 - `infra/argocd/nexustreasury-multiregion.yaml` — ArgoCD ApplicationSet (eu-west-1 + us-east-1), Kafka MirrorMaker 2, Route53 health check ConfigMap
 - `infra/kubernetes/overlays/production-eu-west-1/` + `production-us-east-1/` — Multi-region Kustomize overlays with replica patches
 - `infra/kubernetes/base/accounting-service.yaml` — Missing K8s base manifest added
@@ -127,12 +146,14 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `infra/kubernetes/base/kustomization.yaml` — Updated to include all 13 services, PDB, and ResourceQuota
 
 **Developer Experience**
+
 - `.devcontainer/devcontainer.json` — VS Code Dev Container: Node.js 22, Docker-in-Docker, kubectl, Helm, GitHub CLI, 10 extensions, all ports forwarded
 - `.devcontainer/setup.sh` — Post-create setup: installs pnpm, builds all services, runs migrations, smoke tests. First green build < 5 minutes.
 - `Makefile` — 25 developer targets: `make test`, `make dev`, `make infra-up`, `make api-test`, `make k6`, `make provision-tenant`, etc.
 - `stryker.config.ts` — Mutation testing config: vitest runner, 5 source packages, kill score thresholds (break=65%, low=70%, high=80%)
 
 **Performance & Quality**
+
 - `tests/performance/trade-booking.k6.js` — 3 scenarios (steady 50 VUs, ramp 100 VUs, spike 200 RPS), custom metrics, SLA thresholds
 - `tests/performance/lcr-report.k6.js` — 10 VUs × 2 min regulatory batch load test
 - `tests/contract/trades-booked.consumer.pact.ts` — accounting-service consumer contract
@@ -140,16 +161,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `tests/contract/README.md` — Contract test documentation, Pact Broker workflow
 
 **CI/CD**
+
 - `.github/workflows/contract-tests.yml` — Pact consumer/provider + can-i-deploy gate
 - `.github/workflows/performance-tests.yml` — k6 post-staging SLA validation
 - `scripts/run-api-tests.sh` — Newman API test runner (local/staging/production)
 
 **API Documentation**
+
 - `docs/api/openapi.yaml` — Updated v1.1.0: 20 → 29 paths; added collateral (3), notifications (2), market-data (2), risk limits (2) endpoints; 5 new schemas
 - Postman workspace: 14 → 17 live requests; collection pre-request auth guard; OpenAPI spec updated to v1.1.0
 
-
 ### Platform Statistics
+
 - **13** microservices (all TypeScript strict, Clean Architecture + DDD)
 - **533** automated tests (502 unit + 31 E2E) — 0 failures
 - **0** production CVEs (`pnpm audit --prod`)
@@ -234,20 +257,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [1.5.0] — 2026-04-10 — Sprint 11: AI Treasury Assistant, Report Builder, SSE Streaming
 
 ### Added — Sprint 11.1 (AI Treasury Insights Assistant)
+
 - `TreasuryAIAssistant` in `reporting-service`: Claude claude-sonnet-4-20250514 RAG pipeline with 8 query categories
 - PII redaction (IBAN/BIC patterns) before API call; tenant-isolated context; graceful rule-based fallback
 - `AssistantResponse` with confidence, citedMetrics, followUpQuestions, disclaimers
 
 ### Added — Sprint 11.2 (Self-Service Report Builder)
+
 - `ReportBuilder` in `reporting-service`: 8 pre-built templates (BLOTTER, PNL, LCR, IRRBB, CAPITAL, COLLATERAL, POSITION, CUSTOM)
 - 7 dimensions, schedule (cron), delivery (EMAIL/SFTP/API webhook), run history
 
 ### Added — Sprint 11.3 (Real-Time Dashboard Streaming)
+
 - `SSEStreamPublisher` in `notification-service`: RFC 8895 SSE fan-out with tenant isolation
 - 5 event types: position.mtm.updated, limit.utilisation.tick, rate.feed.tick, lcr.intraday.updated, heartbeat
 - Event log buffer (last 1000), active subscription count, per-tenant scoping
 
 ### Documentation
+
 - C4 component diagrams for Sprints 8, 9–10, and 11 (`docs/architecture/c4/`)
 - Learner modules 09–12 (Islamic Finance, Capital/RAROC, Financial Planning, AI Assistant)
 - Full SE onboarding guide `docs/onboarding/` (6 modules, Days 1–5 + first-week checklist)
@@ -255,6 +282,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Postman collection updated: 15 top-level folders, Sprint 9-11 examples
 
 ### Tests
+
 - Total: **819 tests** (788 unit + 31 E2E), 0 failures
 - CVEs (prod): **0** (`pnpm audit --prod`)
-

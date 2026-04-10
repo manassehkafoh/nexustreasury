@@ -4,7 +4,11 @@
  */
 import { describe, it, expect } from 'vitest';
 import { SukukPricer, SukukGrade } from './sukuk-pricer.js';
-import { MurabahaLifecycleEngine, MurabahaCommodity, MurabahaRepayment } from './murabaha-lifecycle.js';
+import {
+  MurabahaLifecycleEngine,
+  MurabahaCommodity,
+  MurabahaRepayment,
+} from './murabaha-lifecycle.js';
 
 const IJARA_BASE = {
   sukukType: 'IJARA' as const,
@@ -57,7 +61,7 @@ describe('SukukPricer — Ijara (lease-based)', () => {
   });
 
   it('longer tenor → higher duration', () => {
-    const s5  = pricer.price(IJARA_BASE);
+    const s5 = pricer.price(IJARA_BASE);
     const s10 = pricer.price({ ...IJARA_BASE, tenorYears: 10 });
     expect(s10.modifiedDuration).toBeGreaterThan(s5.modifiedDuration);
   });
@@ -73,7 +77,7 @@ describe('SukukPricer — Ijara (lease-based)', () => {
 
   it('capital charge = price × riskWeight × 8%', () => {
     const r = pricer.price(IJARA_BASE);
-    const expected = r.dirtyPrice * 0.20 * 0.08;
+    const expected = r.dirtyPrice * 0.2 * 0.08;
     expect(Math.abs(r.reguCapitalCharge - expected)).toBeLessThan(1);
   });
 
@@ -113,15 +117,15 @@ describe('MurabahaLifecycleEngine — Sprint 9.2', () => {
   const engine = new MurabahaLifecycleEngine();
 
   const BASE_TX = {
-    customerId:    'cust-001',
-    commodity:     MurabahaCommodity.LME_COPPER,
-    costPrice:     500_000,
-    currency:      'USD',
-    profitAmount:  27_500,  // 5.5% pa over 1 year
-    tenorDays:     365,
+    customerId: 'cust-001',
+    commodity: MurabahaCommodity.LME_COPPER,
+    costPrice: 500_000,
+    currency: 'USD',
+    profitAmount: 27_500, // 5.5% pa over 1 year
+    tenorDays: 365,
     repaymentType: MurabahaRepayment.BULLET,
-    isTawarruq:    false,
-    valueDate:     '2026-04-09',
+    isTawarruq: false,
+    valueDate: '2026-04-09',
   };
 
   it('sale price = cost + profit', () => {
@@ -136,18 +140,30 @@ describe('MurabahaLifecycleEngine — Sprint 9.2', () => {
   });
 
   it('instalment schedule has correct number of payments', () => {
-    const r = engine.create({ ...BASE_TX, repaymentType: MurabahaRepayment.INSTALMENT, numInstalments: 4 });
+    const r = engine.create({
+      ...BASE_TX,
+      repaymentType: MurabahaRepayment.INSTALMENT,
+      numInstalments: 4,
+    });
     expect(r.schedule).toHaveLength(4);
   });
 
   it('all instalment payments sum to sale price', () => {
-    const r = engine.create({ ...BASE_TX, repaymentType: MurabahaRepayment.INSTALMENT, numInstalments: 4 });
+    const r = engine.create({
+      ...BASE_TX,
+      repaymentType: MurabahaRepayment.INSTALMENT,
+      numInstalments: 4,
+    });
     const total = r.schedule.reduce((s, c) => s + c.totalPayment, 0);
     expect(Math.abs(total - r.salePrice)).toBeLessThan(1);
   });
 
   it('outstanding principal reaches 0 after last instalment', () => {
-    const r = engine.create({ ...BASE_TX, repaymentType: MurabahaRepayment.INSTALMENT, numInstalments: 4 });
+    const r = engine.create({
+      ...BASE_TX,
+      repaymentType: MurabahaRepayment.INSTALMENT,
+      numInstalments: 4,
+    });
     expect(r.schedule[r.schedule.length - 1].outstandingPrincipal).toBe(0);
   });
 

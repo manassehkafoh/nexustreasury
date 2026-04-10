@@ -19,8 +19,8 @@ describe('XGBoostPDModelAdapter', () => {
 
   it('PD increases with lower rating (BBB < BB < B)', async () => {
     const bbb = await model.predict({ currentRating: 'BBB', tenorYears: 5 });
-    const bb  = await model.predict({ currentRating: 'BB',  tenorYears: 5 });
-    const b   = await model.predict({ currentRating: 'B',   tenorYears: 5 });
+    const bb = await model.predict({ currentRating: 'BB', tenorYears: 5 });
+    const b = await model.predict({ currentRating: 'B', tenorYears: 5 });
     expect(bb.pd12Month).toBeGreaterThan(bbb.pd12Month);
     expect(b.pd12Month).toBeGreaterThan(bb.pd12Month);
   });
@@ -33,7 +33,7 @@ describe('XGBoostPDModelAdapter', () => {
   });
 
   it('sovereign (SOVEREIGN sector) has lower PD than corporate', async () => {
-    const sov  = await model.predict({ currentRating: 'BBB', tenorYears: 5, sector: 'SOVEREIGN' });
+    const sov = await model.predict({ currentRating: 'BBB', tenorYears: 5, sector: 'SOVEREIGN' });
     const corp = await model.predict({ currentRating: 'BBB', tenorYears: 5, sector: 'CORPORATE' });
     expect(sov.pd12Month).toBeLessThanOrEqual(corp.pd12Month + 0.01);
   });
@@ -45,8 +45,11 @@ describe('XGBoostPDModelAdapter', () => {
 
   it('predictWithSHAP returns 9 SHAP attributions', async () => {
     const r = await model.predictWithSHAP({
-      currentRating: 'BBB', tenorYears: 5,
-      daysPastDue: 0, onWatchList: false, effectiveInterestRate: 0.05,
+      currentRating: 'BBB',
+      tenorYears: 5,
+      daysPastDue: 0,
+      onWatchList: false,
+      effectiveInterestRate: 0.05,
     });
     expect(r.shapValues).toHaveLength(FEATURE_NAMES.length);
   });
@@ -60,7 +63,7 @@ describe('XGBoostPDModelAdapter', () => {
 
   it('SHAP impact labels are POSITIVE/NEGATIVE/NEUTRAL', async () => {
     const r = await model.predictWithSHAP({ currentRating: 'CCC', tenorYears: 2 });
-    r.shapValues.forEach(s => {
+    r.shapValues.forEach((s) => {
       expect(['POSITIVE', 'NEGATIVE', 'NEUTRAL']).toContain(s.impact);
     });
   });
@@ -71,7 +74,7 @@ describe('XGBoostPDModelAdapter', () => {
 
   it('AAA sovereign has the lowest PD of all tested ratings', async () => {
     const aaa = await model.predict({ currentRating: 'AAA', tenorYears: 1, sector: 'SOVEREIGN' });
-    const bb  = await model.predict({ currentRating: 'BB',  tenorYears: 1 });
+    const bb = await model.predict({ currentRating: 'BB', tenorYears: 1 });
     // AAA should be strictly lower than speculative-grade
     expect(aaa.pd12Month).toBeLessThan(bb.pd12Month);
     expect(aaa.pd12Month).toBeGreaterThan(0); // non-zero probability is correct
@@ -79,7 +82,7 @@ describe('XGBoostPDModelAdapter', () => {
 
   it('D-rated instrument has higher PD than investment-grade', async () => {
     // D-rated = defaulted; even simplified model should give higher PD than BBB
-    const d   = await model.predict({ currentRating: 'D',   tenorYears: 1 });
+    const d = await model.predict({ currentRating: 'D', tenorYears: 1 });
     const bbb = await model.predict({ currentRating: 'BBB', tenorYears: 1 });
     expect(d.pd12Month).toBeGreaterThan(bbb.pd12Month);
     expect(d.pd12Month).toBeGreaterThan(0); // positive PD always
@@ -110,7 +113,9 @@ describe('ModelDriftDetector', () => {
 
   it('severely drifted distribution triggers ALERT or CRITICAL', () => {
     const detector = new ModelDriftDetector({
-      alertThreshold: 0.15, criticalThreshold: 0.25, minSamples: 50,
+      alertThreshold: 0.15,
+      criticalThreshold: 0.25,
+      minSamples: 50,
     });
     // All high PDs — far from baseline
     for (let i = 0; i < 100; i++) detector.record(0.5 + Math.random() * 0.5, 'CCC');

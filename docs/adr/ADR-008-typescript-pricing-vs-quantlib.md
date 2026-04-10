@@ -18,15 +18,15 @@ Implement a **custom TypeScript Pricing Engine** in `@nexustreasury/domain`.
 
 ## Rationale
 
-| Criterion | QuantLib WASM | Custom TypeScript | Winner |
-|---|---|---|---|
-| Pre-deal check P99 | ~15ms (WASM startup) | < 5ms | TypeScript |
-| WASM bundle size | ~12MB per service | 0MB | TypeScript |
-| Type safety | Partial (C++ bridge) | Full TypeScript strict | TypeScript |
-| Debuggability | Requires C++ knowledge | Standard TS tooling | TypeScript |
-| Test coverage | External black box | 160 tests on own code | TypeScript |
-| EM rates / GHS / NGN | QuantLib defaults | Configurable AI/ML hooks | TypeScript |
-| Exotic instruments | QuantLib covers | Extensible via DI | Tie |
+| Criterion            | QuantLib WASM          | Custom TypeScript        | Winner     |
+| -------------------- | ---------------------- | ------------------------ | ---------- |
+| Pre-deal check P99   | ~15ms (WASM startup)   | < 5ms                    | TypeScript |
+| WASM bundle size     | ~12MB per service      | 0MB                      | TypeScript |
+| Type safety          | Partial (C++ bridge)   | Full TypeScript strict   | TypeScript |
+| Debuggability        | Requires C++ knowledge | Standard TS tooling      | TypeScript |
+| Test coverage        | External black box     | 160 tests on own code    | TypeScript |
+| EM rates / GHS / NGN | QuantLib defaults      | Configurable AI/ML hooks | TypeScript |
+| Exotic instruments   | QuantLib covers        | Extensible via DI        | Tie        |
 
 **Critical constraint**: Pre-deal check must complete P99 < 5ms. QuantLib WASM cold-start
 (module instantiation, memory allocation) takes ~10-15ms on first call per worker thread.

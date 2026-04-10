@@ -24,61 +24,64 @@
  */
 
 export const SecretType = {
-  JWT_SIGNING:   'JWT_SIGNING',
-  AUDIT_HMAC:    'AUDIT_HMAC',
+  JWT_SIGNING: 'JWT_SIGNING',
+  AUDIT_HMAC: 'AUDIT_HMAC',
   DB_CREDENTIAL: 'DB_CREDENTIAL',
-  API_KEY:       'API_KEY',
+  API_KEY: 'API_KEY',
 } as const;
 export type SecretType = (typeof SecretType)[keyof typeof SecretType];
 
 export const RotationStatus = {
-  PENDING:   'PENDING',
-  ROTATING:  'ROTATING',
-  DUAL_VALID:'DUAL_VALID',
-  COMPLETE:  'COMPLETE',
-  FAILED:    'FAILED',
+  PENDING: 'PENDING',
+  ROTATING: 'ROTATING',
+  DUAL_VALID: 'DUAL_VALID',
+  COMPLETE: 'COMPLETE',
+  FAILED: 'FAILED',
 } as const;
 export type RotationStatus = (typeof RotationStatus)[keyof typeof RotationStatus];
 
 export interface SecretRecord {
-  readonly secretId:         string;
-  readonly secretType:       SecretType;
-  readonly tenantId:         string;
+  readonly secretId: string;
+  readonly secretType: SecretType;
+  readonly tenantId: string;
   /** SHA-256 fingerprint — never store the raw secret value */
-  readonly fingerprint:      string;
-  readonly createdAt:        string;
-  readonly expiresAt:        string;
-  readonly rotationDueDays:  number;
-  readonly isActive:         boolean;
-  readonly isRetiring:       boolean;
+  readonly fingerprint: string;
+  readonly createdAt: string;
+  readonly expiresAt: string;
+  readonly rotationDueDays: number;
+  readonly isActive: boolean;
+  readonly isRetiring: boolean;
 }
 
 export interface RotationEvent {
-  readonly rotationId:       string;
-  readonly secretType:       SecretType;
-  readonly tenantId:         string;
-  readonly status:           RotationStatus;
-  readonly oldSecretId:      string;
-  readonly newSecretId:      string;
-  readonly dualValidUntil?:  string;
-  readonly initiatedAt:      string;
-  readonly completedAt?:     string;
-  readonly reSignedRecords?: number;  // for AUDIT_HMAC_KEY: number of anchors re-signed
+  readonly rotationId: string;
+  readonly secretType: SecretType;
+  readonly tenantId: string;
+  readonly status: RotationStatus;
+  readonly oldSecretId: string;
+  readonly newSecretId: string;
+  readonly dualValidUntil?: string;
+  readonly initiatedAt: string;
+  readonly completedAt?: string;
+  readonly reSignedRecords?: number; // for AUDIT_HMAC_KEY: number of anchors re-signed
 }
 
 export interface VaultDynamicCredential {
-  readonly leaseId:          string;
+  readonly leaseId: string;
   readonly leaseDurationSec: number;
-  readonly renewable:        boolean;
-  readonly username:         string;
-  readonly password:         string; // ephemeral — valid only for leaseDuration
-  readonly expiresAt:        string;
+  readonly renewable: boolean;
+  readonly username: string;
+  readonly password: string; // ephemeral — valid only for leaseDuration
+  readonly expiresAt: string;
 }
 
 import { createHmac, randomBytes } from 'crypto';
 
 function sha256Fingerprint(secret: string): string {
-  return createHmac('sha256', 'nexustreasury-fingerprint-salt').update(secret).digest('hex').slice(0, 16);
+  return createHmac('sha256', 'nexustreasury-fingerprint-salt')
+    .update(secret)
+    .digest('hex')
+    .slice(0, 16);
 }
 
 function generateSecret(lengthBytes = 32): string {
@@ -86,28 +89,30 @@ function generateSecret(lengthBytes = 32): string {
 }
 
 export class SecretRotationManager {
-  private readonly _secrets   = new Map<string, SecretRecord>();
+  private readonly _secrets = new Map<string, SecretRecord>();
   private readonly _rotations: RotationEvent[] = [];
   private readonly _dualValid = new Map<string, { activeId: string; retiringId: string }>();
 
   /** Register an existing secret (called at boot, secrets loaded from Vault/KMS). */
   register(params: {
-    secretType:       SecretType;
-    tenantId:         string;
-    rawSecretValue:   string;
-    rotationDueDays:  number;
+    secretType: SecretType;
+    tenantId: string;
+    rawSecretValue: string;
+    rotationDueDays: number;
   }): SecretRecord {
-    const secretId  = `SEC-${randomBytes(8).toString('hex').toUpperCase()}`;
-    const now       = new Date();
-    const expires   = new Date(now.getTime() + params.rotationDueDays * 86_400_000);
+    const secretId = `SEC-${randomBytes(8).toString('hex').toUpperCase()}`;
+    const now = new Date();
+    const expires = new Date(now.getTime() + params.rotationDueDays * 86_400_000);
     const record: SecretRecord = {
-      secretId, secretType: params.secretType, tenantId: params.tenantId,
-      fingerprint:     sha256Fingerprint(params.rawSecretValue),
-      createdAt:       now.toISOString(),
-      expiresAt:       expires.toISOString(),
+      secretId,
+      secretType: params.secretType,
+      tenantId: params.tenantId,
+      fingerprint: sha256Fingerprint(params.rawSecretValue),
+      createdAt: now.toISOString(),
+      expiresAt: expires.toISOString(),
       rotationDueDays: params.rotationDueDays,
-      isActive:        true,
-      isRetiring:      false,
+      isActive: true,
+      isRetiring: false,
     };
     this._secrets.set(secretId, record);
     return record;
@@ -126,21 +131,21 @@ export class SecretRotationManager {
     const current = this._secrets.get(currentSecretId);
     if (!current) throw new Error(`Secret ${currentSecretId} not found`);
 
-    const newRaw   = generateSecret(48);
-    const newId    = `SEC-${randomBytes(8).toString('hex').toUpperCase()}`;
-    const now      = new Date();
-    const dualEnd  = new Date(now.getTime() + dualValidWindowMinutes * 60_000);
+    const newRaw = generateSecret(48);
+    const newId = `SEC-${randomBytes(8).toString('hex').toUpperCase()}`;
+    const now = new Date();
+    const dualEnd = new Date(now.getTime() + dualValidWindowMinutes * 60_000);
 
     const newRecord: SecretRecord = {
-      secretId:     newId,
-      secretType:   SecretType.JWT_SIGNING,
+      secretId: newId,
+      secretType: SecretType.JWT_SIGNING,
       tenantId,
-      fingerprint:  sha256Fingerprint(newRaw),
-      createdAt:    now.toISOString(),
-      expiresAt:    new Date(now.getTime() + 90 * 86_400_000).toISOString(),
+      fingerprint: sha256Fingerprint(newRaw),
+      createdAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + 90 * 86_400_000).toISOString(),
       rotationDueDays: 90,
-      isActive:     true,
-      isRetiring:   false,
+      isActive: true,
+      isRetiring: false,
     };
     const retiringRecord: SecretRecord = { ...current, isActive: false, isRetiring: true };
 
@@ -149,14 +154,14 @@ export class SecretRotationManager {
     this._dualValid.set(tenantId, { activeId: newId, retiringId: currentSecretId });
 
     const event: RotationEvent = {
-      rotationId:    `ROT-${randomBytes(6).toString('hex').toUpperCase()}`,
-      secretType:    SecretType.JWT_SIGNING,
+      rotationId: `ROT-${randomBytes(6).toString('hex').toUpperCase()}`,
+      secretType: SecretType.JWT_SIGNING,
       tenantId,
-      status:        RotationStatus.DUAL_VALID,
-      oldSecretId:   currentSecretId,
-      newSecretId:   newId,
+      status: RotationStatus.DUAL_VALID,
+      oldSecretId: currentSecretId,
+      newSecretId: newId,
       dualValidUntil: dualEnd.toISOString(),
-      initiatedAt:   now.toISOString(),
+      initiatedAt: now.toISOString(),
     };
     this._rotations.push(event);
     return { event, newSecret: newRaw };
@@ -176,11 +181,15 @@ export class SecretRotationManager {
     }
     this._dualValid.delete(tenantId);
 
-    const existing = [...this._rotations].reverse().find((r: RotationEvent) =>
-      r.tenantId === tenantId && r.status === RotationStatus.DUAL_VALID
-    )!;
+    const existing = [...this._rotations]
+      .reverse()
+      .find(
+        (r: RotationEvent) => r.tenantId === tenantId && r.status === RotationStatus.DUAL_VALID,
+      )!;
     const completed = {
-      ...existing, status: RotationStatus.COMPLETE, completedAt: new Date().toISOString(),
+      ...existing,
+      status: RotationStatus.COMPLETE,
+      completedAt: new Date().toISOString(),
     };
     const idx = this._rotations.lastIndexOf(existing);
     this._rotations[idx] = completed;
@@ -200,10 +209,10 @@ export class SecretRotationManager {
     const { event, newSecret } = this.rotateJWTSecret(tenantId, currentSecretId, 0);
     const auditEvent: RotationEvent = {
       ...event,
-      secretType:       SecretType.AUDIT_HMAC,
-      status:           RotationStatus.COMPLETE,
-      reSignedRecords:  auditAnchorCount,
-      completedAt:      new Date().toISOString(),
+      secretType: SecretType.AUDIT_HMAC,
+      status: RotationStatus.COMPLETE,
+      reSignedRecords: auditAnchorCount,
+      completedAt: new Date().toISOString(),
     };
     this._rotations[this._rotations.length - 1] = auditEvent;
     return { event: auditEvent, newSecret };
@@ -217,10 +226,11 @@ export class SecretRotationManager {
     const username = `nexus_${role}_${randomBytes(4).toString('hex')}`;
     const password = generateSecret(24);
     return {
-      leaseId:          `vault-db-${randomBytes(8).toString('hex')}`,
+      leaseId: `vault-db-${randomBytes(8).toString('hex')}`,
       leaseDurationSec: leaseSec,
-      renewable:        true,
-      username, password,
+      renewable: true,
+      username,
+      password,
       expiresAt: new Date(Date.now() + leaseSec * 1000).toISOString(),
     };
   }
@@ -228,10 +238,15 @@ export class SecretRotationManager {
   /** Secrets due for rotation (expiresAt within next 7 days). */
   getDueForRotation(): SecretRecord[] {
     const threshold = Date.now() + 7 * 86_400_000;
-    return Array.from(this._secrets.values())
-      .filter(s => s.isActive && new Date(s.expiresAt).getTime() < threshold);
+    return Array.from(this._secrets.values()).filter(
+      (s) => s.isActive && new Date(s.expiresAt).getTime() < threshold,
+    );
   }
 
-  getRotationHistory(): RotationEvent[] { return [...this._rotations]; }
-  isDualValidActive(tenantId: string): boolean { return this._dualValid.has(tenantId); }
+  getRotationHistory(): RotationEvent[] {
+    return [...this._rotations];
+  }
+  isDualValidActive(tenantId: string): boolean {
+    return this._dualValid.has(tenantId);
+  }
 }

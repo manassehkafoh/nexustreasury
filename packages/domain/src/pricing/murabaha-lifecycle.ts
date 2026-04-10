@@ -35,89 +35,89 @@
 
 /** LME commodity types used as Murabaha underlying. */
 export const MurabahaCommodity = {
-  LME_COPPER:    'LME_COPPER',
+  LME_COPPER: 'LME_COPPER',
   LME_ALUMINIUM: 'LME_ALUMINIUM',
-  LME_NICKEL:    'LME_NICKEL',
-  LME_ZINC:      'LME_ZINC',
-  LME_TIN:       'LME_TIN',
-  GOLD:          'GOLD',
-  PALM_OIL:      'PALM_OIL',
+  LME_NICKEL: 'LME_NICKEL',
+  LME_ZINC: 'LME_ZINC',
+  LME_TIN: 'LME_TIN',
+  GOLD: 'GOLD',
+  PALM_OIL: 'PALM_OIL',
 } as const;
 export type MurabahaCommodity = (typeof MurabahaCommodity)[keyof typeof MurabahaCommodity];
 
 /** Repayment structure. */
 export const MurabahaRepayment = {
-  BULLET:       'BULLET',       // Single payment at maturity
-  INSTALMENT:   'INSTALMENT',   // Equal instalments (like amortising loan)
-  BALLOON:      'BALLOON',      // Small instalments + large final payment
+  BULLET: 'BULLET', // Single payment at maturity
+  INSTALMENT: 'INSTALMENT', // Equal instalments (like amortising loan)
+  BALLOON: 'BALLOON', // Small instalments + large final payment
 } as const;
 export type MurabahaRepayment = (typeof MurabahaRepayment)[keyof typeof MurabahaRepayment];
 
 /** Input for a new Commodity Murabaha transaction. */
 export interface MurabahaInput {
   /** Customer / counterparty ID */
-  readonly customerId:       string;
+  readonly customerId: string;
   /** Underlying LME commodity */
-  readonly commodity:        MurabahaCommodity;
+  readonly commodity: MurabahaCommodity;
   /** Cost price (bank purchase price from Broker A) */
-  readonly costPrice:        number;
+  readonly costPrice: number;
   /** Currency */
-  readonly currency:         string;
+  readonly currency: string;
   /** Profit markup amount (ribh) — absolute, not percentage */
-  readonly profitAmount:     number;
+  readonly profitAmount: number;
   /** Total tenor in days */
-  readonly tenorDays:        number;
+  readonly tenorDays: number;
   /** Repayment structure */
-  readonly repaymentType:    MurabahaRepayment;
+  readonly repaymentType: MurabahaRepayment;
   /** Number of instalments (for INSTALMENT / BALLOON) */
-  readonly numInstalments?:  number;
+  readonly numInstalments?: number;
   /** Is this a Tawarruq (customer sells back to Broker B for cash)? */
-  readonly isTawarruq:       boolean;
+  readonly isTawarruq: boolean;
   /** Value date */
-  readonly valueDate:        string; // ISO date
+  readonly valueDate: string; // ISO date
 }
 
 /** A single cash flow in the Murabaha schedule. */
 export interface MurabahaCashFlow {
-  readonly dueDate:       string;  // ISO date
-  readonly type:          'PRINCIPAL' | 'PROFIT' | 'COMBINED';
+  readonly dueDate: string; // ISO date
+  readonly type: 'PRINCIPAL' | 'PROFIT' | 'COMBINED';
   readonly principalAmount: number;
-  readonly profitAmount:  number;
-  readonly totalPayment:  number;
+  readonly profitAmount: number;
+  readonly totalPayment: number;
   readonly outstandingPrincipal: number;
 }
 
 /** Full Murabaha transaction result. */
 export interface MurabahaResult {
   /** Transaction reference */
-  readonly reference:        string;
+  readonly reference: string;
   /** Total sale price = costPrice + profitAmount */
-  readonly salePrice:        number;
+  readonly salePrice: number;
   /** Effective profit rate (annualised) */
   readonly effectiveProfitRatePct: number;
   /** Profit rate vs benchmark comparison (vs 3M LIBOR proxy) */
   readonly spreadOverBenchmarkBps: number;
   /** Full payment schedule */
-  readonly schedule:         MurabahaCashFlow[];
+  readonly schedule: MurabahaCashFlow[];
   /** For Tawarruq: cash received by customer after selling commodity */
-  readonly tawarruqCash?:    number;
+  readonly tawarruqCash?: number;
   /** AAOIFI compliance status */
-  readonly shariaCompliant:  boolean;
-  readonly shariaNote:       string;
+  readonly shariaCompliant: boolean;
+  readonly shariaNote: string;
   /** IFRS9 classification (amortised cost — AC) */
   readonly ifrs9Classification: string;
-  readonly processingMs:     number;
+  readonly processingMs: number;
 }
 
 // ── LME benchmark prices (simulated; in production: Bloomberg B-PIPE) ─────────
 const LME_SPOT_PRICES: Record<MurabahaCommodity, number> = {
-  LME_COPPER:    9_450,   // USD/tonne
+  LME_COPPER: 9_450, // USD/tonne
   LME_ALUMINIUM: 2_430,
-  LME_NICKEL:    17_200,
-  LME_ZINC:      2_870,
-  LME_TIN:       30_500,
-  GOLD:          2_320,   // USD/troy oz
-  PALM_OIL:      875,     // USD/tonne
+  LME_NICKEL: 17_200,
+  LME_ZINC: 2_870,
+  LME_TIN: 30_500,
+  GOLD: 2_320, // USD/troy oz
+  PALM_OIL: 875, // USD/tonne
 };
 
 // 3M SOFR proxy for spread calculation (basis points)
@@ -135,8 +135,16 @@ export class MurabahaLifecycleEngine {
   create(input: MurabahaInput): MurabahaResult {
     const t0 = performance.now();
 
-    const { costPrice, profitAmount, tenorDays, repaymentType,
-            numInstalments, isTawarruq, currency, commodity } = input;
+    const {
+      costPrice,
+      profitAmount,
+      tenorDays,
+      repaymentType,
+      numInstalments,
+      isTawarruq,
+      currency,
+      commodity,
+    } = input;
 
     const salePrice = costPrice + profitAmount;
     const tenorYears = tenorDays / 365;
@@ -147,7 +155,12 @@ export class MurabahaLifecycleEngine {
 
     // Build payment schedule
     const schedule = this._buildSchedule(
-      costPrice, profitAmount, tenorDays, repaymentType, numInstalments ?? 1, input.valueDate
+      costPrice,
+      profitAmount,
+      tenorDays,
+      repaymentType,
+      numInstalments ?? 1,
+      input.valueDate,
     );
 
     // Sharia compliance check
@@ -157,24 +170,28 @@ export class MurabahaLifecycleEngine {
     const ref = `MURA-${++txnCounter}-${currency}`;
 
     return {
-      reference:               ref,
-      salePrice:               parseFloat(salePrice.toFixed(2)),
-      effectiveProfitRatePct:  parseFloat((effectiveProfitRate * 100).toFixed(4)),
-      spreadOverBenchmarkBps:  spreadBps,
+      reference: ref,
+      salePrice: parseFloat(salePrice.toFixed(2)),
+      effectiveProfitRatePct: parseFloat((effectiveProfitRate * 100).toFixed(4)),
+      spreadOverBenchmarkBps: spreadBps,
       schedule,
-      tawarruqCash:            isTawarruq ? costPrice * 0.995 : undefined, // 0.5% broker fee
+      tawarruqCash: isTawarruq ? costPrice * 0.995 : undefined, // 0.5% broker fee
       shariaCompliant,
-      shariaNote:              shariaCompliant
+      shariaNote: shariaCompliant
         ? 'Commodity Murabaha: bank acquired commodity before sale. AAOIFI FAS 28 & SS-30 compliant.'
         : 'COMPLIANCE ALERT: Review transaction for Sharia compliance.',
-      ifrs9Classification:     'AMORTISED_COST',   // AAOIFI + IFRS9 FAS 28 para 6
-      processingMs:            parseFloat((performance.now() - t0).toFixed(2)),
+      ifrs9Classification: 'AMORTISED_COST', // AAOIFI + IFRS9 FAS 28 para 6
+      processingMs: parseFloat((performance.now() - t0).toFixed(2)),
     };
   }
 
   private _buildSchedule(
-    principal: number, totalProfit: number, tenorDays: number,
-    type: MurabahaRepayment, n: number, valueDate: string,
+    principal: number,
+    totalProfit: number,
+    tenorDays: number,
+    type: MurabahaRepayment,
+    n: number,
+    valueDate: string,
   ): MurabahaCashFlow[] {
     const start = new Date(valueDate);
     const schedule: MurabahaCashFlow[] = [];
@@ -183,30 +200,30 @@ export class MurabahaLifecycleEngine {
       const dueDate = new Date(start);
       dueDate.setDate(dueDate.getDate() + tenorDays);
       schedule.push({
-        dueDate:               dueDate.toISOString().slice(0,10),
-        type:                  'COMBINED',
-        principalAmount:       principal,
-        profitAmount:          totalProfit,
-        totalPayment:          principal + totalProfit,
-        outstandingPrincipal:  0,
+        dueDate: dueDate.toISOString().slice(0, 10),
+        type: 'COMBINED',
+        principalAmount: principal,
+        profitAmount: totalProfit,
+        totalPayment: principal + totalProfit,
+        outstandingPrincipal: 0,
       });
     } else {
       const instalment = Math.round(tenorDays / n);
       const principalPmt = principal / n;
-      const profitPmt    = totalProfit / n;
-      let outstanding    = principal;
+      const profitPmt = totalProfit / n;
+      let outstanding = principal;
 
       for (let i = 1; i <= n; i++) {
         const dueDate = new Date(start);
         dueDate.setDate(dueDate.getDate() + instalment * i);
         outstanding -= principalPmt;
         schedule.push({
-          dueDate:               dueDate.toISOString().slice(0,10),
-          type:                  'COMBINED',
-          principalAmount:       parseFloat(principalPmt.toFixed(2)),
-          profitAmount:          parseFloat(profitPmt.toFixed(2)),
-          totalPayment:          parseFloat((principalPmt + profitPmt).toFixed(2)),
-          outstandingPrincipal:  parseFloat(Math.max(0, outstanding).toFixed(2)),
+          dueDate: dueDate.toISOString().slice(0, 10),
+          type: 'COMBINED',
+          principalAmount: parseFloat(principalPmt.toFixed(2)),
+          profitAmount: parseFloat(profitPmt.toFixed(2)),
+          totalPayment: parseFloat((principalPmt + profitPmt).toFixed(2)),
+          outstandingPrincipal: parseFloat(Math.max(0, outstanding).toFixed(2)),
         });
       }
     }

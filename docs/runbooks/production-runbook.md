@@ -8,15 +8,15 @@
 
 ## 1. Service Map & Health Endpoints
 
-| Service | Port | Health | Metrics | Logs |
-|---|---|---|---|---|
-| trade-service | 4001 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:trade-service` |
-| risk-service | 4003 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:risk-service` |
-| alm-service | 4004 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:alm-service` |
-| bo-service | 4005 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:bo-service` |
+| Service            | Port | Health           | Metrics         | Logs                                 |
+| ------------------ | ---- | ---------------- | --------------- | ------------------------------------ |
+| trade-service      | 4001 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:trade-service`      |
+| risk-service       | 4003 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:risk-service`       |
+| alm-service        | 4004 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:alm-service`        |
+| bo-service         | 4005 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:bo-service`         |
 | accounting-service | 4007 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:accounting-service` |
-| audit-service | 4008 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:audit-service` |
-| reporting-service | 4011 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:reporting-service` |
+| audit-service      | 4008 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:audit-service`      |
+| reporting-service  | 4011 | `/live` `/ready` | `:9090/metrics` | Kibana: `service:reporting-service`  |
 
 ---
 
@@ -159,16 +159,16 @@ kubectl scale deployment/audit-service -n nexustreasury --replicas=5
 
 All services have HPA configured. Thresholds:
 
-| Service | Min Replicas | Max Replicas | Scale-up Trigger |
-|---|---|---|---|
-| trade-service | 3 | 20 | CPU > 70% or P99 latency > 80ms |
-| risk-service | 2 | 10 | CPU > 60% (VaR is CPU-intensive) |
-| alm-service | 2 | 8 | CPU > 70% |
-| bo-service | 2 | 12 | Queue depth > 1,000 |
-| audit-service | 2 | 10 | Kafka lag > 5,000 |
-| notification-service | 2 | 8 | CPU > 70% |
-| collateral-service | 2 | 8 | CPU > 70% |
-| reporting-service | 2 | 6 | Concurrent requests > 10 |
+| Service              | Min Replicas | Max Replicas | Scale-up Trigger                 |
+| -------------------- | ------------ | ------------ | -------------------------------- |
+| trade-service        | 3            | 20           | CPU > 70% or P99 latency > 80ms  |
+| risk-service         | 2            | 10           | CPU > 60% (VaR is CPU-intensive) |
+| alm-service          | 2            | 8            | CPU > 70%                        |
+| bo-service           | 2            | 12           | Queue depth > 1,000              |
+| audit-service        | 2            | 10           | Kafka lag > 5,000                |
+| notification-service | 2            | 8            | CPU > 70%                        |
+| collateral-service   | 2            | 8            | CPU > 70%                        |
+| reporting-service    | 2            | 6            | Concurrent requests > 10         |
 
 ### Manual Scale for EOD/Month-End
 
@@ -283,14 +283,14 @@ kubectl logs job/audit-integrity-verify-<date> -n nexustreasury
 
 ## 7. Key Contacts
 
-| Role | Contact | Escalation |
-|---|---|---|
-| Platform Engineering Lead | platform-lead@bank.com | PagerDuty: nexustreasury-p1 |
-| CISO / Security | ciso@bank.com | For JWT/audit/sanctions incidents |
-| Head of Treasury | treasury-head@bank.com | For trading availability P1 |
-| Head of Compliance | compliance-head@bank.com | For sanctions/AML incidents |
-| HashiCorp Vault Admin | infra-security@bank.com | Secret rotation |
-| SWIFT Operations | +1-800-000-0000 | For MT/MX message failures |
+| Role                      | Contact                  | Escalation                        |
+| ------------------------- | ------------------------ | --------------------------------- |
+| Platform Engineering Lead | platform-lead@bank.com   | PagerDuty: nexustreasury-p1       |
+| CISO / Security           | ciso@bank.com            | For JWT/audit/sanctions incidents |
+| Head of Treasury          | treasury-head@bank.com   | For trading availability P1       |
+| Head of Compliance        | compliance-head@bank.com | For sanctions/AML incidents       |
+| HashiCorp Vault Admin     | infra-security@bank.com  | Secret rotation                   |
+| SWIFT Operations          | +1-800-000-0000          | For MT/MX message failures        |
 
 ---
 
@@ -298,15 +298,15 @@ kubectl logs job/audit-integrity-verify-<date> -n nexustreasury
 
 Grafana: https://grafana.nexustreasury.io/d/nexustreasury-slo
 
-| Metric | SLO | Alert Threshold |
-|---|---|---|
-| Trade booking availability | 99.9% | < 99.5% in 5min window |
-| Trade booking P99 latency | < 100ms | > 150ms P99 |
-| Pre-deal check P99 | < 5ms | > 10ms P99 |
-| VaR calculation P99 | < 5s | > 8s P99 |
-| LCR report generation | < 30s | > 45s |
-| Kafka consumer lag (all) | < 1,000 msgs | > 5,000 msgs |
-| Audit write latency P99 | < 100ms | > 200ms P99 |
-| Error rate (all services) | < 0.1% | > 0.5% in 5min |
+| Metric                     | SLO          | Alert Threshold        |
+| -------------------------- | ------------ | ---------------------- |
+| Trade booking availability | 99.9%        | < 99.5% in 5min window |
+| Trade booking P99 latency  | < 100ms      | > 150ms P99            |
+| Pre-deal check P99         | < 5ms        | > 10ms P99             |
+| VaR calculation P99        | < 5s         | > 8s P99               |
+| LCR report generation      | < 30s        | > 45s                  |
+| Kafka consumer lag (all)   | < 1,000 msgs | > 5,000 msgs           |
+| Audit write latency P99    | < 100ms      | > 200ms P99            |
+| Error rate (all services)  | < 0.1%       | > 0.5% in 5min         |
 
 Error budget burn rate alert: Page if burn rate > 5× in any 1-hour window.

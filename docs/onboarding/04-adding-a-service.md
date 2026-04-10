@@ -75,7 +75,7 @@ import { type LiquidityGapReport } from '@nexustreasury/domain';
 export class PortfolioAnalyser {
   analyse(reports: LiquidityGapReport[]) {
     // orchestration only — no business logic here
-    return reports.map(r => ({ id: r.id, lcrRatio: r.lcr.lcrRatio }));
+    return reports.map((r) => ({ id: r.id, lcrRatio: r.lcr.lcrRatio }));
   }
 }
 ```
@@ -91,6 +91,7 @@ pnpm --filter @nexustreasury/portfolio-service exec vitest run
 ## Step 7 — Add the Fastify server
 
 Follow `packages/trade-service/src/server.ts` as a template. Register:
+
 - `@fastify/jwt` for authentication
 - Health route at `/health`
 - Your domain routes
@@ -110,6 +111,7 @@ Add your new service's consumer group to `docs/architecture/c4/07-kafka-topology
 ## Step 10 — Open a PR
 
 PR checklist (enforced in CI):
+
 - [ ] `pnpm build` — 0 errors
 - [ ] `pnpm test` — 0 failures
 - [ ] `pnpm audit --prod` — 0 CVEs

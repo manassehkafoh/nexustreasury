@@ -30,11 +30,11 @@ import {
 // ── Test Fixtures ─────────────────────────────────────────────────────────────
 
 const DEFAULT_CONFIG: SanctionsConfig = {
-  enabled:              true,
-  throwOnMatch:         false,   // return result, don't throw
-  fuzzyMatchThreshold:  0.85,
-  providers:            ['INTERNAL_TEST'],
-  aiEnhancedMatching:   true,
+  enabled: true,
+  throwOnMatch: false, // return result, don't throw
+  fuzzyMatchThreshold: 0.85,
+  providers: ['INTERNAL_TEST'],
+  aiEnhancedMatching: true,
 };
 
 const service = new SanctionsScreeningService(DEFAULT_CONFIG);
@@ -42,14 +42,13 @@ const service = new SanctionsScreeningService(DEFAULT_CONFIG);
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('SanctionsScreeningService', () => {
-
   describe('clear counterparties', () => {
     it('CLEAR for a known-good bank (Standard Chartered)', async () => {
       const result = await service.screen({
-        counterpartyId:   'cpty-001',
-        legalName:        'Standard Chartered Bank',
-        lei:              'RILFO74KP1CM8P6PCT96',
-        bic:              'SCBLGB2L',
+        counterpartyId: 'cpty-001',
+        legalName: 'Standard Chartered Bank',
+        lei: 'RILFO74KP1CM8P6PCT96',
+        bic: 'SCBLGB2L',
       });
       expect(result.status).toBe(SanctionsResult.CLEAR);
     });
@@ -57,7 +56,7 @@ describe('SanctionsScreeningService', () => {
     it('CLEAR result includes screening timestamp', async () => {
       const result = await service.screen({
         counterpartyId: 'cpty-002',
-        legalName:      'Barclays Bank PLC',
+        legalName: 'Barclays Bank PLC',
       });
       expect(result.screenedAt).toBeInstanceOf(Date);
     });
@@ -65,7 +64,7 @@ describe('SanctionsScreeningService', () => {
     it('CLEAR result has empty matches array', async () => {
       const result = await service.screen({
         counterpartyId: 'cpty-003',
-        legalName:      'Deutsche Bank AG',
+        legalName: 'Deutsche Bank AG',
       });
       expect(result.matches).toHaveLength(0);
     });
@@ -76,7 +75,7 @@ describe('SanctionsScreeningService', () => {
       // Using a test fixture name — safe for unit tests
       const result = await service.screen({
         counterpartyId: 'cpty-bad-001',
-        legalName:      '__TEST_SANCTIONED_ENTITY__',
+        legalName: '__TEST_SANCTIONED_ENTITY__',
       });
       expect(result.status).toBe(SanctionsResult.MATCH);
     });
@@ -84,7 +83,7 @@ describe('SanctionsScreeningService', () => {
     it('MATCH result includes the matching list name', async () => {
       const result = await service.screen({
         counterpartyId: 'cpty-bad-002',
-        legalName:      '__TEST_SANCTIONED_ENTITY__',
+        legalName: '__TEST_SANCTIONED_ENTITY__',
       });
       expect(result.listName).toBeTruthy();
     });
@@ -92,7 +91,7 @@ describe('SanctionsScreeningService', () => {
     it('MATCH result includes match score [0,1]', async () => {
       const result = await service.screen({
         counterpartyId: 'cpty-bad-003',
-        legalName:      '__TEST_SANCTIONED_ENTITY__',
+        legalName: '__TEST_SANCTIONED_ENTITY__',
       });
       expect(result.matchScore).toBeGreaterThan(0);
       expect(result.matchScore).toBeLessThanOrEqual(1);
@@ -104,7 +103,7 @@ describe('SanctionsScreeningService', () => {
       // Close variant of the test sanctioned name
       const result = await service.screen({
         counterpartyId: 'cpty-fuzzy-001',
-        legalName:      '__TEST_SANCTIONED_ENTTY__',  // typo
+        legalName: '__TEST_SANCTIONED_ENTTY__', // typo
       });
       // Depending on fuzzy match score, may be POTENTIAL_MATCH or CLEAR
       expect([SanctionsResult.POTENTIAL_MATCH, SanctionsResult.CLEAR]).toContain(result.status);
@@ -116,7 +115,7 @@ describe('SanctionsScreeningService', () => {
       const disabledService = new SanctionsScreeningService({ ...DEFAULT_CONFIG, enabled: false });
       const result = await disabledService.screen({
         counterpartyId: 'any-id',
-        legalName:      '__TEST_SANCTIONED_ENTITY__',
+        legalName: '__TEST_SANCTIONED_ENTITY__',
       });
       expect(result.status).toBe(SanctionsResult.CLEAR);
       expect(result.screeningBypassed).toBe(true);
@@ -127,7 +126,7 @@ describe('SanctionsScreeningService', () => {
     it('AI score is present when aiEnhancedMatching is true', async () => {
       const result = await service.screen({
         counterpartyId: 'cpty-ai-001',
-        legalName:      'Republic of Ghana Central Bank',
+        legalName: 'Republic of Ghana Central Bank',
       });
       expect(result.aiRiskScore).toBeGreaterThanOrEqual(0);
       expect(result.aiRiskScore).toBeLessThanOrEqual(1);
@@ -136,8 +135,8 @@ describe('SanctionsScreeningService', () => {
     it('AI risk score is lower for well-known legitimate banks', async () => {
       const clearResult = await service.screen({
         counterpartyId: 'cpty-ai-002',
-        legalName:      'HSBC Holdings PLC',
-        lei:            'MLQ5HLMZQLHGRH4GBD64',
+        legalName: 'HSBC Holdings PLC',
+        lei: 'MLQ5HLMZQLHGRH4GBD64',
       });
       // Well-known G-SIB — AI risk score should be low
       expect(clearResult.aiRiskScore).toBeLessThan(0.3);

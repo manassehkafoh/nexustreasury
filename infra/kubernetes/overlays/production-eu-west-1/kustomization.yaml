@@ -34,10 +34,10 @@ patches:
 images:
   - name: ghcr.io/manassehkafoh/nexustreasury/trade-service
     newName: ghcr.io/manassehkafoh/nexustreasury/trade-service
-    digest: ""  # ArgoCD image-updater fills this from GHCR on each deploy
+    digest: '' # ArgoCD image-updater fills this from GHCR on each deploy
   - name: ghcr.io/manassehkafoh/nexustreasury/risk-service
     newName: ghcr.io/manassehkafoh/nexustreasury/risk-service
 
 commonAnnotations:
   deployment.region: eu-west-1
-  deployment.primary: "true"
+  deployment.primary: 'true'

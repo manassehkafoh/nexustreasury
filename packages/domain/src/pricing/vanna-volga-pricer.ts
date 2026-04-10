@@ -35,41 +35,41 @@ import { normCDF } from './yield-curve.js';
 
 /** Input for Vanna-Volga exotic option pricing. */
 export interface VannaVolgaInput {
-  readonly optionType:     'CALL' | 'PUT';
-  readonly exoticType:     'VANILLA' | 'DOWN_AND_OUT' | 'DOWN_AND_IN' | 'UP_AND_OUT' | 'UP_AND_IN';
-  readonly spot:           number;
-  readonly strike:         number;
-  readonly barrier?:       number;
-  readonly rebate:         number;
-  readonly timeToExpiry:   number;
-  readonly riskFreeRate:   number;
-  readonly dividendYield:  number;
+  readonly optionType: 'CALL' | 'PUT';
+  readonly exoticType: 'VANILLA' | 'DOWN_AND_OUT' | 'DOWN_AND_IN' | 'UP_AND_OUT' | 'UP_AND_IN';
+  readonly spot: number;
+  readonly strike: number;
+  readonly barrier?: number;
+  readonly rebate: number;
+  readonly timeToExpiry: number;
+  readonly riskFreeRate: number;
+  readonly dividendYield: number;
   /** ATM (flat vol) used for base BS pricing */
-  readonly atmVol:         number;
+  readonly atmVol: number;
   /** SVI surface for smile-adjusted pricing */
-  readonly volSurface?:    SVIVolatilitySurface;
+  readonly volSurface?: SVIVolatilitySurface;
 }
 
 /** Vanna-Volga pricing result. */
 export interface VannaVolgaResult {
   /** Vanna-Volga price (smile-adjusted) */
-  readonly price:          number;
+  readonly price: number;
   /** Black-Scholes price (flat vol, no smile) */
-  readonly bsPrice:        number;
+  readonly bsPrice: number;
   /** Smile correction amount */
   readonly smileCorrection: number;
   /** VV weights [x1_ATM, x2_25C, x3_25P] */
-  readonly weights:        [number, number, number];
+  readonly weights: [number, number, number];
   /** Implied vols used [ATM, 25C, 25P] */
-  readonly impliedVols:    [number, number, number];
-  readonly processingMs:   number;
+  readonly impliedVols: [number, number, number];
+  readonly processingMs: number;
 }
 
 /**
  * Vanna-Volga pricer for FX exotic options.
  */
 export class VannaVolgaPricer {
-  private readonly _bsPricer      = new OptionPricer();
+  private readonly _bsPricer = new OptionPricer();
   private readonly _barrierPricer = new BarrierOptionPricer();
 
   /**
@@ -80,16 +80,22 @@ export class VannaVolgaPricer {
    */
   price(input: VannaVolgaInput): VannaVolgaResult {
     const t0 = performance.now();
-    const { spot: S, strike: K, timeToExpiry: T,
-            riskFreeRate: r, dividendYield: q,
-            atmVol: σ_atm, volSurface } = input;
+    const {
+      spot: S,
+      strike: K,
+      timeToExpiry: T,
+      riskFreeRate: r,
+      dividendYield: q,
+      atmVol: σ_atm,
+      volSurface,
+    } = input;
 
     // ── Step 1: Compute 25Δ strikes ────────────────────────────────────────
-    const sqrtT  = Math.sqrt(T);
-    const k_25C  =  0.43 * σ_atm * sqrtT;  // Malz approx for 25Δ call log-moneyness
-    const k_25P  = -0.43 * σ_atm * sqrtT;
-    const K_25C  = S * Math.exp(k_25C);
-    const K_25P  = S * Math.exp(k_25P);
+    const sqrtT = Math.sqrt(T);
+    const k_25C = 0.43 * σ_atm * sqrtT; // Malz approx for 25Δ call log-moneyness
+    const k_25P = -0.43 * σ_atm * sqrtT;
+    const K_25C = S * Math.exp(k_25C);
+    const K_25P = S * Math.exp(k_25P);
 
     // ── Step 2: Get implied vols from surface (or use flat ATM) ───────────
     const vol_ATM = σ_atm;
@@ -97,19 +103,17 @@ export class VannaVolgaPricer {
     const vol_25P = volSurface ? volSurface.impliedVol(K_25P, T) : σ_atm;
 
     // ── Step 3: BS prices with market vols ─────────────────────────────────
-    const bs_mkt_atm = this._bsCall(S, S,    T, r, q, vol_ATM); // ATM call
+    const bs_mkt_atm = this._bsCall(S, S, T, r, q, vol_ATM); // ATM call
     const bs_mkt_25C = this._bsCall(S, K_25C, T, r, q, vol_25C);
-    const bs_mkt_25P = this._bsPut (S, K_25P, T, r, q, vol_25P);
+    const bs_mkt_25P = this._bsPut(S, K_25P, T, r, q, vol_25P);
 
     // ── Step 4: BS prices with flat ATM vol ────────────────────────────────
-    const bs_flat_atm = this._bsCall(S, S,    T, r, q, σ_atm);
+    const bs_flat_atm = this._bsCall(S, S, T, r, q, σ_atm);
     const bs_flat_25C = this._bsCall(S, K_25C, T, r, q, σ_atm);
-    const bs_flat_25P = this._bsPut (S, K_25P, T, r, q, σ_atm);
+    const bs_flat_25P = this._bsPut(S, K_25P, T, r, q, σ_atm);
 
     // ── Step 5: Compute Vanna-Volga weights via sensitivity ratios ─────────
-    const weights = this._computeWeights(
-      S, K, K_25C, K_25P, T, r, q, σ_atm, input,
-    );
+    const weights = this._computeWeights(S, K, K_25C, K_25P, T, r, q, σ_atm, input);
 
     // ── Step 6: Base exotic price at flat vol ──────────────────────────────
     const bsPrice = this._exoticBSPrice(input, σ_atm);
@@ -121,41 +125,52 @@ export class VannaVolgaPricer {
       weights[2] * (bs_mkt_25P - bs_flat_25P);
 
     return {
-      price:           Math.max(0, bsPrice + smileCorrection),
-      bsPrice:         parseFloat(bsPrice.toFixed(6)),
+      price: Math.max(0, bsPrice + smileCorrection),
+      bsPrice: parseFloat(bsPrice.toFixed(6)),
       smileCorrection: parseFloat(smileCorrection.toFixed(6)),
-      weights:         weights.map(w => parseFloat(w.toFixed(4))) as [number, number, number],
-      impliedVols:     [vol_ATM, vol_25C, vol_25P].map(v => parseFloat(v.toFixed(6))) as [number, number, number],
-      processingMs:    parseFloat((performance.now() - t0).toFixed(2)),
+      weights: weights.map((w) => parseFloat(w.toFixed(4))) as [number, number, number],
+      impliedVols: [vol_ATM, vol_25C, vol_25P].map((v) => parseFloat(v.toFixed(6))) as [
+        number,
+        number,
+        number,
+      ],
+      processingMs: parseFloat((performance.now() - t0).toFixed(2)),
     };
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private _computeWeights(
-    S: number, K: number, K_25C: number, K_25P: number,
-    T: number, r: number, q: number, σ: number,
+    S: number,
+    K: number,
+    K_25C: number,
+    K_25P: number,
+    T: number,
+    r: number,
+    q: number,
+    σ: number,
     input: VannaVolgaInput,
   ): [number, number, number] {
     // For vanilla: weights from Castagna-Mercurio (2007) Eq. 12
-    const d1_K    = this._d1(S, K,    T, r, q, σ);
-    const d1_25C  = this._d1(S, K_25C, T, r, q, σ);
-    const d1_25P  = this._d1(S, K_25P, T, r, q, σ);
-    const sqrtT   = Math.sqrt(T);
+    const d1_K = this._d1(S, K, T, r, q, σ);
+    const d1_25C = this._d1(S, K_25C, T, r, q, σ);
+    const d1_25P = this._d1(S, K_25P, T, r, q, σ);
+    const sqrtT = Math.sqrt(T);
 
     // Vega-proportional weights
-    const vega_K   = S * Math.exp(-q * T) * this._normPDF(d1_K) * sqrtT / 100;
-    const vega_25C = S * Math.exp(-q * T) * this._normPDF(d1_25C) * sqrtT / 100;
-    const vega_25P = S * Math.exp(-q * T) * this._normPDF(d1_25P) * sqrtT / 100;
+    const vega_K = (S * Math.exp(-q * T) * this._normPDF(d1_K) * sqrtT) / 100;
+    const vega_25C = (S * Math.exp(-q * T) * this._normPDF(d1_25C) * sqrtT) / 100;
+    const vega_25P = (S * Math.exp(-q * T) * this._normPDF(d1_25P) * sqrtT) / 100;
 
     // Survival probability adjustment for barrier options
-    const pSurv = input.barrier && input.exoticType !== 'VANILLA'
-      ? this._survivalProb(S, input.barrier, T, r, q, σ, input.exoticType)
-      : 1;
+    const pSurv =
+      input.barrier && input.exoticType !== 'VANILLA'
+        ? this._survivalProb(S, input.barrier, T, r, q, σ, input.exoticType)
+        : 1;
 
-    const x1 = pSurv * vega_K  / (vega_25C + 1e-12);
-    const x2 = pSurv * vega_K  / (vega_25C + 1e-12) * 0.5;
-    const x3 = pSurv * vega_K  / (vega_25P + 1e-12) * 0.5;
+    const x1 = (pSurv * vega_K) / (vega_25C + 1e-12);
+    const x2 = ((pSurv * vega_K) / (vega_25C + 1e-12)) * 0.5;
+    const x3 = ((pSurv * vega_K) / (vega_25P + 1e-12)) * 0.5;
 
     return [x1, x2, x3];
   }
@@ -163,35 +178,43 @@ export class VannaVolgaPricer {
   private _exoticBSPrice(input: VannaVolgaInput, vol: number): number {
     if (input.exoticType === 'VANILLA') {
       const bs: BlackScholesInput = {
-        optionType:    input.optionType,
-        spot:          input.spot,
-        strike:        input.strike,
-        timeToExpiry:  input.timeToExpiry,
-        riskFreeRate:  input.riskFreeRate,
+        optionType: input.optionType,
+        spot: input.spot,
+        strike: input.strike,
+        timeToExpiry: input.timeToExpiry,
+        riskFreeRate: input.riskFreeRate,
         dividendYield: input.dividendYield,
-        volatility:    vol,
+        volatility: vol,
       };
       return this._bsPricer.price(bs).price;
     }
 
     // Barrier option
     const result = this._barrierPricer.price({
-      optionType:    input.optionType,
-      barrierType:   input.exoticType as 'DOWN_AND_OUT' | 'DOWN_AND_IN' | 'UP_AND_OUT' | 'UP_AND_IN',
-      spot:          input.spot,
-      strike:        input.strike,
-      barrier:       input.barrier ?? input.spot * 0.9,
-      rebate:        input.rebate,
-      timeToExpiry:  input.timeToExpiry,
-      riskFreeRate:  input.riskFreeRate,
+      optionType: input.optionType,
+      barrierType: input.exoticType as 'DOWN_AND_OUT' | 'DOWN_AND_IN' | 'UP_AND_OUT' | 'UP_AND_IN',
+      spot: input.spot,
+      strike: input.strike,
+      barrier: input.barrier ?? input.spot * 0.9,
+      rebate: input.rebate,
+      timeToExpiry: input.timeToExpiry,
+      riskFreeRate: input.riskFreeRate,
       dividendYield: input.dividendYield,
-      volatility:    vol,
+      volatility: vol,
     });
     return result.price;
   }
 
-  private _survivalProb(S: number, H: number, T: number, r: number, q: number, σ: number, type: string): number {
-    const mu = (r - q - 0.5 * σ * σ);
+  private _survivalProb(
+    S: number,
+    H: number,
+    T: number,
+    r: number,
+    q: number,
+    σ: number,
+    type: string,
+  ): number {
+    const mu = r - q - 0.5 * σ * σ;
     if (type.startsWith('DOWN')) {
       const d = (Math.log(S / H) + mu * T) / (σ * Math.sqrt(T));
       return normCDF(d);

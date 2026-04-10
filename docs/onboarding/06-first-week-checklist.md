@@ -44,48 +44,48 @@ By the end of your first week, you should be able to check every item below. If 
 
 ## Glossary of key abbreviations
 
-| Term | Meaning |
-|---|---|
-| TMS | Treasury Management System |
-| ALM | Asset-Liability Management |
-| IRRBB | Interest Rate Risk in the Banking Book |
-| LCR | Liquidity Coverage Ratio (BCBS 30-day stress) |
-| NSFR | Net Stable Funding Ratio (1-year structural liquidity) |
-| FTP | Funds Transfer Pricing (internal cost of funds) |
-| ECL | Expected Credit Loss (IFRS9) |
-| RAROC | Risk-Adjusted Return on Capital |
-| COREP | Common Reporting (Basel III capital adequacy) |
-| FINREP | Financial Reporting (EBA balance sheet / P&L) |
-| STP | Straight-Through Processing (zero-touch automation) |
-| DV01 | Dollar Value of 1 basis point (rate sensitivity) |
-| VaR | Value at Risk (market risk metric) |
-| XVA | Valuation Adjustments (CVA/DVA/FVA) |
-| UETR | Unique End-to-end Transaction Reference (SWIFT gpi) |
-| CBPR+ | Cross-Border Payments and Reporting Plus (SWIFT ISO 20022) |
-| SSE | Server-Sent Events (push-based streaming to browser) |
-| RAG | Retrieval-Augmented Generation (AI pattern) |
+| Term   | Meaning                                                    |
+| ------ | ---------------------------------------------------------- |
+| TMS    | Treasury Management System                                 |
+| ALM    | Asset-Liability Management                                 |
+| IRRBB  | Interest Rate Risk in the Banking Book                     |
+| LCR    | Liquidity Coverage Ratio (BCBS 30-day stress)              |
+| NSFR   | Net Stable Funding Ratio (1-year structural liquidity)     |
+| FTP    | Funds Transfer Pricing (internal cost of funds)            |
+| ECL    | Expected Credit Loss (IFRS9)                               |
+| RAROC  | Risk-Adjusted Return on Capital                            |
+| COREP  | Common Reporting (Basel III capital adequacy)              |
+| FINREP | Financial Reporting (EBA balance sheet / P&L)              |
+| STP    | Straight-Through Processing (zero-touch automation)        |
+| DV01   | Dollar Value of 1 basis point (rate sensitivity)           |
+| VaR    | Value at Risk (market risk metric)                         |
+| XVA    | Valuation Adjustments (CVA/DVA/FVA)                        |
+| UETR   | Unique End-to-end Transaction Reference (SWIFT gpi)        |
+| CBPR+  | Cross-Border Payments and Reporting Plus (SWIFT ISO 20022) |
+| SSE    | Server-Sent Events (push-based streaming to browser)       |
+| RAG    | Retrieval-Augmented Generation (AI pattern)                |
 
 ---
 
 ## Key contacts
 
-| Role | Area |
-|---|---|
-| Platform lead | Architecture decisions, ADRs |
-| Domain lead | Business logic, DDD aggregates |
-| Security lead | CVE triage, Keycloak, zero-trust |
-| QA lead | Test strategy, k6 performance targets |
+| Role          | Area                                  |
+| ------------- | ------------------------------------- |
+| Platform lead | Architecture decisions, ADRs          |
+| Domain lead   | Business logic, DDD aggregates        |
+| Security lead | CVE triage, Keycloak, zero-trust      |
+| QA lead       | Test strategy, k6 performance targets |
 
 ---
 
 ## Where to find things
 
-| Need | Location |
-|---|---|
-| OpenAPI spec | `docs/api/openapi.yaml` |
-| AsyncAPI (Kafka events) | `docs/api/asyncapi.yaml` |
-| ADR index | `docs/adr/README.md` |
-| C4 diagrams | `docs/architecture/c4/` |
-| Learner modules | `docs/learner/` |
-| Runbooks | `docs/runbooks/` |
-| Postman collection | `docs/NexusTreasury_API_Collection.postman_collection.json` |
+| Need                    | Location                                                    |
+| ----------------------- | ----------------------------------------------------------- |
+| OpenAPI spec            | `docs/api/openapi.yaml`                                     |
+| AsyncAPI (Kafka events) | `docs/api/asyncapi.yaml`                                    |
+| ADR index               | `docs/adr/README.md`                                        |
+| C4 diagrams             | `docs/architecture/c4/`                                     |
+| Learner modules         | `docs/learner/`                                             |
+| Runbooks                | `docs/runbooks/`                                            |
+| Postman collection      | `docs/NexusTreasury_API_Collection.postman_collection.json` |

@@ -3,12 +3,15 @@
 ## The big picture: 3 architectural choices that shape everything
 
 ### 1. Domain-Driven Design (DDD)
+
 Every business concept lives in one bounded context. You will never find a `LimitAggregate` in `accounting-service` — it belongs in `domain` and `risk-service`. When you need to add a feature, first ask: "Which bounded context owns this?"
 
 ### 2. Event-driven via Kafka
+
 Services do not call each other over HTTP for state changes. Instead, they emit domain events to Kafka topics. This makes the system decoupled and resilient. Read `docs/architecture/c4/07-kafka-topology.md` before writing any service-to-service code.
 
 ### 3. Monorepo with pnpm workspaces
+
 All 14 packages live in one repo under `packages/`. The `@nexustreasury/domain` package is the shared kernel — all services import from it. You never import from one service into another.
 
 ---

@@ -233,17 +233,23 @@ export class PricingEngine {
   // ── Exotic Convenience Methods (Sprint 7.4) ──────────────────────────────
 
   /** Price a barrier option (DOWN_AND_OUT, UP_AND_IN, etc.). */
-  priceBarrierOption(input: import('./exotic-pricer.interface.js').BarrierOptionInput): import('./exotic-pricer.interface.js').BarrierOptionResult {
+  priceBarrierOption(
+    input: import('./exotic-pricer.interface.js').BarrierOptionInput,
+  ): import('./exotic-pricer.interface.js').BarrierOptionResult {
     return this.exotic.priceBarrier(input);
   }
 
   /** Price a look-back option (floating or fixed). */
-  priceLookbackOption(input: import('./exotic-pricer.interface.js').LookbackOptionInput): import('./exotic-pricer.interface.js').LookbackOptionResult {
+  priceLookbackOption(
+    input: import('./exotic-pricer.interface.js').LookbackOptionInput,
+  ): import('./exotic-pricer.interface.js').LookbackOptionResult {
     return this.exotic.priceLookback(input);
   }
 
   /** Price a Bermudan swaption via Longstaff-Schwartz LSM Monte Carlo. */
-  priceBermudanSwaption(input: import('./exotic-pricer.interface.js').BermudanSwaptionInput): import('./exotic-pricer.interface.js').BermudanSwaptionResult {
+  priceBermudanSwaption(
+    input: import('./exotic-pricer.interface.js').BermudanSwaptionInput,
+  ): import('./exotic-pricer.interface.js').BermudanSwaptionResult {
     return this.exotic.priceBermudanSwaption(input);
   }
 

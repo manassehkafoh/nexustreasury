@@ -41,27 +41,27 @@ NexusTreasury uses a comprehensive, five-layer quality assurance approach coveri
 
 ### Coverage by service
 
-| Package | Tests | Key Areas Covered |
-|---|---|---|
-| `@nexustreasury/domain` | 160 | Trade invariants, Money type, BusinessDate, pricers, VaR |
-| `@nexustreasury/bo-service` | 112 | SWIFT MT/MX generation, SWIFTMatcher, nostro recon |
-| `@nexustreasury/accounting-service` | 71 | IFRS9 classifier, ECL stages, double-entry DR=CR |
-| `@nexustreasury/risk-service` | 47 | Pre-deal limits, VaR/sVaR, FRTB SA, Greeks |
-| `@nexustreasury/alm-service` | 23 | LCR inflow cap, NSFR, NMD modelling, IRRBB outlier |
-| `@nexustreasury/audit-service` | 18 | HMAC-SHA256 generation, tamper detection, replay |
-| `@nexustreasury/trade-service` | 32 | Route handlers, sanctions screening, idempotency |
-| `@nexustreasury/collateral-service` | 13 | Margin call arithmetic, CTD optimisation, CSA threshold |
-| `@nexustreasury/reporting-service` | 14 | LCR ratio, NSFR ASF/RSF, IRRBB ΔEVE/Tier1 |
-| `@nexustreasury/notification-service` | 12 | Event routing, channel dispatch, priority |
+| Package                               | Tests | Key Areas Covered                                        |
+| ------------------------------------- | ----- | -------------------------------------------------------- |
+| `@nexustreasury/domain`               | 160   | Trade invariants, Money type, BusinessDate, pricers, VaR |
+| `@nexustreasury/bo-service`           | 112   | SWIFT MT/MX generation, SWIFTMatcher, nostro recon       |
+| `@nexustreasury/accounting-service`   | 71    | IFRS9 classifier, ECL stages, double-entry DR=CR         |
+| `@nexustreasury/risk-service`         | 47    | Pre-deal limits, VaR/sVaR, FRTB SA, Greeks               |
+| `@nexustreasury/alm-service`          | 23    | LCR inflow cap, NSFR, NMD modelling, IRRBB outlier       |
+| `@nexustreasury/audit-service`        | 18    | HMAC-SHA256 generation, tamper detection, replay         |
+| `@nexustreasury/trade-service`        | 32    | Route handlers, sanctions screening, idempotency         |
+| `@nexustreasury/collateral-service`   | 13    | Margin call arithmetic, CTD optimisation, CSA threshold  |
+| `@nexustreasury/reporting-service`    | 14    | LCR ratio, NSFR ASF/RSF, IRRBB ΔEVE/Tier1                |
+| `@nexustreasury/notification-service` | 12    | Event routing, channel dispatch, priority                |
 
 ### Coverage thresholds (enforced in CI)
 
-| Metric | Threshold | Current (domain) |
-|---|---|---|
-| Lines | 80% | 96.83% |
-| Functions | 80% | 92.07% |
-| Branches | 70% | 88.4% |
-| Statements | 80% | 96.12% |
+| Metric     | Threshold | Current (domain) |
+| ---------- | --------- | ---------------- |
+| Lines      | 80%       | 96.83%           |
+| Functions  | 80%       | 92.07%           |
+| Branches   | 70%       | 88.4%            |
+| Statements | 80%       | 96.12%           |
 
 ### Running unit tests
 
@@ -116,15 +116,15 @@ make bench                         # Run 7 benchmark suites (SLA verification)
 
 The 7 benchmark suites verify that all pricing SLAs are met under load. These run in CI and fail if any SLA is exceeded:
 
-| Benchmark | SLA | Verified |
-|---|---|---|
-| Black-Scholes pricing (with Greeks) | P99 < 2ms | ✅ |
-| Bond DV01 + convexity | P99 < 3ms | ✅ |
-| IRS multi-curve NPV | P99 < 5ms | ✅ |
-| Pre-deal credit limit check | P99 < 5ms | ✅ |
-| HMAC-SHA256 audit record generation | P99 < 1ms | ✅ |
-| LCR inflow cap calculation | P99 < 100ms | ✅ |
-| IRRBB ΔEVE/Tier1 calculation | P99 < 50ms | ✅ |
+| Benchmark                           | SLA         | Verified |
+| ----------------------------------- | ----------- | -------- |
+| Black-Scholes pricing (with Greeks) | P99 < 2ms   | ✅       |
+| Bond DV01 + convexity               | P99 < 3ms   | ✅       |
+| IRS multi-curve NPV                 | P99 < 5ms   | ✅       |
+| Pre-deal credit limit check         | P99 < 5ms   | ✅       |
+| HMAC-SHA256 audit record generation | P99 < 1ms   | ✅       |
+| LCR inflow cap calculation          | P99 < 100ms | ✅       |
+| IRRBB ΔEVE/Tier1 calculation        | P99 < 50ms  | ✅       |
 
 ---
 
@@ -138,6 +138,7 @@ The 7 benchmark suites verify that all pricing SLAs are met under load. These ru
 ### Test suites
 
 **`trade-booking.k6.js`** — Validates 500 TPS SLA under sustained load:
+
 - Scenario 1: Steady state — 50 VUs for 5 minutes
 - Scenario 2: Ramp up — 0 → 100 VUs over 4 minutes
 - Scenario 3: Spike — 10 → 200 RPS burst in 20 seconds
@@ -145,6 +146,7 @@ The 7 benchmark suites verify that all pricing SLAs are met under load. These ru
 - Thresholds: P99 < 200ms (booking), P99 < 10ms (pre-deal), error rate < 0.1%
 
 **`lcr-report.k6.js`** — Validates LCR report concurrency:
+
 - 10 VUs for 2 minutes (10 concurrent regulatory reports)
 - Threshold: P99 < 30 seconds
 
@@ -173,10 +175,10 @@ Contract tests prevent breaking changes at the Kafka event boundary. Consumers d
 
 ### Active contracts
 
-| Consumer | Producer | Kafka Topic | Status |
-|---|---|---|---|
-| `accounting-service` | `trade-service` | `nexus.trading.trades.booked` | ✅ Stub |
-| `notification-service` | `risk-service` | `nexus.risk.limit-breach` | ✅ Stub |
+| Consumer               | Producer        | Kafka Topic                   | Status  |
+| ---------------------- | --------------- | ----------------------------- | ------- |
+| `accounting-service`   | `trade-service` | `nexus.trading.trades.booked` | ✅ Stub |
+| `notification-service` | `risk-service`  | `nexus.risk.limit-breach`     | ✅ Stub |
 
 ### CI workflow
 
@@ -211,11 +213,11 @@ Mutation testing verifies that tests are _meaningful_ — not just that they pas
 
 ### Thresholds
 
-| Score | Meaning |
-|---|---|
-| ≥ 80% | ✅ Green — tests are strong |
-| 70–79% | ⚠️ Warning — improve test quality |
-| < 65% | ❌ CI failure — tests are too weak |
+| Score  | Meaning                            |
+| ------ | ---------------------------------- |
+| ≥ 80%  | ✅ Green — tests are strong        |
+| 70–79% | ⚠️ Warning — improve test quality  |
+| < 65%  | ❌ CI failure — tests are too weak |
 
 ### Reading reports
 
@@ -256,14 +258,15 @@ On main branch (contract-tests.yml):
 ```typescript
 // ✅ Test behaviour, not implementation
 it('rejects trade booking when notional is negative', () => {
-  expect(() => Trade.book({ ...validParams, notional: Money.of(-100, 'USD') }))
-    .toThrow(TradeDomainError);
+  expect(() => Trade.book({ ...validParams, notional: Money.of(-100, 'USD') })).toThrow(
+    TradeDomainError,
+  );
 });
 
 // ✅ Test domain events
 it('publishes TradeBooked event on successful booking', () => {
   const trade = Trade.book(validParams);
-  expect(trade.domainEvents.some(e => e.eventType === 'TradeBooked')).toBe(true);
+  expect(trade.domainEvents.some((e) => e.eventType === 'TradeBooked')).toBe(true);
 });
 
 // ❌ Do not test the TypeScript type system
@@ -275,9 +278,13 @@ it('publishes TradeBooked event on successful booking', () => {
 
 ```typescript
 // Verify SLA at bench time — fails CI if P99 exceeds threshold
-bench('Black-Scholes pricing P99 < 2ms', () => {
-  BlackScholesPricer.price({ ...validOption });
-}, { time: 1000 });
+bench(
+  'Black-Scholes pricing P99 < 2ms',
+  () => {
+    BlackScholesPricer.price({ ...validOption });
+  },
+  { time: 1000 },
+);
 ```
 
 ### k6 test conventions

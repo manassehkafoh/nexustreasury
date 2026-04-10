@@ -28,94 +28,94 @@
 
 export interface BrandColors {
   /** Deep dark background — primary page background */
-  bgDeep:     string;
+  bgDeep: string;
   /** Surface background — cards, panels */
-  bgSurface:  string;
+  bgSurface: string;
   /** Elevated surface — hover states, selected rows */
   bgElevated: string;
   /** Primary accent — logo, CTAs, gold highlights */
-  accent:     string;
+  accent: string;
   /** Accent light — hover states, shimmer */
   accentLight: string;
   /** Success / BUY direction */
-  buy:        string;
+  buy: string;
   /** Danger / SELL direction / alerts */
-  sell:       string;
+  sell: string;
   /** Warning — soft alerts, approaching limits */
-  warning:    string;
+  warning: string;
   /** Body text — primary */
   textPrimary: string;
   /** Muted text — labels, secondary info */
-  textMuted:  string;
+  textMuted: string;
   /** Border / divider */
-  border:     string;
+  border: string;
 }
 
 export interface BrandTypography {
   /** Display font — hero text, logo mark, chart titles */
-  fontDisplay:  string;
+  fontDisplay: string;
   /** Body font — UI text, tables, forms */
-  fontBody:     string;
+  fontBody: string;
   /** Monospace — prices, numbers, code, reference numbers */
-  fontMono:     string;
+  fontMono: string;
 }
 
 export interface BrandLogo {
   /** SVG string or URL to logo mark (shown in collapsed sidebar) */
-  mark:         string;
+  mark: string;
   /** SVG string or URL to full wordmark (shown in expanded sidebar) */
-  wordmark?:    string;
+  wordmark?: string;
   /** Alt text for accessibility */
-  alt:          string;
+  alt: string;
   /** Width of the mark in pixels */
-  markWidth:    number;
+  markWidth: number;
   /** Width of the wordmark in pixels */
   wordmarkWidth?: number;
 }
 
 export interface BrandLocale {
   /** BCP 47 language tag, e.g. 'en', 'fr', 'ar', 'es' */
-  language:       string;
+  language: string;
   /** Number format locale, e.g. 'en-US', 'fr-FR', 'ar-AE' */
-  numberLocale:   string;
+  numberLocale: string;
   /** Date format pattern */
-  dateFormat:     'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
+  dateFormat: 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD';
   /** Currency symbol position */
   currencySymbolPosition: 'before' | 'after';
   /** RTL layout */
-  rtl:            boolean;
+  rtl: boolean;
 }
 
 export interface BrandConfig {
   /** Unique identifier — used as CSS class and localStorage key */
-  id:             string;
+  id: string;
   /** Display name shown in the platform header */
-  displayName:    string;
+  displayName: string;
   /** Tagline shown in the login page and splash screen */
-  tagline?:       string;
+  tagline?: string;
   /** Favicon URL or base64 data URI */
-  favicon?:       string;
+  favicon?: string;
   /** Color tokens */
-  colors:         BrandColors;
+  colors: BrandColors;
   /** Typography */
-  typography:     BrandTypography;
+  typography: BrandTypography;
   /** Logo assets */
-  logo:           BrandLogo;
+  logo: BrandLogo;
   /** Localisation */
-  locale:         BrandLocale;
+  locale: BrandLocale;
   /** Custom CSS injected after design tokens (escape hatch for complex overrides) */
-  customCSS?:     string;
+  customCSS?: string;
   /**
    * Feature flags per brand — some deployments hide certain modules
    * e.g. a small bank may not use FX Options or Collateral Management
    */
   features: {
-    fxEDealing:       boolean;
-    irrbbReporting:   boolean;
-    collateralMgmt:   boolean;
-    islamicFinance:   boolean;
-    aiInsights:       boolean;  // shows AI/ML panel in dashboard
-    marketData:       boolean;
+    fxEDealing: boolean;
+    irrbbReporting: boolean;
+    collateralMgmt: boolean;
+    islamicFinance: boolean;
+    aiInsights: boolean; // shows AI/ML panel in dashboard
+    marketData: boolean;
   };
 }
 
@@ -123,26 +123,26 @@ export interface BrandConfig {
 
 /** Default NexusTreasury brand — dark navy + gold */
 export const NEXUSTREASURY_BRAND: BrandConfig = {
-  id:          'nexustreasury',
+  id: 'nexustreasury',
   displayName: 'NexusTreasury',
-  tagline:     'Cloud-native treasury for modern banks',
+  tagline: 'Cloud-native treasury for modern banks',
   colors: {
-    bgDeep:      '#030C1B',
-    bgSurface:   '#071827',
-    bgElevated:  '#0C2038',
-    accent:      '#D4A843',
+    bgDeep: '#030C1B',
+    bgSurface: '#071827',
+    bgElevated: '#0C2038',
+    accent: '#D4A843',
     accentLight: '#F0CA6A',
-    buy:         '#10b981',
-    sell:        '#EF4060',
-    warning:     '#F59E0B',
+    buy: '#10b981',
+    sell: '#EF4060',
+    warning: '#F59E0B',
     textPrimary: '#EAF0FF',
-    textMuted:   '#6882A8',
-    border:      '#243558',
+    textMuted: '#6882A8',
+    border: '#243558',
   },
   typography: {
     fontDisplay: "'Cormorant Garamond', Georgia, serif",
-    fontBody:    "'DM Sans', system-ui, sans-serif",
-    fontMono:    "'JetBrains Mono', 'Fira Code', monospace",
+    fontBody: "'DM Sans', system-ui, sans-serif",
+    fontMono: "'JetBrains Mono', 'Fira Code', monospace",
   },
   logo: {
     mark: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -150,84 +150,84 @@ export const NEXUSTREASURY_BRAND: BrandConfig = {
       <path d="M8 22L16 8L24 22" stroke="#030C1B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M10.5 18H21.5" stroke="#030C1B" stroke-width="2" stroke-linecap="round"/>
     </svg>`,
-    alt:         'NexusTreasury',
-    markWidth:   32,
+    alt: 'NexusTreasury',
+    markWidth: 32,
     wordmarkWidth: 160,
   },
   locale: {
-    language:               'en',
-    numberLocale:           'en-US',
-    dateFormat:             'DD/MM/YYYY',
+    language: 'en',
+    numberLocale: 'en-US',
+    dateFormat: 'DD/MM/YYYY',
     currencySymbolPosition: 'before',
-    rtl:                    false,
+    rtl: false,
   },
   features: {
-    fxEDealing:     true,
+    fxEDealing: true,
     irrbbReporting: true,
     collateralMgmt: true,
     islamicFinance: true,
-    aiInsights:     true,
-    marketData:     true,
+    aiInsights: true,
+    marketData: true,
   },
 };
 
 /** Republic Bank brand — Caribbean blue + gold */
 export const REPUBLIC_BANK_BRAND: BrandConfig = {
   ...NEXUSTREASURY_BRAND,
-  id:          'republic-bank',
+  id: 'republic-bank',
   displayName: 'Republic Treasury',
-  tagline:     'Republic Bank — Treasury Management',
+  tagline: 'Republic Bank — Treasury Management',
   colors: {
     ...NEXUSTREASURY_BRAND.colors,
-    accent:      '#C8A84B',  // Republic Bank gold
+    accent: '#C8A84B', // Republic Bank gold
     accentLight: '#E8C86A',
-    bgDeep:      '#021420',   // darker navy
-    bgSurface:   '#061C2E',
+    bgDeep: '#021420', // darker navy
+    bgSurface: '#061C2E',
   },
   logo: {
     mark: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="32" height="32" rx="4" fill="#C8A84B"/>
       <text x="5" y="23" font-size="18" font-weight="bold" fill="#021420" font-family="serif">R</text>
     </svg>`,
-    alt:       'Republic Bank',
+    alt: 'Republic Bank',
     markWidth: 32,
   },
   features: {
     ...NEXUSTREASURY_BRAND.features,
-    islamicFinance: false,  // Not in scope for Caribbean deployment
+    islamicFinance: false, // Not in scope for Caribbean deployment
   },
 };
 
 /** Minimal / white-label preset — neutral grays for system integrators */
 export const MINIMAL_BRAND: BrandConfig = {
   ...NEXUSTREASURY_BRAND,
-  id:          'minimal',
+  id: 'minimal',
   displayName: 'Treasury Platform',
-  tagline:     '',
+  tagline: '',
   colors: {
-    bgDeep:      '#0F1117',
-    bgSurface:   '#161B22',
-    bgElevated:  '#1C2128',
-    accent:      '#3B82F6',
+    bgDeep: '#0F1117',
+    bgSurface: '#161B22',
+    bgElevated: '#1C2128',
+    accent: '#3B82F6',
     accentLight: '#60A5FA',
-    buy:         '#22C55E',
-    sell:        '#EF4444',
-    warning:     '#EAB308',
+    buy: '#22C55E',
+    sell: '#EF4444',
+    warning: '#EAB308',
     textPrimary: '#F0F6FC',
-    textMuted:   '#8B949E',
-    border:      '#30363D',
+    textMuted: '#8B949E',
+    border: '#30363D',
   },
   typography: {
-    fontDisplay: "Inter, system-ui, sans-serif",
-    fontBody:    "Inter, system-ui, sans-serif",
-    fontMono:    "'JetBrains Mono', monospace",
+    fontDisplay: 'Inter, system-ui, sans-serif',
+    fontBody: 'Inter, system-ui, sans-serif',
+    fontMono: "'JetBrains Mono', monospace",
   },
   logo: {
     mark: `<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
       <circle cx="16" cy="16" r="14" fill="#3B82F6"/>
       <path d="M10 20L16 10L22 20" stroke="white" stroke-width="2" stroke-linecap="round"/>
     </svg>`,
-    alt:       'Treasury Platform',
+    alt: 'Treasury Platform',
     markWidth: 32,
   },
 };
@@ -318,10 +318,10 @@ function deepMergeBrand(base: BrandConfig, override: Partial<BrandConfig>): Bran
   return {
     ...base,
     ...override,
-    colors:     { ...base.colors,     ...(override.colors     ?? {}) },
+    colors: { ...base.colors, ...(override.colors ?? {}) },
     typography: { ...base.typography, ...(override.typography ?? {}) },
-    logo:       { ...base.logo,       ...(override.logo       ?? {}) },
-    locale:     { ...base.locale,     ...(override.locale     ?? {}) },
-    features:   { ...base.features,   ...(override.features   ?? {}) },
+    logo: { ...base.logo, ...(override.logo ?? {}) },
+    locale: { ...base.locale, ...(override.locale ?? {}) },
+    features: { ...base.features, ...(override.features ?? {}) },
   };
 }

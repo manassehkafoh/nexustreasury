@@ -29,21 +29,21 @@
  */
 
 import { randomUUID, randomBytes } from 'crypto';
-import { parseArgs }               from 'util';
+import { parseArgs } from 'util';
 
 // ── CLI Argument Parsing ──────────────────────────────────────────────────────
 
 const { values: args } = parseArgs({
-  args:    process.argv.slice(2),
-  strict:  false,
+  args: process.argv.slice(2),
+  strict: false,
   options: {
-    tenantId:    { type: 'string' },
+    tenantId: { type: 'string' },
     displayName: { type: 'string' },
-    adminEmail:  { type: 'string' },
-    currency:    { type: 'string', default: 'USD' },
-    brand:       { type: 'string', default: 'nexustreasury' },
-    env:         { type: 'string', default: 'staging' },
-    dryRun:      { type: 'boolean', default: false },
+    adminEmail: { type: 'string' },
+    currency: { type: 'string', default: 'USD' },
+    brand: { type: 'string', default: 'nexustreasury' },
+    env: { type: 'string', default: 'staging' },
+    dryRun: { type: 'boolean', default: false },
   },
 });
 
@@ -53,36 +53,36 @@ function required(name: string): string {
   return v;
 }
 
-const TENANT_ID    = required('tenantId');
+const TENANT_ID = required('tenantId');
 const DISPLAY_NAME = required('displayName');
-const ADMIN_EMAIL  = required('adminEmail');
-const CURRENCY     = (args['currency'] as string) ?? 'USD';
-const BRAND        = (args['brand'] as string) ?? 'nexustreasury';
-const ENV          = (args['env'] as string) ?? 'staging';
-const DRY_RUN      = !!(args['dryRun']);
+const ADMIN_EMAIL = required('adminEmail');
+const CURRENCY = (args['currency'] as string) ?? 'USD';
+const BRAND = (args['brand'] as string) ?? 'nexustreasury';
+const ENV = (args['env'] as string) ?? 'staging';
+const DRY_RUN = !!args['dryRun'];
 
 // ── Logger ────────────────────────────────────────────────────────────────────
 
 const log = {
-  info:    (msg: string) => console.log(`  ✅ ${msg}`),
-  warn:    (msg: string) => console.log(`  ⚠️  ${msg}`),
+  info: (msg: string) => console.log(`  ✅ ${msg}`),
+  warn: (msg: string) => console.log(`  ⚠️  ${msg}`),
   section: (msg: string) => console.log(`\n── ${msg} ──`),
-  dry:     (msg: string) => DRY_RUN && console.log(`  [DRY] ${msg}`),
+  dry: (msg: string) => DRY_RUN && console.log(`  [DRY] ${msg}`),
 };
 
 // ── Provisioning Steps ────────────────────────────────────────────────────────
 
 interface ProvisioningContext {
-  tenantId:    string;
+  tenantId: string;
   displayName: string;
-  adminEmail:  string;
-  currency:    string;
-  brand:       string;
-  env:         string;
-  hmacKey:     string;
-  jwtSecret:   string;
+  adminEmail: string;
+  currency: string;
+  brand: string;
+  env: string;
+  hmacKey: string;
+  jwtSecret: string;
   adminUserId: string;
-  realmId:     string;
+  realmId: string;
 }
 
 async function run(): Promise<void> {
@@ -96,16 +96,16 @@ async function run(): Promise<void> {
   console.log(`   Dry run:     ${DRY_RUN}`);
 
   const ctx: ProvisioningContext = {
-    tenantId:    TENANT_ID,
+    tenantId: TENANT_ID,
     displayName: DISPLAY_NAME,
-    adminEmail:  ADMIN_EMAIL,
-    currency:    CURRENCY,
-    brand:       BRAND,
-    env:         ENV,
-    hmacKey:     randomBytes(32).toString('hex'),
-    jwtSecret:   randomBytes(32).toString('hex'),
+    adminEmail: ADMIN_EMAIL,
+    currency: CURRENCY,
+    brand: BRAND,
+    env: ENV,
+    hmacKey: randomBytes(32).toString('hex'),
+    jwtSecret: randomBytes(32).toString('hex'),
     adminUserId: randomUUID(),
-    realmId:     `nexustreasury-${TENANT_ID}`,
+    realmId: `nexustreasury-${TENANT_ID}`,
   };
 
   try {
@@ -125,7 +125,6 @@ async function run(): Promise<void> {
     console.log(`   Admin URL:  https://auth.${ENV}.nexustreasury.io/realms/${ctx.realmId}`);
     console.log(`   Admin user: ${ADMIN_EMAIL}`);
     console.log(`\n   ⚠️  Rotate the generated secrets in Vault before go-live.\n`);
-
   } catch (err) {
     console.error(`\n❌ Provisioning failed: ${(err as Error).message}`);
     process.exit(1);
@@ -168,23 +167,29 @@ async function step2_keycloak(ctx: ProvisioningContext): Promise<void> {
   log.section('Step 2: Keycloak — Realm + Roles + Admin User');
 
   const realmConfig = {
-    id:               ctx.realmId,
-    realm:            ctx.realmId,
-    displayName:      ctx.displayName,
-    enabled:          true,
-    ssoSessionMaxLifespan: 28800,  // 8 hours
-    accessTokenLifespan:   900,    // 15 minutes
+    id: ctx.realmId,
+    realm: ctx.realmId,
+    displayName: ctx.displayName,
+    enabled: true,
+    ssoSessionMaxLifespan: 28800, // 8 hours
+    accessTokenLifespan: 900, // 15 minutes
     roles: {
       realm: [
-        { name: 'TREASURY_DEALER',    description: 'Front office dealer — can book and amend trades' },
-        { name: 'RISK_MANAGER',       description: 'Risk manager — read limits, approve overrides' },
-        { name: 'BO_ANALYST',         description: 'Back office — process settlements and reconciliation' },
-        { name: 'ALM_MANAGER',        description: 'ALM team — LCR/NSFR reporting, NMD modelling' },
+        { name: 'TREASURY_DEALER', description: 'Front office dealer — can book and amend trades' },
+        { name: 'RISK_MANAGER', description: 'Risk manager — read limits, approve overrides' },
+        { name: 'BO_ANALYST', description: 'Back office — process settlements and reconciliation' },
+        { name: 'ALM_MANAGER', description: 'ALM team — LCR/NSFR reporting, NMD modelling' },
         { name: 'FINANCIAL_CONTROLLER', description: 'IFRS9, hedge accounting, ECL sign-off' },
-        { name: 'COMPLIANCE_OFFICER', description: 'Sanctions review, audit access, regulatory reports' },
-        { name: 'PLATFORM_ADMIN',     description: 'Platform configuration, brand admin, user management' },
-        { name: 'SYSTEM',             description: 'Service-to-service automation (Kafka consumers)' },
-        { name: 'READ_ONLY',          description: 'Auditor / regulator read-only access' },
+        {
+          name: 'COMPLIANCE_OFFICER',
+          description: 'Sanctions review, audit access, regulatory reports',
+        },
+        {
+          name: 'PLATFORM_ADMIN',
+          description: 'Platform configuration, brand admin, user management',
+        },
+        { name: 'SYSTEM', description: 'Service-to-service automation (Kafka consumers)' },
+        { name: 'READ_ONLY', description: 'Auditor / regulator read-only access' },
       ],
     },
   };
@@ -233,9 +238,9 @@ async function step4_vault(ctx: ProvisioningContext): Promise<void> {
 
   const secrets = {
     [`secret/nexustreasury/${ctx.tenantId}/prod`]: {
-      JWT_SECRET:       ctx.jwtSecret,
-      AUDIT_HMAC_KEY:   ctx.hmacKey,
-      DATABASE_URL:     `postgresql://nexus:CHANGE_ME@postgres.nexustreasury.io:5432/nexustreasury_${ctx.tenantId}`,
+      JWT_SECRET: ctx.jwtSecret,
+      AUDIT_HMAC_KEY: ctx.hmacKey,
+      DATABASE_URL: `postgresql://nexus:CHANGE_ME@postgres.nexustreasury.io:5432/nexustreasury_${ctx.tenantId}`,
     },
   };
 
@@ -271,11 +276,11 @@ async function step6_limits(ctx: ProvisioningContext): Promise<void> {
   log.section('Step 6: Default Credit + Market Risk Limits');
 
   const defaultLimits = [
-    { type: 'CREDIT',     name: 'Default counterparty credit',  amount: 50_000_000  },
-    { type: 'MARKET',     name: 'FX delta aggregate',            amount: 20_000_000  },
-    { type: 'MARKET',     name: 'IR DV01 aggregate',             amount: 500_000     },
-    { type: 'MARKET',     name: 'Options vega aggregate',        amount: 2_000_000   },
-    { type: 'MARKET',     name: 'Daily VaR 99% 1-day',           amount: 5_000_000   },
+    { type: 'CREDIT', name: 'Default counterparty credit', amount: 50_000_000 },
+    { type: 'MARKET', name: 'FX delta aggregate', amount: 20_000_000 },
+    { type: 'MARKET', name: 'IR DV01 aggregate', amount: 500_000 },
+    { type: 'MARKET', name: 'Options vega aggregate', amount: 2_000_000 },
+    { type: 'MARKET', name: 'Daily VaR 99% 1-day', amount: 5_000_000 },
   ];
 
   if (DRY_RUN) {
@@ -296,7 +301,9 @@ async function step7_brand(ctx: ProvisioningContext): Promise<void> {
     log.dry(`Would set brand preset '${ctx.brand}' for tenant ${ctx.tenantId}`);
   } else {
     log.info(`Brand preset applied: '${ctx.brand}'`);
-    log.info(`Customisable via: PATCH /api/v1/admin/tenants/${ctx.tenantId}/brand (PLATFORM_ADMIN role)`);
+    log.info(
+      `Customisable via: PATCH /api/v1/admin/tenants/${ctx.tenantId}/brand (PLATFORM_ADMIN role)`,
+    );
   }
 }
 
@@ -306,10 +313,10 @@ async function step8_notifications(ctx: ProvisioningContext): Promise<void> {
   log.section('Step 8: Default Notification Rules');
 
   const rules = [
-    { event: 'nexus.risk.limit-breach',        channels: 'EMAIL+WS+WEBHOOK', severity: 'CRITICAL' },
-    { event: 'nexus.bo.reconciliation-break',  channels: 'EMAIL+WS',         severity: 'WARNING'  },
-    { event: 'nexus.alm.lcr-breach',           channels: 'EMAIL+WS',         severity: 'CRITICAL' },
-    { event: 'nexus.security.login-failed',    channels: 'EMAIL',            severity: 'CRITICAL' },
+    { event: 'nexus.risk.limit-breach', channels: 'EMAIL+WS+WEBHOOK', severity: 'CRITICAL' },
+    { event: 'nexus.bo.reconciliation-break', channels: 'EMAIL+WS', severity: 'WARNING' },
+    { event: 'nexus.alm.lcr-breach', channels: 'EMAIL+WS', severity: 'CRITICAL' },
+    { event: 'nexus.security.login-failed', channels: 'EMAIL', severity: 'CRITICAL' },
   ];
 
   if (DRY_RUN) {

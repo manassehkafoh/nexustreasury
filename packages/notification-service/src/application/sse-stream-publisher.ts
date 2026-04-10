@@ -16,29 +16,29 @@ import { randomUUID } from 'crypto';
  */
 
 export const StreamEventType = {
-  POSITION_MTM:      'position.mtm.updated',
+  POSITION_MTM: 'position.mtm.updated',
   LIMIT_UTILISATION: 'limit.utilisation.tick',
-  RATE_FEED:         'rate.feed.tick',
-  LCR_INTRADAY:      'lcr.intraday.updated',
-  HEARTBEAT:         'heartbeat',
+  RATE_FEED: 'rate.feed.tick',
+  LCR_INTRADAY: 'lcr.intraday.updated',
+  HEARTBEAT: 'heartbeat',
 } as const;
 export type StreamEventType = (typeof StreamEventType)[keyof typeof StreamEventType];
 
 export interface StreamEvent {
-  readonly id:        string;
-  readonly type:      StreamEventType;
-  readonly tenantId:  string;
-  readonly data:      Record<string, unknown>;
+  readonly id: string;
+  readonly type: StreamEventType;
+  readonly tenantId: string;
+  readonly data: Record<string, unknown>;
   readonly timestamp: string;
 }
 
 export interface StreamSubscription {
   readonly subscriptionId: string;
-  readonly tenantId:       string;
-  readonly userId:         string;
-  readonly eventTypes:     StreamEventType[];
-  readonly connectedAt:    string;
-  isActive:                boolean;
+  readonly tenantId: string;
+  readonly userId: string;
+  readonly eventTypes: StreamEventType[];
+  readonly connectedAt: string;
+  isActive: boolean;
 }
 
 /** SSE format: https://html.spec.whatwg.org/multipage/server-sent-events.html */
@@ -47,32 +47,29 @@ function formatSSEEvent(event: StreamEvent): string {
     `id: ${event.id}`,
     `event: ${event.type}`,
     `data: ${JSON.stringify(event.data)}`,
-    '',  // blank line terminates SSE event
+    '', // blank line terminates SSE event
     '',
   ].join('\n');
 }
 
-
-
-
 export class SSEStreamPublisher {
   private readonly _subscriptions = new Map<string, StreamSubscription>();
-  private readonly _eventLog:       StreamEvent[] = [];
-  private readonly _maxLogSize      = 1000;
+  private readonly _eventLog: StreamEvent[] = [];
+  private readonly _maxLogSize = 1000;
 
   /** Register a new SSE client connection. */
   subscribe(params: {
-    tenantId:    string;
-    userId:      string;
+    tenantId: string;
+    userId: string;
     eventTypes?: StreamEventType[];
   }): StreamSubscription {
     const sub: StreamSubscription = {
       subscriptionId: `SSE-${randomUUID().split('-')[0].toUpperCase()}`,
-      tenantId:       params.tenantId,
-      userId:         params.userId,
-      eventTypes:     params.eventTypes ?? Object.values(StreamEventType),
-      connectedAt:    new Date().toISOString(),
-      isActive:       true,
+      tenantId: params.tenantId,
+      userId: params.userId,
+      eventTypes: params.eventTypes ?? Object.values(StreamEventType),
+      connectedAt: new Date().toISOString(),
+      isActive: true,
     };
     this._subscriptions.set(sub.subscriptionId, sub);
     return sub;
@@ -86,7 +83,7 @@ export class SSEStreamPublisher {
 
   /** Publish an event to all matching subscriptions. Returns SSE-formatted strings. */
   publish(event: Omit<StreamEvent, 'id'>): { subscriptionId: string; ssePayload: string }[] {
-    const id        = `EVT-${randomUUID().split('-')[0].toUpperCase()}`;
+    const id = `EVT-${randomUUID().split('-')[0].toUpperCase()}`;
     const fullEvent = { ...event, id };
 
     // Append to log
@@ -95,11 +92,14 @@ export class SSEStreamPublisher {
 
     // Fan-out to matching subscriptions
     const deliveries: { subscriptionId: string; ssePayload: string }[] = [];
-    this._subscriptions.forEach(sub => {
+    this._subscriptions.forEach((sub) => {
       if (!sub.isActive) return;
-      if (sub.tenantId !== event.tenantId) return;     // tenant isolation
+      if (sub.tenantId !== event.tenantId) return; // tenant isolation
       if (!sub.eventTypes.includes(event.type)) return;
-      deliveries.push({ subscriptionId: sub.subscriptionId, ssePayload: formatSSEEvent(fullEvent) });
+      deliveries.push({
+        subscriptionId: sub.subscriptionId,
+        ssePayload: formatSSEEvent(fullEvent),
+      });
     });
 
     return deliveries;
@@ -108,7 +108,8 @@ export class SSEStreamPublisher {
   /** Emit a heartbeat to keep connections alive (every 30s). */
   heartbeat(tenantId: string): StreamEvent {
     const event: Omit<StreamEvent, 'id'> = {
-      type: StreamEventType.HEARTBEAT, tenantId,
+      type: StreamEventType.HEARTBEAT,
+      tenantId,
       data: { ts: Date.now(), activeSubscriptions: this.activeCount(tenantId) },
       timestamp: new Date().toISOString(),
     };
@@ -117,13 +118,12 @@ export class SSEStreamPublisher {
   }
 
   activeCount(tenantId?: string): number {
-    return Array.from(this._subscriptions.values())
-      .filter(s => s.isActive && (!tenantId || s.tenantId === tenantId)).length;
+    return Array.from(this._subscriptions.values()).filter(
+      (s) => s.isActive && (!tenantId || s.tenantId === tenantId),
+    ).length;
   }
 
   getEventLog(tenantId: string, limit = 50): StreamEvent[] {
-    return this._eventLog
-      .filter(e => e.tenantId === tenantId)
-      .slice(-limit);
+    return this._eventLog.filter((e) => e.tenantId === tenantId).slice(-limit);
   }
 }

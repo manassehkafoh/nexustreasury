@@ -21,7 +21,6 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-
 const PORT = Number(process.env['PORT'] ?? 4001);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
 
@@ -84,29 +83,35 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
   await app.register(healthRoutes, { prefix: '/health' });
   await app.register(tradeRoutes, { prefix: '/api/v1/trades' });
 
-  app.setErrorHandler((error: Error & { statusCode?: number; code?: string; validation?: unknown }, request, reply) => {
-    logger.error({ err: error, reqId: request.id }, 'Unhandled error');
-    // Fastify built-in JSON schema validation
-    if (error.validation) {
-      return reply
-        .status(400)
-        .send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
-    }
-    // Zod validation errors — parse() throws ZodError, not a Fastify validation error
-    if (error instanceof ZodError) {
-      return reply.status(400).send({
-        error: 'VALIDATION_ERROR',
-        message: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
-        statusCode: 400,
+  app.setErrorHandler(
+    (
+      error: Error & { statusCode?: number; code?: string; validation?: unknown },
+      request,
+      reply,
+    ) => {
+      logger.error({ err: error, reqId: request.id }, 'Unhandled error');
+      // Fastify built-in JSON schema validation
+      if (error.validation) {
+        return reply
+          .status(400)
+          .send({ error: 'VALIDATION_ERROR', message: error.message, statusCode: 400 });
+      }
+      // Zod validation errors — parse() throws ZodError, not a Fastify validation error
+      if (error instanceof ZodError) {
+        return reply.status(400).send({
+          error: 'VALIDATION_ERROR',
+          message: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          statusCode: 400,
+        });
+      }
+      const statusCode = error.statusCode ?? 500;
+      return reply.status(statusCode).send({
+        error: error.code ?? 'INTERNAL_ERROR',
+        message: statusCode < 500 ? error.message : 'Internal server error',
+        statusCode,
       });
-    }
-    const statusCode = error.statusCode ?? 500;
-    return reply.status(statusCode).send({
-      error: error.code ?? 'INTERNAL_ERROR',
-      message: statusCode < 500 ? error.message : 'Internal server error',
-      statusCode,
-    });
-  });
+    },
+  );
 
   return app;
 }

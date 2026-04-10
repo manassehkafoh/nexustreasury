@@ -19,7 +19,7 @@ import type { Config } from '@stryker-mutator/core';
 
 const config: Config = {
   // ── Test runner ─────────────────────────────────────────────────────────────
-  testRunner:     'vitest',
+  testRunner: 'vitest',
   testRunnerNodeArgs: ['--experimental-vm-modules'],
 
   // ── Source files to mutate ──────────────────────────────────────────────────
@@ -41,7 +41,7 @@ const config: Config = {
   // ── Mutators ─────────────────────────────────────────────────────────────────
   // Enable all mutators — financial code has no room for skipped checks.
   mutator: {
-    plugins:         [],
+    plugins: [],
     excludedMutations: [
       // String literal mutations in log/error messages are low-value noise
       'StringLiteral',
@@ -51,28 +51,28 @@ const config: Config = {
   // ── Reporters ────────────────────────────────────────────────────────────────
   reporters: ['html', 'json', 'clear-text', 'progress'],
   htmlReporter: { fileName: 'reports/mutation/mutation-report.html' },
-  jsonReporter:  { fileName: 'reports/mutation/mutation-report.json' },
+  jsonReporter: { fileName: 'reports/mutation/mutation-report.json' },
 
   // ── Thresholds ────────────────────────────────────────────────────────────────
   // Kill score < 70% = CI FAILURE (hard gate)
   // Kill score 70-79% = WARNING
   // Kill score ≥ 80% = PASS (Sprint 7 target)
   thresholds: {
-    high:    80,  // 🟢 good
-    low:     70,  // 🟡 warning
-    break:   65,  // 🔴 CI failure
+    high: 80, // 🟢 good
+    low: 70, // 🟡 warning
+    break: 65, // 🔴 CI failure
   },
 
   // ── Timeouts ─────────────────────────────────────────────────────────────────
-  timeoutMS:          10000,  // 10s per mutant (pricing engine is CPU-bound)
-  timeoutFactor:      1.5,
+  timeoutMS: 10000, // 10s per mutant (pricing engine is CPU-bound)
+  timeoutFactor: 1.5,
 
   // ── Concurrency ──────────────────────────────────────────────────────────────
-  concurrency: 4,  // 4 parallel workers
+  concurrency: 4, // 4 parallel workers
 
   // ── Ignore patterns ──────────────────────────────────────────────────────────
-  ignoreStatic: true,  // Skip mutations that can't affect output
-  tempDirName:  'reports/mutation/.stryker-tmp',
+  ignoreStatic: true, // Skip mutations that can't affect output
+  tempDirName: 'reports/mutation/.stryker-tmp',
 };
 
 export default config;

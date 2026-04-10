@@ -271,19 +271,19 @@ generator. Progressive delivery (10% canary → 100%) via Argo Rollouts on each 
 ### Kafka MirrorMaker 2
 
 All `nexus.*` topics are replicated eu-west-1 → us-east-1 with:
+
 - Lag target: < 30 seconds (RPO)
 - Consumer group offset sync: every 60 seconds
 - 3 MirrorMaker replicas for HA
 
 ### SLAs
 
-| Metric | Target |
-|---|---|
-| RPO (data loss on failure) | < 1 minute |
-| RTO (traffic failover time) | < 5 minutes |
-| Health check interval | 30 seconds |
-| Failover threshold | 3 consecutive failures |
-
+| Metric                      | Target                 |
+| --------------------------- | ---------------------- |
+| RPO (data loss on failure)  | < 1 minute             |
+| RTO (traffic failover time) | < 5 minutes            |
+| Health check interval       | 30 seconds             |
+| Failover threshold          | 3 consecutive failures |
 
 ---
 
@@ -328,10 +328,10 @@ NexusTreasury runs in two AWS regions simultaneously using active-active archite
 
 ### RPO / RTO targets
 
-| Metric | Target | Mechanism |
-|---|---|---|
-| RPO (Recovery Point Objective) | < 1 minute | Kafka MirrorMaker 2 lag |
-| RTO (Recovery Time Objective) | < 5 minutes | Route53 health-check failover |
+| Metric                         | Target      | Mechanism                     |
+| ------------------------------ | ----------- | ----------------------------- |
+| RPO (Recovery Point Objective) | < 1 minute  | Kafka MirrorMaker 2 lag       |
+| RTO (Recovery Time Objective)  | < 5 minutes | Route53 health-check failover |
 
 ### Deployment mechanism
 
@@ -357,6 +357,7 @@ infra/kubernetes/
 ### Kafka MirrorMaker 2 details
 
 See `infra/argocd/nexustreasury-multiregion.yaml` — `KafkaMirrorMaker2` Strimzi CRD:
+
 - Replicates: all `nexus.*` topics (trades, positions, risk, settlement, audit)
 - `nexus.security.*` topics replicated with higher-priority connector
 - Consumer group offsets synced every 60 seconds — minimal re-processing on failover

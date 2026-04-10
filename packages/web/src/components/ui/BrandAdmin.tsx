@@ -42,19 +42,29 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 // ── ColorInput ────────────────────────────────────────────────────────────────
 
 function ColorInput({
-  label, value, onChange,
-}: { label: string; value: string; onChange: (v: string) => void }): JSX.Element {
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}): JSX.Element {
   return (
     <div className="flex items-center gap-3">
       <input
         type="color"
         value={value}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>): void => { onChange(e.target.value); }}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>): void => {
+          onChange(e.target.value);
+        }}
         className="w-8 h-8 rounded cursor-pointer border border-[var(--nt-border,#243558)] bg-transparent"
         aria-label={label}
       />
       <div className="flex-1">
-        <div className="text-[10px] text-[var(--nt-muted,#6882A8)] uppercase tracking-wider">{label}</div>
+        <div className="text-[10px] text-[var(--nt-muted,#6882A8)] uppercase tracking-wider">
+          {label}
+        </div>
         <div className="text-xs font-mono text-[var(--nt-text,#EAF0FF)]">{value}</div>
       </div>
     </div>
@@ -64,8 +74,14 @@ function ColorInput({
 // ── FeatureToggle ─────────────────────────────────────────────────────────────
 
 function FeatureToggle({
-  label, checked, onChange,
-}: { label: string; checked: boolean; onChange: (v: boolean) => void }): JSX.Element {
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}): JSX.Element {
   return (
     <label className="flex items-center justify-between cursor-pointer">
       <span className="text-xs text-[var(--nt-text,#EAF0FF)]">{label}</span>
@@ -91,9 +107,9 @@ function FeatureToggle({
 
 export function BrandAdmin(): JSX.Element {
   const { brand, setBrand, loadPreset } = useBrand();
-  const [saving, setSaving]   = useState(false);
-  const [saved,  setSaved]    = useState(false);
-  const [error,  setError]    = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Local draft to allow live preview without persisting
   const [draft, setDraft] = useState<BrandConfig>({ ...brand });
@@ -115,13 +131,15 @@ export function BrandAdmin(): JSX.Element {
   };
 
   const handleSave = async (): Promise<void> => {
-    setSaving(true); setError(null);
+    setSaving(true);
+    setError(null);
     try {
-      const token = typeof window !== 'undefined' ? sessionStorage.getItem('nexus_jwt') ?? '' : '';
+      const token =
+        typeof window !== 'undefined' ? (sessionStorage.getItem('nexus_jwt') ?? '') : '';
       const resp = await fetch('/api/v1/tenant/branding', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body:    JSON.stringify(draft),
+        body: JSON.stringify(draft),
       });
       if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
       setSaved(true);
@@ -135,9 +153,11 @@ export function BrandAdmin(): JSX.Element {
 
   const handleExport = (): void => {
     const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url; a.download = `${draft.id}-brand.json`; a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${draft.id}-brand.json`;
+    a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -158,7 +178,9 @@ export function BrandAdmin(): JSX.Element {
             Export JSON
           </button>
           <button
-            onClick={(): void => { void handleSave(); }}
+            onClick={(): void => {
+              void handleSave();
+            }}
             disabled={saving}
             className="px-4 py-1.5 text-xs rounded font-semibold bg-[var(--nt-accent,#D4A843)] text-[var(--nt-bg-deep,#030C1B)] disabled:opacity-50 transition-opacity"
           >
@@ -197,7 +219,11 @@ export function BrandAdmin(): JSX.Element {
           <input
             type="text"
             value={draft.displayName}
-            onChange={(e): void => { const updated = { ...draft, displayName: e.target.value }; setDraft(updated); setBrand(updated); }}
+            onChange={(e): void => {
+              const updated = { ...draft, displayName: e.target.value };
+              setDraft(updated);
+              setBrand(updated);
+            }}
             className="w-full bg-[var(--nt-bg-elevated,#0C2038)] border border-[var(--nt-border,#243558)] rounded px-3 py-1.5 text-xs text-[var(--nt-text,#EAF0FF)] focus:outline-none focus:border-[var(--nt-accent,#D4A843)]"
           />
         </div>
@@ -205,25 +231,85 @@ export function BrandAdmin(): JSX.Element {
 
       {/* Colors */}
       <Section title="Color Tokens">
-        <ColorInput label="Accent"      value={draft.colors.accent}     onChange={(v): void => updateColor('accent', v)} />
-        <ColorInput label="Accent Light" value={draft.colors.accentLight} onChange={(v): void => updateColor('accentLight', v)} />
-        <ColorInput label="BUY"         value={draft.colors.buy}        onChange={(v): void => updateColor('buy', v)} />
-        <ColorInput label="SELL / Alert" value={draft.colors.sell}      onChange={(v): void => updateColor('sell', v)} />
-        <ColorInput label="Background (Deep)"   value={draft.colors.bgDeep}    onChange={(v): void => updateColor('bgDeep', v)} />
-        <ColorInput label="Background (Surface)" value={draft.colors.bgSurface} onChange={(v): void => updateColor('bgSurface', v)} />
-        <ColorInput label="Text Primary" value={draft.colors.textPrimary} onChange={(v): void => updateColor('textPrimary', v)} />
-        <ColorInput label="Text Muted"  value={draft.colors.textMuted}   onChange={(v): void => updateColor('textMuted', v)} />
-        <ColorInput label="Border"      value={draft.colors.border}      onChange={(v): void => updateColor('border', v)} />
+        <ColorInput
+          label="Accent"
+          value={draft.colors.accent}
+          onChange={(v): void => updateColor('accent', v)}
+        />
+        <ColorInput
+          label="Accent Light"
+          value={draft.colors.accentLight}
+          onChange={(v): void => updateColor('accentLight', v)}
+        />
+        <ColorInput
+          label="BUY"
+          value={draft.colors.buy}
+          onChange={(v): void => updateColor('buy', v)}
+        />
+        <ColorInput
+          label="SELL / Alert"
+          value={draft.colors.sell}
+          onChange={(v): void => updateColor('sell', v)}
+        />
+        <ColorInput
+          label="Background (Deep)"
+          value={draft.colors.bgDeep}
+          onChange={(v): void => updateColor('bgDeep', v)}
+        />
+        <ColorInput
+          label="Background (Surface)"
+          value={draft.colors.bgSurface}
+          onChange={(v): void => updateColor('bgSurface', v)}
+        />
+        <ColorInput
+          label="Text Primary"
+          value={draft.colors.textPrimary}
+          onChange={(v): void => updateColor('textPrimary', v)}
+        />
+        <ColorInput
+          label="Text Muted"
+          value={draft.colors.textMuted}
+          onChange={(v): void => updateColor('textMuted', v)}
+        />
+        <ColorInput
+          label="Border"
+          value={draft.colors.border}
+          onChange={(v): void => updateColor('border', v)}
+        />
       </Section>
 
       {/* Features */}
       <Section title="Feature Flags">
-        <FeatureToggle label="FX eDealing Portal"    checked={draft.features.fxEDealing}     onChange={(v): void => updateFeature('fxEDealing', v)} />
-        <FeatureToggle label="IRRBB Reporting"       checked={draft.features.irrbbReporting} onChange={(v): void => updateFeature('irrbbReporting', v)} />
-        <FeatureToggle label="Collateral Management" checked={draft.features.collateralMgmt} onChange={(v): void => updateFeature('collateralMgmt', v)} />
-        <FeatureToggle label="Islamic Finance"       checked={draft.features.islamicFinance} onChange={(v): void => updateFeature('islamicFinance', v)} />
-        <FeatureToggle label="AI Insights Panel"     checked={draft.features.aiInsights}     onChange={(v): void => updateFeature('aiInsights', v)} />
-        <FeatureToggle label="Market Data Feed"      checked={draft.features.marketData}     onChange={(v): void => updateFeature('marketData', v)} />
+        <FeatureToggle
+          label="FX eDealing Portal"
+          checked={draft.features.fxEDealing}
+          onChange={(v): void => updateFeature('fxEDealing', v)}
+        />
+        <FeatureToggle
+          label="IRRBB Reporting"
+          checked={draft.features.irrbbReporting}
+          onChange={(v): void => updateFeature('irrbbReporting', v)}
+        />
+        <FeatureToggle
+          label="Collateral Management"
+          checked={draft.features.collateralMgmt}
+          onChange={(v): void => updateFeature('collateralMgmt', v)}
+        />
+        <FeatureToggle
+          label="Islamic Finance"
+          checked={draft.features.islamicFinance}
+          onChange={(v): void => updateFeature('islamicFinance', v)}
+        />
+        <FeatureToggle
+          label="AI Insights Panel"
+          checked={draft.features.aiInsights}
+          onChange={(v): void => updateFeature('aiInsights', v)}
+        />
+        <FeatureToggle
+          label="Market Data Feed"
+          checked={draft.features.marketData}
+          onChange={(v): void => updateFeature('marketData', v)}
+        />
       </Section>
 
       {/* Live preview */}
@@ -232,16 +318,34 @@ export function BrandAdmin(): JSX.Element {
           style={{ background: draft.colors.bgSurface, border: `1px solid ${draft.colors.border}` }}
           className="rounded-lg p-4"
         >
-          <div style={{ color: draft.colors.accent, fontFamily: draft.typography.fontDisplay }} className="text-lg font-bold">
+          <div
+            style={{ color: draft.colors.accent, fontFamily: draft.typography.fontDisplay }}
+            className="text-lg font-bold"
+          >
             {draft.displayName}
           </div>
           <div style={{ color: draft.colors.textMuted }} className="text-xs mt-1">
             {draft.tagline}
           </div>
           <div className="flex gap-2 mt-3">
-            <span style={{ background: draft.colors.buy,  color: '#fff' }} className="px-3 py-1 rounded text-xs font-bold">BUY</span>
-            <span style={{ background: draft.colors.sell, color: '#fff' }} className="px-3 py-1 rounded text-xs font-bold">SELL</span>
-            <span style={{ background: draft.colors.accent, color: draft.colors.bgDeep }} className="px-3 py-1 rounded text-xs font-bold">BOOK</span>
+            <span
+              style={{ background: draft.colors.buy, color: '#fff' }}
+              className="px-3 py-1 rounded text-xs font-bold"
+            >
+              BUY
+            </span>
+            <span
+              style={{ background: draft.colors.sell, color: '#fff' }}
+              className="px-3 py-1 rounded text-xs font-bold"
+            >
+              SELL
+            </span>
+            <span
+              style={{ background: draft.colors.accent, color: draft.colors.bgDeep }}
+              className="px-3 py-1 rounded text-xs font-bold"
+            >
+              BOOK
+            </span>
           </div>
         </div>
       </Section>

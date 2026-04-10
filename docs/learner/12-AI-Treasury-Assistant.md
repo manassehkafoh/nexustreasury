@@ -15,20 +15,23 @@ Sprint 11 added three capabilities that move NexusTreasury from a data platform 
 The assistant is powered by **Claude claude-sonnet-4-20250514** (Anthropic) via a RAG (Retrieval-Augmented Generation) pipeline.
 
 **How it works:**
+
 1. User asks: "What is our EUR/USD FX exposure vs last month?"
 2. `QueryClassifier` identifies category: `FX_EXPOSURE`
 3. `ContextBuilder` assembles a structured data snapshot from the treasury database
-4. Grounded prompt sent to Claude: *"Here is today's FX position data. Answer: What is our EUR/USD exposure?"*
+4. Grounded prompt sent to Claude: _"Here is today's FX position data. Answer: What is our EUR/USD exposure?"_
 5. Claude answers using only the provided data — it cannot hallucinate metrics it was not given
 6. `PIIRedactor` strips any IBAN/BIC patterns from the user's input before the API call
 
 **Guardrails:**
+
 - No cross-tenant data: context is scoped to `tenantId`
 - No model training: data is context tokens only, never stored by Anthropic
 - Hallucination resistance: system prompt instructs Claude to say "Insufficient data" rather than invent numbers
 - Graceful degradation: if the API is unavailable, rule-based fallback returns category-appropriate suggestions
 
 **Example questions the assistant handles well:**
+
 - "Which counterparties are above 80% limit utilisation?"
 - "Compare our LCR to the 100% regulatory minimum"
 - "Show me the IRRBB NII sensitivity to a +200bp shock"

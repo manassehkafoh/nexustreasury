@@ -24,4 +24,4 @@ patches:
 
 commonAnnotations:
   deployment.region: us-east-1
-  deployment.primary: "false"
+  deployment.primary: 'false'

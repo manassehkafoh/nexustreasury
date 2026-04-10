@@ -13,13 +13,13 @@
 
 ## Platform Summary
 
-| Metric | Value |
-|---|---|
-| Microservices | 13 (all TypeScript strict, Clean Architecture + DDD) |
-| Unit tests | 502 — 0 failures |
-| E2E integration tests | 31 — 0 failures |
-| Production CVEs | **0** (`pnpm audit --prod`) |
-| QA Score | **9.8 / 10** (April 2026) |
+| Metric                | Value                                                |
+| --------------------- | ---------------------------------------------------- |
+| Microservices         | 13 (all TypeScript strict, Clean Architecture + DDD) |
+| Unit tests            | 502 — 0 failures                                     |
+| E2E integration tests | 31 — 0 failures                                      |
+| Production CVEs       | **0** (`pnpm audit --prod`)                          |
+| QA Score              | **9.8 / 10** (April 2026)                            |
 
 ---
 
@@ -50,20 +50,20 @@ All services publish to and subscribe from Kafka topics using a choreography pat
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Language** | TypeScript 5.4 (strict throughout, no `any` in production paths) |
-| **API Framework** | Fastify 5.8 + OpenAPI 3.1 (auto-generated from specs) |
-| **Frontend** | Next.js 15, React 19, Tailwind CSS 3, Radix UI |
-| **Event Bus** | Apache Kafka 3.7 (exactly-once semantics, KEDA autoscaling) |
-| **Database** | PostgreSQL 16 + TimescaleDB, Row Level Security per tenant |
-| **Cache** | Redis 7 (limit hierarchy, rate snapshots, session store) |
-| **Secrets** | HashiCorp Vault (agent injection in Kubernetes) |
-| **Identity** | Keycloak 24 (OAuth2/OIDC, MFA enforced for risk/compliance) |
-| **Observability** | Prometheus + Grafana + Elasticsearch + Kibana |
-| **Orchestration** | Kubernetes 1.28 + Helm 3 + ArgoCD GitOps |
-| **Build** | pnpm 9 workspaces + Turborepo |
-| **Testing** | Vitest 1.x (unit + E2E + benchmarks) |
+| Layer             | Technology                                                       |
+| ----------------- | ---------------------------------------------------------------- |
+| **Language**      | TypeScript 5.4 (strict throughout, no `any` in production paths) |
+| **API Framework** | Fastify 5.8 + OpenAPI 3.1 (auto-generated from specs)            |
+| **Frontend**      | Next.js 15, React 19, Tailwind CSS 3, Radix UI                   |
+| **Event Bus**     | Apache Kafka 3.7 (exactly-once semantics, KEDA autoscaling)      |
+| **Database**      | PostgreSQL 16 + TimescaleDB, Row Level Security per tenant       |
+| **Cache**         | Redis 7 (limit hierarchy, rate snapshots, session store)         |
+| **Secrets**       | HashiCorp Vault (agent injection in Kubernetes)                  |
+| **Identity**      | Keycloak 24 (OAuth2/OIDC, MFA enforced for risk/compliance)      |
+| **Observability** | Prometheus + Grafana + Elasticsearch + Kibana                    |
+| **Orchestration** | Kubernetes 1.28 + Helm 3 + ArgoCD GitOps                         |
+| **Build**         | pnpm 9 workspaces + Turborepo                                    |
+| **Testing**       | Vitest 1.x (unit + E2E + benchmarks)                             |
 
 ---
 
@@ -107,12 +107,12 @@ See [Developer Onboarding Guide](docs/runbooks/developer-onboarding.md) for full
 
 ## API Documentation
 
-| Format | Location | Live |
-|---|---|---|
-| **REST (OpenAPI 3.1)** | [`docs/api/openapi.yaml`](docs/api/openapi.yaml) | [Postman ↗](https://www.postman.com/manassehkafoh/nexustreasury) |
-| **Events (AsyncAPI 2.0)** | [`docs/api/asyncapi.yaml`](docs/api/asyncapi.yaml) | [Postman ↗](https://www.postman.com/manassehkafoh/nexustreasury) |
-| **Postman Collection** | [`docs/NexusTreasury_API_Collection.postman_collection.json`](docs/NexusTreasury_API_Collection.postman_collection.json) | UID: `24370565-29ab24d8` |
-| **Mock Server** | — | `https://eeed7962-2b7b-495b-b197-03bb48aaae11.mock.pstmn.io` |
+| Format                    | Location                                                                                                                 | Live                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| **REST (OpenAPI 3.1)**    | [`docs/api/openapi.yaml`](docs/api/openapi.yaml)                                                                         | [Postman ↗](https://www.postman.com/manassehkafoh/nexustreasury) |
+| **Events (AsyncAPI 2.0)** | [`docs/api/asyncapi.yaml`](docs/api/asyncapi.yaml)                                                                       | [Postman ↗](https://www.postman.com/manassehkafoh/nexustreasury) |
+| **Postman Collection**    | [`docs/NexusTreasury_API_Collection.postman_collection.json`](docs/NexusTreasury_API_Collection.postman_collection.json) | UID: `24370565-29ab24d8`                                         |
+| **Mock Server**           | —                                                                                                                        | `https://eeed7962-2b7b-495b-b197-03bb48aaae11.mock.pstmn.io`     |
 
 Import both JSON files from `docs/` into Postman for a zero-setup development experience. The mock server returns realistic banking responses — no running infrastructure required.
 
@@ -121,6 +121,7 @@ Import both JSON files from `docs/` into Postman for a zero-setup development ex
 ## Key Capabilities
 
 ### Trading & Pre-Deal
+
 - Book trades across 8 asset classes (FX, Fixed Income, MM, IRD, Equity, Commodity, Repo, Islamic)
 - Synchronous **sanctions screening** — OFAC SDN + HM Treasury + UN Consolidated (P99 < 10ms)
 - In-memory **credit limit pre-deal check** — limit hierarchy with override workflow (P99 < 5ms)
@@ -129,23 +130,27 @@ Import both JSON files from `docs/` into Postman for a zero-setup development ex
 - **IRS** multi-curve NPV with telescoping discount factors (P99 < 5ms)
 
 ### Risk
+
 - **Historical VaR** — 250-day window, 99% CI, √10 scaling, Expected Shortfall (BCBS 352)
 - **Stressed VaR** — 1-year stressed window (2008 GFC + 2020 COVID scenarios)
 - **FRTB SA Capital** — BCBS 457 Sensitivity-Based Method: Δ + Vega + Curvature across 5 risk classes
 - **Book-level Greeks** aggregation, real-time limit breach detection
 
 ### Accounting (IFRS9)
+
 - Automatic classification: FVPL / FVPL_MANDATORY / FVOCI / AMORTISED_COST / FVOCI_EQUITY
 - **ECL** (Expected Credit Loss) — Stage 1/2/3 with ML-injectable PD model interface
 - Double-entry journal engine with IFRS9 account code mapping
 - Islamic finance: Murabaha, Sukuk, Ijara accounting treatment
 
 ### Back Office
+
 - **SWIFT** MT202 / MT103 / MT210 / MX Pain.001 settlement instruction generation
 - **Nostro reconciliation** — camt.053/MT940, exact/reference/amount/date matching, AI break insight
 - **Corporate actions** — coupon payments, principal repayment, swap resets
 
 ### Compliance & Reporting (Basel III/IV)
+
 - **LCR** BCBS 238 Daily Monitoring Report (inflow cap, Level 1/2A/2B HQLA)
 - **NSFR** BCBS 295 Net Stable Funding Ratio
 - **IRRBB** BCBS 368 §12 Supervisory Outlier Test (6 rate shock scenarios)
@@ -157,6 +162,7 @@ Import both JSON files from `docs/` into Postman for a zero-setup development ex
 ## Multi-Tenancy & Branding
 
 NexusTreasury is designed for white-label deployment. Each bank tenant gets:
+
 - PostgreSQL **Row Level Security** isolation
 - Keycloak **realm** with configurable MFA policies
 - **Brand configuration** — colours, fonts, logo (SVG), locale, feature flags

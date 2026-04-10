@@ -44,6 +44,7 @@ it('everything works', () => {
 ## Invariant tests
 
 The `platform-health.test.ts` file in `@nexustreasury/domain` verifies cross-sprint invariants:
+
 - FX CIP: `F = S·exp((r_d−r_f)·T)`
 - Put-call parity within 0.01
 - At-par IRS NPV < 1,000
@@ -72,7 +73,10 @@ All external dependencies (Bloomberg, BERT endpoint, Claude API) are mocked in t
 
 ```typescript
 // Use unreachable URLs in tests to exercise the fallback path
-const assistant = new TreasuryAIAssistant({ apiEndpoint: 'http://localhost:99999/', timeoutMs: 100 });
+const assistant = new TreasuryAIAssistant({
+  apiEndpoint: 'http://localhost:99999/',
+  timeoutMs: 100,
+});
 ```
 
 Never make real HTTP calls in unit or integration tests.

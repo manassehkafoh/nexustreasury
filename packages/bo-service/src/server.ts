@@ -13,7 +13,6 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-
 const PORT = Number(process.env['PORT'] ?? 4005);
 const log = (msg: string): void => {
   process.stdout.write(

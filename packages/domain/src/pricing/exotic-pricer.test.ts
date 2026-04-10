@@ -13,10 +13,10 @@
  */
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { TsExoticPricer }          from './ts-exotic-pricer.js';
-import { WasmExoticPricerPool }    from './wasm-exotic-pricer-pool.js';
-import { BarrierOptionPricer }     from './barrier-option-pricer.js';
-import { BermudanSwaptionPricer }  from './bermudan-swaption-pricer.js';
+import { TsExoticPricer } from './ts-exotic-pricer.js';
+import { WasmExoticPricerPool } from './wasm-exotic-pricer-pool.js';
+import { BarrierOptionPricer } from './barrier-option-pricer.js';
+import { BermudanSwaptionPricer } from './bermudan-swaption-pricer.js';
 import type {
   BarrierOptionInput,
   LookbackOptionInput,
@@ -26,50 +26,50 @@ import type {
 // ── Test fixtures ─────────────────────────────────────────────────────────────
 
 const BASE_BARRIER: BarrierOptionInput = {
-  optionType:    'CALL',
-  barrierType:   'DOWN_AND_OUT',
-  spot:          100,
-  strike:        100,
-  barrier:       90,
-  rebate:        0,
-  timeToExpiry:  1.0,
-  riskFreeRate:  0.05,
+  optionType: 'CALL',
+  barrierType: 'DOWN_AND_OUT',
+  spot: 100,
+  strike: 100,
+  barrier: 90,
+  rebate: 0,
+  timeToExpiry: 1.0,
+  riskFreeRate: 0.05,
   dividendYield: 0.0,
-  volatility:    0.20,
+  volatility: 0.2,
 };
 
 const BASE_LOOKBACK: LookbackOptionInput = {
-  optionType:    'CALL',
-  lookbackType:  'FLOATING',
-  spot:          100,
+  optionType: 'CALL',
+  lookbackType: 'FLOATING',
+  spot: 100,
   runningExtreme: 95,
-  timeToExpiry:  1.0,
-  riskFreeRate:  0.05,
+  timeToExpiry: 1.0,
+  riskFreeRate: 0.05,
   dividendYield: 0.0,
-  volatility:    0.20,
+  volatility: 0.2,
 };
 
 const BASE_BERMUDAN: BermudanSwaptionInput = {
-  swaptionType:    'PAYER',
-  notional:        1_000_000,
-  fixedRate:       0.05,
+  swaptionType: 'PAYER',
+  notional: 1_000_000,
+  fixedRate: 0.05,
   currentSwapRate: 0.055,
   exerciseDates: [
     { timeToExercise: 1.0, remainingTenor: 4.0 },
     { timeToExercise: 2.0, remainingTenor: 3.0 },
     { timeToExercise: 3.0, remainingTenor: 2.0 },
   ],
-  swaptionVol:   0.20,
-  discountRate:  0.05,
-  numPaths:      1_000, // reduced for CI memory
+  swaptionVol: 0.2,
+  discountRate: 0.05,
+  numPaths: 1_000, // reduced for CI memory
 };
 
 // ── Suite 1: IExoticPricer interface contract ─────────────────────────────────
 
 describe('IExoticPricer interface contract', () => {
   const pricers = [
-    { name: 'TsExoticPricer',       pricer: () => new TsExoticPricer()         },
-    { name: 'WasmExoticPricerPool', pricer: () => new WasmExoticPricerPool()   },
+    { name: 'TsExoticPricer', pricer: () => new TsExoticPricer() },
+    { name: 'WasmExoticPricerPool', pricer: () => new WasmExoticPricerPool() },
   ];
 
   pricers.forEach(({ name, pricer: makePricer }) => {
@@ -115,14 +115,14 @@ describe('BarrierOptionPricer — mathematical correctness', () => {
 
   it('DOWN_AND_OUT call: price is less than vanilla call', () => {
     const vanilla = 10.451; // BS(S=100, K=100, T=1, r=0.05, σ=0.20)
-    const result  = pricer.price(BASE_BARRIER);
+    const result = pricer.price(BASE_BARRIER);
     expect(result.price).toBeGreaterThan(0);
     expect(result.price).toBeLessThan(vanilla + 0.5); // barrier ≤ vanilla + tolerance
   });
 
   it('in-out parity: DOWN_AND_IN + DOWN_AND_OUT ≈ vanilla (within 0.05)', () => {
     const doCall = pricer.price({ ...BASE_BARRIER, barrierType: 'DOWN_AND_OUT' });
-    const diCall = pricer.price({ ...BASE_BARRIER, barrierType: 'DOWN_AND_IN'  });
+    const diCall = pricer.price({ ...BASE_BARRIER, barrierType: 'DOWN_AND_IN' });
     // For in-out parity: C_DI + C_DO ≈ C_vanilla
     expect(doCall.price + diCall.price).toBeGreaterThan(0);
   });
@@ -220,7 +220,7 @@ describe('TsExoticPricer — look-back options', () => {
     const r = pricer.priceLookback({
       ...BASE_LOOKBACK,
       lookbackType: 'FIXED',
-      strike:       95,
+      strike: 95,
     });
     expect(r.price).toBeGreaterThan(0);
   });
@@ -243,8 +243,7 @@ describe('BermudanSwaptionPricer — LSM Monte Carlo', () => {
   });
 
   it('receiver swaption is more valuable when currentSwapRate < fixedRate', () => {
-    const r = pricer.price({ ...BASE_BERMUDAN,
-      swaptionType: 'RECEIVER', currentSwapRate: 0.03 });
+    const r = pricer.price({ ...BASE_BERMUDAN, swaptionType: 'RECEIVER', currentSwapRate: 0.03 });
     expect(r.price).toBeGreaterThan(0);
   });
 
@@ -260,7 +259,7 @@ describe('BermudanSwaptionPricer — LSM Monte Carlo', () => {
 
   it('all exercise probabilities are in [0, 1]', () => {
     const r = pricer.price(BASE_BERMUDAN);
-    r.exerciseProbs.forEach(p => {
+    r.exerciseProbs.forEach((p) => {
       expect(p).toBeGreaterThanOrEqual(0);
       expect(p).toBeLessThanOrEqual(1);
     });
@@ -273,8 +272,8 @@ describe('BermudanSwaptionPricer — LSM Monte Carlo', () => {
 
   it('exercise boundary is within exercise date range', () => {
     const r = pricer.price(BASE_BERMUDAN);
-    const minTime = Math.min(...BASE_BERMUDAN.exerciseDates.map(e => e.timeToExercise));
-    const maxTime = Math.max(...BASE_BERMUDAN.exerciseDates.map(e => e.timeToExercise));
+    const minTime = Math.min(...BASE_BERMUDAN.exerciseDates.map((e) => e.timeToExercise));
+    const maxTime = Math.max(...BASE_BERMUDAN.exerciseDates.map((e) => e.timeToExercise));
     expect(r.exerciseBoundary).toBeGreaterThanOrEqual(minTime - 0.01);
     expect(r.exerciseBoundary).toBeLessThanOrEqual(maxTime + 0.01);
   });
@@ -342,7 +341,7 @@ describe('WasmExoticPricerPool — pool management', () => {
     pool.priceBarrier(BASE_BARRIER);
     pool.priceLookback(BASE_LOOKBACK);
     const metrics = pool.instanceMetrics;
-    const total   = metrics.reduce((s, m) => s + m.requestsServed, 0);
+    const total = metrics.reduce((s, m) => s + m.requestsServed, 0);
     expect(total).toBe(2);
   });
 
@@ -388,6 +387,6 @@ describe('P99 latency SLA', () => {
   it('pool priceBarrier under concurrent load returns valid prices', () => {
     const pool = new WasmExoticPricerPool({ poolSize: 4 });
     const results = Array.from({ length: 20 }, () => pool.priceBarrier(BASE_BARRIER));
-    results.forEach(r => expect(r.price).toBeGreaterThanOrEqual(0));
+    results.forEach((r) => expect(r.price).toBeGreaterThanOrEqual(0));
   });
 });

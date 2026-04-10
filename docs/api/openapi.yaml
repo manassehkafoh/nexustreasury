@@ -81,7 +81,7 @@ paths:
               price: 1.0842
               counterpartyId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               bookId: fx-options-desk
-              valueDate: "2026-04-11"
+              valueDate: '2026-04-11'
       responses:
         '201':
           description: Trade booked successfully
@@ -722,7 +722,7 @@ paths:
                 agreementId: csa-550e8400-e29b-41d4
                 netMTM: 1800000
                 currentCollateralPosted: 200000
-                valuationDate: "2026-04-09"
+                valuationDate: '2026-04-09'
       responses:
         '200':
           description: Margin call computed
@@ -760,11 +760,11 @@ paths:
                   items:
                     type: object
                     properties:
-                      id:        { type: string }
+                      id: { type: string }
                       collateralType: { type: string }
                       faceValue: { type: number }
                       marketValue: { type: number }
-                      currency:  { type: string }
+                      currency: { type: string }
       responses:
         '200':
           description: CTD allocation computed
@@ -780,8 +780,8 @@ paths:
                       properties:
                         collateralId: { type: string }
                         adjustedValue: { type: number }
-                        haircut:       { type: number }
-                        currency:      { type: string }
+                        haircut: { type: number }
+                        currency: { type: string }
 
   # ── Notification Service ───────────────────────────────────────────────────
 
@@ -876,11 +876,11 @@ paths:
                     items:
                       type: object
                       properties:
-                        pair:    { type: string, example: EUR/USD }
-                        bid:     { type: number }
-                        ask:     { type: number }
-                        mid:     { type: number }
-                        spread:  { type: number }
+                        pair: { type: string, example: EUR/USD }
+                        bid: { type: number }
+                        ask: { type: number }
+                        mid: { type: number }
+                        spread: { type: number }
 
   /market-data/curves:
     get:
@@ -914,9 +914,9 @@ paths:
                 properties:
                   currency: { type: string }
                   curveType: { type: string }
-                  tenors:    { type: array, items: { type: string } }
-                  rates:     { type: array, items: { type: number } }
-                  asOf:      { type: string, format: date-time }
+                  tenors: { type: array, items: { type: string } }
+                  rates: { type: array, items: { type: number } }
+                  asOf: { type: string, format: date-time }
 
   # ── Risk Limits Management ─────────────────────────────────────────────────
 
@@ -978,9 +978,9 @@ paths:
               required: [requestedAmount, currency, expiresAt, reason]
               properties:
                 requestedAmount: { type: number }
-                currency:        { type: string }
-                expiresAt:       { type: string, format: date-time }
-                reason:          { type: string, maxLength: 500 }
+                currency: { type: string }
+                expiresAt: { type: string, format: date-time }
+                reason: { type: string, maxLength: 500 }
       responses:
         '202':
           description: Override request submitted, pending RISK_MANAGER approval
@@ -1192,7 +1192,11 @@ paths:
               type: object
               properties:
                 name: { type: string }
-                template: { type: string, enum: [BLOTTER, PNL, POSITION, LCR, IRRBB, COLLATERAL, CAPITAL, CUSTOM] }
+                template:
+                  {
+                    type: string,
+                    enum: [BLOTTER, PNL, POSITION, LCR, IRRBB, COLLATERAL, CAPITAL, CUSTOM],
+                  }
                 dimensions: { type: array, items: { type: string } }
                 format: { type: string, enum: [PDF, EXCEL, CSV] }
                 schedule:
@@ -1263,7 +1267,8 @@ paths:
             type: array
             items:
               type: string
-              enum: [position.mtm.updated, limit.utilisation.tick, rate.feed.tick, lcr.intraday.updated]
+              enum:
+                [position.mtm.updated, limit.utilisation.tick, rate.feed.tick, lcr.intraday.updated]
       responses:
         '200':
           description: SSE stream (text/event-stream)
@@ -1299,11 +1304,31 @@ components:
   schemas:
     BookTradeRequest:
       type: object
-      required: [assetClass, instrumentType, direction, notional, currency, counterpartyId, bookId, valueDate]
+      required:
+        [
+          assetClass,
+          instrumentType,
+          direction,
+          notional,
+          currency,
+          counterpartyId,
+          bookId,
+          valueDate,
+        ]
       properties:
         assetClass:
           type: string
-          enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE, EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE]
+          enum:
+            [
+              FX,
+              FIXED_INCOME,
+              MONEY_MARKET,
+              INTEREST_RATE_DERIVATIVE,
+              EQUITY,
+              COMMODITY,
+              REPO,
+              ISLAMIC_FINANCE,
+            ]
         instrumentType:
           type: string
           description: e.g. SPOT, FORWARD, OPTION, BOND, IRS, DEPOSIT
@@ -1380,7 +1405,11 @@ components:
           type: array
           items:
             type: string
-          example: ["Credit limit breach: headroom $0 on counterparty CITI", "Sanctions MATCH: entity on OFAC SDN list"]
+          example:
+            [
+              'Credit limit breach: headroom $0 on counterparty CITI',
+              'Sanctions MATCH: entity on OFAC SDN list',
+            ]
         utilisationPct:
           type: number
         headroomAmount:
@@ -1530,7 +1559,16 @@ components:
 
     SSIInput:
       type: object
-      required: [counterpartyId, currency, instrumentType, method, beneficiaryBank, beneficiaryAccount, beneficiaryName]
+      required:
+        [
+          counterpartyId,
+          currency,
+          instrumentType,
+          method,
+          beneficiaryBank,
+          beneficiaryAccount,
+          beneficiaryName,
+        ]
       properties:
         counterpartyId:
           type: string
@@ -1638,7 +1676,7 @@ components:
             properties:
               accountCode:
                 type: string
-                example: "1300"
+                example: '1300'
               accountName:
                 type: string
               direction:
@@ -1736,7 +1774,19 @@ components:
 
     HedgeTestInput:
       type: object
-      required: [hedgeId, hedgeType, hedgedItemId, hedgingInstrumentId, notional, currency, effectivenessMethod, designationDate, instrumentFVChange, hedgedItemFVChange]
+      required:
+        [
+          hedgeId,
+          hedgeType,
+          hedgedItemId,
+          hedgingInstrumentId,
+          notional,
+          currency,
+          effectivenessMethod,
+          designationDate,
+          instrumentFVChange,
+          hedgedItemFVChange,
+        ]
       properties:
         hedgeId:
           type: string
@@ -1787,7 +1837,19 @@ components:
           type: string
         category:
           type: string
-          enum: [TRADE, POSITION, RISK, ACCOUNTING, SETTLEMENT, SECURITY, PLATFORM, MARKET_DATA, ALM, COMPLIANCE]
+          enum:
+            [
+              TRADE,
+              POSITION,
+              RISK,
+              ACCOUNTING,
+              SETTLEMENT,
+              SECURITY,
+              PLATFORM,
+              MARKET_DATA,
+              ALM,
+              COMPLIANCE,
+            ]
         severity:
           type: string
           enum: [INFO, WARNING, CRITICAL]
@@ -1892,45 +1954,44 @@ components:
           items:
             type: object
 
-
     CollateralAgreement:
       type: object
       properties:
-        id:              { type: string, format: uuid }
-        tenantId:        { type: string }
-        counterpartyId:  { type: string, format: uuid }
-        agreementType:   { type: string, enum: [ISDA_CSA, GMRA, GMSLA] }
-        threshold:       { type: number }
-        mta:             { type: number, description: Minimum Transfer Amount }
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        counterpartyId: { type: string, format: uuid }
+        agreementType: { type: string, enum: [ISDA_CSA, GMRA, GMSLA] }
+        threshold: { type: number }
+        mta: { type: number, description: Minimum Transfer Amount }
         independentAmount: { type: number }
-        currency:        { type: string }
-        active:          { type: boolean }
+        currency: { type: string }
+        active: { type: boolean }
 
     MarginCallResult:
       type: object
       properties:
-        agreementId:  { type: string }
-        direction:    { type: string, enum: [WE_CALL, THEY_CALL, NO_CALL] }
-        callAmount:   { type: number }
-        currency:     { type: string }
-        valueDate:    { type: string, format: date }
-        threshold:    { type: number }
+        agreementId: { type: string }
+        direction: { type: string, enum: [WE_CALL, THEY_CALL, NO_CALL] }
+        callAmount: { type: number }
+        currency: { type: string }
+        valueDate: { type: string, format: date }
+        threshold: { type: number }
         currentCollateral: { type: number }
-        netMTM:       { type: number }
+        netMTM: { type: number }
 
     NotificationRule:
       type: object
       properties:
-        id:           { type: string }
-        eventTopic:   { type: string }
+        id: { type: string }
+        eventTopic: { type: string }
         channels:
           type: array
           items:
             type: string
             enum: [EMAIL, WEBSOCKET, WEBHOOK]
-        priority:     { type: string, enum: [high, normal, low] }
-        recipients:   { type: array, items: { type: string } }
-        enabled:      { type: boolean }
+        priority: { type: string, enum: [high, normal, low] }
+        recipients: { type: array, items: { type: string } }
+        enabled: { type: boolean }
 
     NotificationRuleInput:
       type: object
@@ -1940,28 +2001,37 @@ components:
         channels:
           type: array
           items: { type: string, enum: [EMAIL, WEBSOCKET, WEBHOOK] }
-        priority:   { type: string, enum: [high, normal, low] }
+        priority: { type: string, enum: [high, normal, low] }
         recipients: { type: array, items: { type: string, format: email } }
-        enabled:    { type: boolean, default: true }
+        enabled: { type: boolean, default: true }
 
     RiskLimit:
       type: object
       properties:
-        id:           { type: string }
-        tenantId:     { type: string }
-        limitType:    { type: string, enum: [CREDIT, MARKET, CONCENTRATION, LIQUIDITY] }
+        id: { type: string }
+        tenantId: { type: string }
+        limitType: { type: string, enum: [CREDIT, MARKET, CONCENTRATION, LIQUIDITY] }
         counterpartyId: { type: string, format: uuid }
-        hardLimit:    { type: number }
-        softLimit:    { type: number }
-        currency:     { type: string }
+        hardLimit: { type: number }
+        softLimit: { type: number }
+        currency: { type: string }
         utilisationPct: { type: number }
         currentExposure: { type: number }
-        headroom:     { type: number }
-        active:       { type: boolean }
+        headroom: { type: number }
+        active: { type: boolean }
 
     IRRBBReportInput:
       type: object
-      required: [tenantId, reportDate, currency, tier1Capital, eveDeltas, niiSensitivity200Up, niiSensitivity200Down]
+      required:
+        [
+          tenantId,
+          reportDate,
+          currency,
+          tier1Capital,
+          eveDeltas,
+          niiSensitivity200Up,
+          niiSensitivity200Down,
+        ]
       properties:
         tenantId:
           type: string

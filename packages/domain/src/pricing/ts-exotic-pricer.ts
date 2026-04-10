@@ -43,7 +43,7 @@ import type {
  * Production deployments swap this out for WasmExoticPricerPool.
  */
 export class TsExoticPricer implements IExoticPricer {
-  private readonly _barrierPricer  = new BarrierOptionPricer();
+  private readonly _barrierPricer = new BarrierOptionPricer();
   private readonly _bermudanPricer = new BermudanSwaptionPricer();
 
   /**
@@ -64,22 +64,32 @@ export class TsExoticPricer implements IExoticPricer {
    */
   priceLookback(input: LookbackOptionInput): LookbackOptionResult {
     const t0 = performance.now();
-    const { optionType, spot: S, riskFreeRate: r,
-            dividendYield: q, volatility: sigma,
-            timeToExpiry: T, runningExtreme } = input;
+    const {
+      optionType,
+      spot: S,
+      riskFreeRate: r,
+      dividendYield: q,
+      volatility: sigma,
+      timeToExpiry: T,
+      runningExtreme,
+    } = input;
 
     if (T <= 0) {
-      const price = optionType === 'CALL'
-        ? Math.max(0, S - runningExtreme)
-        : Math.max(0, runningExtreme - S);
-      return { price, delta: optionType === 'CALL' ? 1 : -1, algorithm: 'CV_1991_ANALYTICAL', processingMs: performance.now() - t0 };
+      const price =
+        optionType === 'CALL' ? Math.max(0, S - runningExtreme) : Math.max(0, runningExtreme - S);
+      return {
+        price,
+        delta: optionType === 'CALL' ? 1 : -1,
+        algorithm: 'CV_1991_ANALYTICAL',
+        processingMs: performance.now() - t0,
+      };
     }
 
     const sqrtT = Math.sqrt(T);
-    const dfR   = Math.exp(-r  * T);
-    const dfQ   = Math.exp(-q  * T);
-    const m     = runningExtreme; // running min (call) or max (put)
-    const b     = 2 * (r - q) / (sigma * sigma);
+    const dfR = Math.exp(-r * T);
+    const dfQ = Math.exp(-q * T);
+    const m = runningExtreme; // running min (call) or max (put)
+    const b = (2 * (r - q)) / (sigma * sigma);
 
     // Conze-Viswanathan (1991) formulas for floating look-back
     let price: number;
@@ -98,7 +108,8 @@ export class TsExoticPricer implements IExoticPricer {
           price = S * dfQ * (normCDF(a1) + sigma * sqrtT * (normCDF(-a1) + a1 * (normCDF(a1) - 1)));
           price -= m * dfR * normCDF(a2);
         } else {
-          const adjustment = (sigma * sigma / (2 * (r - q))) *
+          const adjustment =
+            ((sigma * sigma) / (2 * (r - q))) *
             (S * dfQ * normCDF(a1) - m * dfR * Math.pow(S / m, -b) * normCDF(a3));
           price = S * dfQ * normCDF(a1) - m * dfR * normCDF(a2) + adjustment;
         }
@@ -110,9 +121,10 @@ export class TsExoticPricer implements IExoticPricer {
         const a3 = (Math.log(m / S) + (-r + q + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
 
         if (Math.abs(r - q) < 1e-8) {
-          price = m * dfR * normCDF(a1) - S * dfQ * (1 - sigma * sqrtT * (normCDF(-a2)));
+          price = m * dfR * normCDF(a1) - S * dfQ * (1 - sigma * sqrtT * normCDF(-a2));
         } else {
-          const adjustment = (sigma * sigma / (2 * (r - q))) *
+          const adjustment =
+            ((sigma * sigma) / (2 * (r - q))) *
             (-S * dfQ * normCDF(-a1) + m * dfR * Math.pow(m / S, b) * normCDF(-a3));
           price = m * dfR * normCDF(a1) - S * dfQ * normCDF(-a2) + adjustment;
         }
@@ -123,14 +135,15 @@ export class TsExoticPricer implements IExoticPricer {
       const K = input.strike ?? m;
       const d1 = (Math.log(S / K) + (r - q + 0.5 * sigma * sigma) * T) / (sigma * sqrtT);
       const d2 = d1 - sigma * sqrtT;
-      price = optionType === 'CALL'
-        ? S * dfQ * normCDF(d1) - K * dfR * normCDF(d2)
-        : K * dfR * normCDF(-d2) - S * dfQ * normCDF(-d1);
+      price =
+        optionType === 'CALL'
+          ? S * dfQ * normCDF(d1) - K * dfR * normCDF(d2)
+          : K * dfR * normCDF(-d2) - S * dfQ * normCDF(-d1);
       delta = optionType === 'CALL' ? dfQ * normCDF(d1) : -dfQ * normCDF(-d1);
     }
 
     return {
-      price:  Math.max(0, price),
+      price: Math.max(0, price),
       delta,
       algorithm: 'CV_1991_ANALYTICAL',
       processingMs: performance.now() - t0,
@@ -147,11 +160,11 @@ export class TsExoticPricer implements IExoticPricer {
 
   getPoolStatus(): PricerPoolStatus {
     return {
-      poolSize:           1,
+      poolSize: 1,
       availableInstances: 1,
-      busyInstances:      0,
+      busyInstances: 0,
       implementationType: 'TYPESCRIPT',
-      warmUpComplete:     true,
+      warmUpComplete: true,
     };
   }
 }

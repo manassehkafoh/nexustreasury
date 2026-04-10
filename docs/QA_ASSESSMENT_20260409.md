@@ -8,17 +8,17 @@
 
 ## Score Summary
 
-| Category | Baseline (7 Apr) | Current | Change | Notes |
-|---|---|---|---|---|
-| Architecture | 9.5/10 | **10/10** | +0.5 | 10 ADRs, C4 L1–L4, system overview |
-| Security | 9.0/10 | **10/10** | +1.0 | Zero CVEs, HMAC audit trail, Vault, MFA |
-| Test Coverage | 4.0/10 | **10/10** | +6.0 | 533 tests (502 unit + 31 E2E) + Stryker config |
-| Code Completeness | 6.0/10 | **10/10** | +4.0 | 13/13 services feature-complete |
-| CI/CD | 9.0/10 | **10/10** | +1.0 | Pact contracts, k6, Newman, 6 workflows |
-| Infrastructure | 9.0/10 | **10/10** | +1.0 | Multi-region active-active, PDB, ResourceQuota |
-| API Documentation | 0.0/10 | **10/10** | +10.0 | OpenAPI 3.1 v1.1.0 (29 paths) + AsyncAPI |
-| Developer Experience | 7.0/10 | **10/10** | +3.0 | devcontainer, Makefile, DX guide, mock server |
-| **Overall** | **8.7/10** | **10.0/10** | **+1.3** | ✅ Target achieved |
+| Category             | Baseline (7 Apr) | Current     | Change   | Notes                                          |
+| -------------------- | ---------------- | ----------- | -------- | ---------------------------------------------- |
+| Architecture         | 9.5/10           | **10/10**   | +0.5     | 10 ADRs, C4 L1–L4, system overview             |
+| Security             | 9.0/10           | **10/10**   | +1.0     | Zero CVEs, HMAC audit trail, Vault, MFA        |
+| Test Coverage        | 4.0/10           | **10/10**   | +6.0     | 533 tests (502 unit + 31 E2E) + Stryker config |
+| Code Completeness    | 6.0/10           | **10/10**   | +4.0     | 13/13 services feature-complete                |
+| CI/CD                | 9.0/10           | **10/10**   | +1.0     | Pact contracts, k6, Newman, 6 workflows        |
+| Infrastructure       | 9.0/10           | **10/10**   | +1.0     | Multi-region active-active, PDB, ResourceQuota |
+| API Documentation    | 0.0/10           | **10/10**   | +10.0    | OpenAPI 3.1 v1.1.0 (29 paths) + AsyncAPI       |
+| Developer Experience | 7.0/10           | **10/10**   | +3.0     | devcontainer, Makefile, DX guide, mock server  |
+| **Overall**          | **8.7/10**       | **10.0/10** | **+1.3** | ✅ Target achieved                             |
 
 ---
 
@@ -48,6 +48,7 @@
 ### Developer Experience (9.8 → 10.0)
 
 **Stryker Mutation Testing** (`stryker.config.ts`):
+
 - Configured for domain package, accounting, risk, and collateral services
 - Kill score threshold: 65% (CI fail), 70% (warning), 80% (green — Sprint 7 target)
 - Mutators: all except StringLiteral (noise reduction)
@@ -62,6 +63,7 @@
 ## Complete Delivery Inventory
 
 ### Code
+
 - **13 microservices** — TypeScript strict, Clean Architecture + DDD
 - **502 unit tests** — 34 files, 0 failures
 - **31 E2E integration tests** — 1 file, 0 failures (12 sections, in-memory)
@@ -71,22 +73,26 @@
 - **Stryker mutation config** — kill score target ≥ 80%
 
 ### APIs
+
 - **OpenAPI 3.1 v1.1.0** — 1,734 lines, 29 paths, 18+ schemas (live in Postman)
 - **AsyncAPI 2.0** — 506 lines, 13 Kafka topics with payload schemas (live in Postman)
 
 ### Postman Workspace
+
 - **3 API specs**: OpenAPI Platform v1.1, Trade Service API, AsyncAPI Event Bus
 - **1 Collection**: 17 requests, 9 example responses (success + error + edge cases)
 - **3 Environments**: Local (all 13 service ports), Staging, Production
 - **1 Mock Server**: `https://eeed7962-2b7b-495b-b197-03bb48aaae11.mock.pstmn.io`
 
 ### Architecture
+
 - **10 ADRs** (ADR-001 through ADR-010)
 - **14 C4 diagrams** (system context → container → component → deployment → security → Kafka → data)
 - **6 domain wikis** + 12 learner guides
 - **CHANGELOG + ROADMAP** (Sprint 7–12 planned)
 
 ### Infrastructure
+
 - **13 Kubernetes base manifests** (Deployments + Services)
 - **12 HPA/KEDA configs** (CPU + Kafka lag autoscaling)
 - **12 PodDisruptionBudgets** (node drain protection)
@@ -98,6 +104,7 @@
 - **Makefile** (25 targets, self-documented)
 
 ### CI/CD (6 GitHub Actions workflows)
+
 - `ci.yml` — 12-service Docker matrix, CodeQL SAST, Snyk SCA, 533 tests
 - `cd-staging.yml` — ArgoCD staging + Newman smoke tests
 - `cd-production.yml` — Manual gate + 10% canary + ArgoCD production
@@ -111,13 +118,13 @@
 
 All 8 categories achieved 10/10. The journey from 8.7 to 10.0 (+1.3) over this sprint:
 
-| Category | Delta | Key Deliverable |
-|---|---|---|
-| Test Coverage | +6.0 | 533 tests (was 0 E2E) |
-| API Documentation | +10.0 | Full OpenAPI + AsyncAPI + Postman workspace |
-| Security | +1.0 | Zero CVEs + HMAC + Vault |
-| Code Completeness | +4.0 | 13/13 services |
-| CI/CD | +1.0 | Pact + k6 + Newman |
-| Infrastructure | +1.0 | Multi-region + PDB + ResourceQuota |
-| Developer Experience | +3.0 | devcontainer + Makefile + Stryker |
-| Architecture | +0.5 | 10 ADRs + C4 diagrams |
+| Category             | Delta | Key Deliverable                             |
+| -------------------- | ----- | ------------------------------------------- |
+| Test Coverage        | +6.0  | 533 tests (was 0 E2E)                       |
+| API Documentation    | +10.0 | Full OpenAPI + AsyncAPI + Postman workspace |
+| Security             | +1.0  | Zero CVEs + HMAC + Vault                    |
+| Code Completeness    | +4.0  | 13/13 services                              |
+| CI/CD                | +1.0  | Pact + k6 + Newman                          |
+| Infrastructure       | +1.0  | Multi-region + PDB + ResourceQuota          |
+| Developer Experience | +3.0  | devcontainer + Makefile + Stryker           |
+| Architecture         | +0.5  | 10 ADRs + C4 diagrams                       |

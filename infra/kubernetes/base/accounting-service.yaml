@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: accounting-service
   namespace: nexustreasury
-  labels: { app: accounting-service, sprint: "2" }
+  labels: { app: accounting-service, sprint: '2' }
 spec:
   replicas: 2
   selector:
@@ -12,9 +12,9 @@ spec:
     metadata:
       labels: { app: accounting-service }
       annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9090"
-        vault.hashicorp.com/agent-inject: "true"
+        prometheus.io/scrape: 'true'
+        prometheus.io/port: '9090'
+        vault.hashicorp.com/agent-inject: 'true'
     spec:
       serviceAccountName: nexustreasury-workload
       securityContext: { runAsNonRoot: true, runAsUser: 1000 }
@@ -24,7 +24,7 @@ spec:
           ports: [{ containerPort: 4007 }, { containerPort: 9090, name: metrics }]
           env:
             - { name: NODE_ENV, value: production }
-            - { name: PORT, value: "4007" }
+            - { name: PORT, value: '4007' }
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef: { name: nexustreasury-db, key: url }
@@ -33,9 +33,10 @@ spec:
                 secretKeyRef: { name: nexustreasury-kafka, key: brokers }
           resources:
             requests: { cpu: 200m, memory: 512Mi }
-            limits:   { cpu: 1000m, memory: 1Gi }
-          livenessProbe:  { httpGet: { path: /live,  port: 4007 }, initialDelaySeconds: 15 }
-          readinessProbe: { httpGet: { path: /ready, port: 4007 }, initialDelaySeconds: 20, failureThreshold: 3 }
+            limits: { cpu: 1000m, memory: 1Gi }
+          livenessProbe: { httpGet: { path: /live, port: 4007 }, initialDelaySeconds: 15 }
+          readinessProbe:
+            { httpGet: { path: /ready, port: 4007 }, initialDelaySeconds: 20, failureThreshold: 3 }
           securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true }
 ---
 apiVersion: v1

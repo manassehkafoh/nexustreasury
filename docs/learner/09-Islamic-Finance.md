@@ -2,7 +2,7 @@
 
 ## What makes Islamic finance different?
 
-Conventional treasury instruments earn return through interest (*riba*). Islamic finance prohibits *riba* entirely. Instead, return is generated through **profit-sharing, lease income, or cost-plus-profit arrangements**, all backed by real economic activity or assets.
+Conventional treasury instruments earn return through interest (_riba_). Islamic finance prohibits _riba_ entirely. Instead, return is generated through **profit-sharing, lease income, or cost-plus-profit arrangements**, all backed by real economic activity or assets.
 
 NexusTreasury implements the two most common structures used by Gulf, Malaysian, and African Islamic banks.
 
@@ -23,6 +23,7 @@ At maturity: bank buys back asset at agreed purchase price
 The `SukukPricer` prices the cash flow stream identically to a conventional bond, but labels the return as `profitRate` not `yield`, and references AAOIFI FAS 28.
 
 **Key formula:**
+
 ```
 P = Σ (rental_i × e^(-r·tᵢ)) + FaceValue × e^(-r·T)
 ```
@@ -48,18 +49,18 @@ AAOIFI Standard 17 requires **simple profit, no compounding**.
 
 ## IFRS9 classification
 
-| Instrument | IFRS9 | Reason |
-|---|---|---|
-| Murabaha | Amortised Cost | Fixed cash flows, held-to-collect |
-| Ijara Sukuk | FVOCI | Held for both collecting and selling |
-| Mudaraba | FVPL | Equity-like profit/loss sharing |
+| Instrument  | IFRS9          | Reason                               |
+| ----------- | -------------- | ------------------------------------ |
+| Murabaha    | Amortised Cost | Fixed cash flows, held-to-collect    |
+| Ijara Sukuk | FVOCI          | Held for both collecting and selling |
+| Mudaraba    | FVPL           | Equity-like profit/loss sharing      |
 
 Stage assignment uses **Days Past Profit (DPP)** — the Islamic equivalent of DPD:
 
-| DPP | Stage | ECL horizon |
-|---|---|---|
-| 0–29 | Stage 1 | 12-month PD |
-| 30–89 | Stage 2 | Lifetime PD |
+| DPP                    | Stage   | ECL horizon |
+| ---------------------- | ------- | ----------- |
+| 0–29                   | Stage 1 | 12-month PD |
+| 30–89                  | Stage 2 | Lifetime PD |
 | ≥ 90 or non-performing | Stage 3 | Lifetime PD |
 
 ---

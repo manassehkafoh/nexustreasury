@@ -6,25 +6,43 @@ import { describe, it, expect } from 'vitest';
 import { RAROCEngine, RAROCDimension, type RAROCInput } from './raroc-engine.js';
 
 const FX_BU: RAROCInput = {
-  entityId: 'FX_TRADING', dimension: RAROCDimension.BUSINESS_UNIT,
-  period: 'FY-2027', currency: 'USD',
-  grossRevenue: 5_000_000, directCosts: 1_200_000,
-  ftpCharge: 300_000, ftpCredit: 100_000,
-  expectedLoss: 50_000, rwa: 80_000_000, capitalAllocated: 8_000_000,
+  entityId: 'FX_TRADING',
+  dimension: RAROCDimension.BUSINESS_UNIT,
+  period: 'FY-2027',
+  currency: 'USD',
+  grossRevenue: 5_000_000,
+  directCosts: 1_200_000,
+  ftpCharge: 300_000,
+  ftpCredit: 100_000,
+  expectedLoss: 50_000,
+  rwa: 80_000_000,
+  capitalAllocated: 8_000_000,
 };
 const RETAIL_BU: RAROCInput = {
-  entityId: 'RETAIL', dimension: RAROCDimension.BUSINESS_UNIT,
-  period: 'FY-2027', currency: 'USD',
-  grossRevenue: 12_000_000, directCosts: 4_000_000,
-  ftpCharge: 600_000, ftpCredit: 200_000,
-  expectedLoss: 400_000, rwa: 200_000_000, capitalAllocated: 20_000_000,
+  entityId: 'RETAIL',
+  dimension: RAROCDimension.BUSINESS_UNIT,
+  period: 'FY-2027',
+  currency: 'USD',
+  grossRevenue: 12_000_000,
+  directCosts: 4_000_000,
+  ftpCharge: 600_000,
+  ftpCredit: 200_000,
+  expectedLoss: 400_000,
+  rwa: 200_000_000,
+  capitalAllocated: 20_000_000,
 };
 const LOW_RAROC: RAROCInput = {
-  entityId: 'BAD_DESK', dimension: RAROCDimension.BUSINESS_UNIT,
-  period: 'FY-2027', currency: 'USD',
-  grossRevenue: 500_000, directCosts: 450_000,
-  ftpCharge: 100_000, ftpCredit: 0,
-  expectedLoss: 200_000, rwa: 20_000_000, capitalAllocated: 2_000_000,
+  entityId: 'BAD_DESK',
+  dimension: RAROCDimension.BUSINESS_UNIT,
+  period: 'FY-2027',
+  currency: 'USD',
+  grossRevenue: 500_000,
+  directCosts: 450_000,
+  ftpCharge: 100_000,
+  ftpCredit: 0,
+  expectedLoss: 200_000,
+  rwa: 20_000_000,
+  capitalAllocated: 2_000_000,
 };
 
 describe('RAROCEngine — Sprint 9-B (FIS BSM profitability gap closure)', () => {
@@ -104,11 +122,15 @@ describe('RAROCEngine — Sprint 9-B (FIS BSM profitability gap closure)', () =>
 
   it('underperformers are all below hurdle', () => {
     const rpt = engine.generateReport([FX_BU, RETAIL_BU, LOW_RAROC]);
-    rpt.underperformers.forEach(u => expect(u.isAboveHurdle).toBe(false));
+    rpt.underperformers.forEach((u) => expect(u.isAboveHurdle).toBe(false));
   });
 
   it('customer dimension RAROC works correctly', () => {
-    const customerInput: RAROCInput = { ...FX_BU, entityId: 'CUST-001', dimension: RAROCDimension.CUSTOMER };
+    const customerInput: RAROCInput = {
+      ...FX_BU,
+      entityId: 'CUST-001',
+      dimension: RAROCDimension.CUSTOMER,
+    };
     const r = engine.calculate(customerInput);
     expect(r.dimension).toBe(RAROCDimension.CUSTOMER);
     expect(r.raroc).toBeGreaterThan(0);

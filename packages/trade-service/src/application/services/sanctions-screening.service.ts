@@ -59,16 +59,16 @@
 /** Possible outcomes from a sanctions screen. */
 export enum SanctionsResult {
   /** No match found on any list — safe to proceed. */
-  CLEAR           = 'CLEAR',
+  CLEAR = 'CLEAR',
   /** Exact or near-exact match on a sanctions list — trade MUST be blocked. */
-  MATCH           = 'MATCH',
+  MATCH = 'MATCH',
   /**
    * Partial match requiring manual review before proceeding.
    * The trade is held in a pending queue with a 4-hour SLA for compliance review.
    */
   POTENTIAL_MATCH = 'POTENTIAL_MATCH',
   /** Provider unavailable — fallback behaviour is configured per risk appetite. */
-  ERROR           = 'ERROR',
+  ERROR = 'ERROR',
 }
 
 /** Input for a single screening request. */
@@ -76,51 +76,51 @@ export interface ScreeningInput {
   /** Internal counterparty UUID */
   readonly counterpartyId: string;
   /** Full legal name of the entity */
-  readonly legalName:      string;
+  readonly legalName: string;
   /** Legal Entity Identifier (20-char ISO 17442) — optional but improves accuracy */
-  readonly lei?:           string;
+  readonly lei?: string;
   /** SWIFT BIC code — optional cross-reference */
-  readonly bic?:           string;
+  readonly bic?: string;
   /** Registered country (ISO 3166-1 alpha-2) — optional */
-  readonly country?:       string;
+  readonly country?: string;
 }
 
 /** Result of a single screening request. */
 export interface ScreeningResult {
   /** Screening decision */
-  readonly status:            SanctionsResult;
+  readonly status: SanctionsResult;
   /** UTC timestamp of when the screening was performed */
-  readonly screenedAt:        Date;
+  readonly screenedAt: Date;
   /** Name of the sanctions list that produced a match (empty if CLEAR) */
-  readonly listName:          string;
+  readonly listName: string;
   /** Match confidence score [0,1] — 1.0 = exact match */
-  readonly matchScore:        number;
+  readonly matchScore: number;
   /** AI-computed entity risk score [0,1] — advisory, not a list match */
-  readonly aiRiskScore:       number;
+  readonly aiRiskScore: number;
   /** Human-readable reason for non-CLEAR results */
-  readonly reason:            string;
+  readonly reason: string;
   /** Whether screening was bypassed (e.g. disabled in config) */
   readonly screeningBypassed: boolean;
   /** All individual matches found (empty for CLEAR) */
-  readonly matches:           ReadonlyArray<SanctionsMatch>;
+  readonly matches: ReadonlyArray<SanctionsMatch>;
   /** The counterparty ID screened */
-  readonly counterpartyId:    string;
+  readonly counterpartyId: string;
   /** Unique ID for this screening event (for audit log correlation) */
-  readonly screeningEventId:  string;
+  readonly screeningEventId: string;
 }
 
 /** A single match record from a sanctions list. */
 export interface SanctionsMatch {
   /** Name on the sanctions list */
-  readonly listedName:    string;
+  readonly listedName: string;
   /** Sanctions list name */
-  readonly listName:      string;
+  readonly listName: string;
   /** Confidence of the match [0,1] */
-  readonly score:         number;
+  readonly score: number;
   /** Entry identifier on the list */
-  readonly listEntryId:   string;
+  readonly listEntryId: string;
   /** Match method (EXACT, FUZZY, AI, LEI, BIC) */
-  readonly matchMethod:   string;
+  readonly matchMethod: string;
 }
 
 /**
@@ -129,12 +129,12 @@ export interface SanctionsMatch {
  */
 export interface SanctionsConfig {
   /** Master on/off switch (default: true — DO NOT disable in production). */
-  readonly enabled:             boolean;
+  readonly enabled: boolean;
   /**
    * If true, throw `SanctionsMatchError` on MATCH/POTENTIAL_MATCH.
    * If false (default), return the result for the caller to handle.
    */
-  readonly throwOnMatch:        boolean;
+  readonly throwOnMatch: boolean;
   /**
    * Minimum fuzzy match score [0,1] to trigger POTENTIAL_MATCH.
    * Default: 0.85 — balances false-positive rate vs. compliance exposure.
@@ -146,12 +146,12 @@ export interface SanctionsConfig {
    * Providers run in parallel. First provider to return MATCH wins.
    * Available: 'OFAC_SDN', 'HMT', 'UN', 'EU', 'WORLD_CHECK', 'INTERNAL_TEST'
    */
-  readonly providers:           ReadonlyArray<string>;
+  readonly providers: ReadonlyArray<string>;
   /**
    * Enable AI-enhanced risk scoring alongside list matching.
    * Adds ~5ms to screening time but catches entity structures not on lists.
    */
-  readonly aiEnhancedMatching:  boolean;
+  readonly aiEnhancedMatching: boolean;
 }
 
 // ── Internal: Test Sanctions List ─────────────────────────────────────────────
@@ -163,7 +163,7 @@ export interface SanctionsConfig {
  */
 const INTERNAL_TEST_LIST: ReadonlyArray<{ name: string; listEntryId: string }> = [
   { name: '__TEST_SANCTIONED_ENTITY__', listEntryId: 'TEST-001' },
-  { name: '__TEST_HIGH_RISK_ENTITY__',  listEntryId: 'TEST-002' },
+  { name: '__TEST_HIGH_RISK_ENTITY__', listEntryId: 'TEST-002' },
 ];
 
 /**
@@ -171,9 +171,17 @@ const INTERNAL_TEST_LIST: ReadonlyArray<{ name: string; listEntryId: string }> =
  * used by the AI risk scorer to calibrate the baseline (low-risk anchor).
  */
 const KNOWN_LOW_RISK_ENTITIES = new Set([
-  'HSBC', 'STANDARD CHARTERED', 'BARCLAYS', 'DEUTSCHE BANK',
-  'BNP PARIBAS', 'JPMORGAN', 'CITIBANK', 'WELLS FARGO',
-  'BANK OF AMERICA', 'GOLDMAN SACHS', 'MORGAN STANLEY',
+  'HSBC',
+  'STANDARD CHARTERED',
+  'BARCLAYS',
+  'DEUTSCHE BANK',
+  'BNP PARIBAS',
+  'JPMORGAN',
+  'CITIBANK',
+  'WELLS FARGO',
+  'BANK OF AMERICA',
+  'GOLDMAN SACHS',
+  'MORGAN STANLEY',
 ]);
 
 // ── SanctionsScreeningService ─────────────────────────────────────────────────
@@ -209,7 +217,6 @@ const KNOWN_LOW_RISK_ENTITIES = new Set([
  * ```
  */
 export class SanctionsScreeningService {
-
   constructor(private readonly config: SanctionsConfig) {}
 
   /**
@@ -231,24 +238,22 @@ export class SanctionsScreeningService {
     // ── Short-circuit: disabled ───────────────────────────────────────────
     if (!this.config.enabled) {
       return this._buildResult({
-        status:            SanctionsResult.CLEAR,
+        status: SanctionsResult.CLEAR,
         screenedAt,
-        listName:          '',
-        matchScore:        0,
-        aiRiskScore:       0,
-        reason:            'Screening disabled by configuration',
+        listName: '',
+        matchScore: 0,
+        aiRiskScore: 0,
+        reason: 'Screening disabled by configuration',
         screeningBypassed: true,
-        matches:           [],
-        counterpartyId:    input.counterpartyId,
+        matches: [],
+        counterpartyId: input.counterpartyId,
         screeningEventId,
       });
     }
 
     // ── Run all configured providers in parallel ───────────────────────────
     const providerResults = await Promise.allSettled(
-      this.config.providers.map(provider =>
-        this._queryProvider(provider, input),
-      ),
+      this.config.providers.map((provider) => this._queryProvider(provider, input)),
     );
 
     // ── Collect matches across all providers ──────────────────────────────
@@ -267,7 +272,7 @@ export class SanctionsScreeningService {
       if (match.score >= 0.99) {
         status = SanctionsResult.MATCH;
         topMatch = match;
-        break;  // Exact match — no need to continue
+        break; // Exact match — no need to continue
       }
       if (match.score >= this.config.fuzzyMatchThreshold) {
         // Only upgrade to POTENTIAL_MATCH if not already MATCH
@@ -289,13 +294,13 @@ export class SanctionsScreeningService {
     return this._buildResult({
       status,
       screenedAt,
-      listName:          topMatch?.listName ?? '',
-      matchScore:        topMatch?.score ?? 0,
+      listName: topMatch?.listName ?? '',
+      matchScore: topMatch?.score ?? 0,
       aiRiskScore,
       reason,
       screeningBypassed: false,
-      matches:           allMatches,
-      counterpartyId:    input.counterpartyId,
+      matches: allMatches,
+      counterpartyId: input.counterpartyId,
       screeningEventId,
     });
   }
@@ -303,10 +308,7 @@ export class SanctionsScreeningService {
   // ── Private ──────────────────────────────────────────────────────────────────
 
   /** Query a specific provider and return any matches found. */
-  private async _queryProvider(
-    provider: string,
-    input: ScreeningInput,
-  ): Promise<SanctionsMatch[]> {
+  private async _queryProvider(provider: string, input: ScreeningInput): Promise<SanctionsMatch[]> {
     if (provider === 'INTERNAL_TEST') {
       return this._queryInternalTestList(input);
     }
@@ -330,8 +332,8 @@ export class SanctionsScreeningService {
 
       if (score >= this.config.fuzzyMatchThreshold) {
         matches.push({
-          listedName:  entry.name,
-          listName:    'INTERNAL_TEST',
+          listedName: entry.name,
+          listName: 'INTERNAL_TEST',
           score,
           listEntryId: entry.listEntryId,
           matchMethod: score >= 0.99 ? 'EXACT' : 'FUZZY',
@@ -357,11 +359,8 @@ export class SanctionsScreeningService {
    *
    * The final score is clamped to [0, 1].
    */
-  private _computeAIRiskScore(
-    input: ScreeningInput,
-    currentStatus: SanctionsResult,
-  ): number {
-    let score = 0.1;  // baseline risk
+  private _computeAIRiskScore(input: ScreeningInput, currentStatus: SanctionsResult): number {
+    let score = 0.1; // baseline risk
 
     // G-SIB recognition — well-known low-risk entities
     const upperName = input.legalName.toUpperCase();
@@ -373,7 +372,7 @@ export class SanctionsScreeningService {
     }
 
     // Escalate if list match found
-    if (currentStatus === SanctionsResult.MATCH)           score += 0.8;
+    if (currentStatus === SanctionsResult.MATCH) score += 0.8;
     if (currentStatus === SanctionsResult.POTENTIAL_MATCH) score += 0.4;
 
     // Short name heuristic (potential evasion signal)
@@ -469,13 +468,11 @@ export class SanctionsScreeningService {
  * and the result is MATCH or POTENTIAL_MATCH.
  */
 export class SanctionsMatchError extends Error {
-  constructor(
-    public readonly screeningResult: ScreeningResult,
-  ) {
+  constructor(public readonly screeningResult: ScreeningResult) {
     super(
       `Sanctions match detected for counterparty ` +
-      `${screeningResult.counterpartyId} ` +
-      `(${screeningResult.listName}): ${screeningResult.reason}`,
+        `${screeningResult.counterpartyId} ` +
+        `(${screeningResult.listName}): ${screeningResult.reason}`,
     );
     this.name = 'SanctionsMatchError';
   }

@@ -4,21 +4,22 @@
 
 ## Decision: Vitest 1.x
 
-| Criterion | Jest | Vitest 1.x | Winner |
-|---|---|---|---|
-| ESM support | Complex config required | Native | Vitest |
-| Speed (first run) | ~45s | ~12s | Vitest |
-| Speed (watch mode) | ~3s per file | ~0.3s per file | Vitest |
-| TypeScript support | Requires `ts-jest` | Native | Vitest |
-| Benchmark support | No | `bench()` built-in | Vitest |
-| API compatibility | Industry standard | Jest-compatible API | Tie |
-| pnpm workspace support | Manual config | Native | Vitest |
+| Criterion              | Jest                    | Vitest 1.x          | Winner |
+| ---------------------- | ----------------------- | ------------------- | ------ |
+| ESM support            | Complex config required | Native              | Vitest |
+| Speed (first run)      | ~45s                    | ~12s                | Vitest |
+| Speed (watch mode)     | ~3s per file            | ~0.3s per file      | Vitest |
+| TypeScript support     | Requires `ts-jest`      | Native              | Vitest |
+| Benchmark support      | No                      | `bench()` built-in  | Vitest |
+| API compatibility      | Industry standard       | Jest-compatible API | Tie    |
+| pnpm workspace support | Manual config           | Native              | Vitest |
 
 **Key driver**: ESM-native monorepo. The `@nexustreasury/domain` package uses `"type": "module"` throughout. Jest requires `@jest/globals`, `ts-jest`, and extensive `moduleNameMapper` config to handle ESM. Vitest handles it with zero configuration.
 
 **Benchmark requirement**: Pricing SLA verification (Black-Scholes P99 < 2ms) requires built-in benchmarking. Jest has no `bench()` equivalent.
 
 ## Consequences
+
 - All 13 packages use Vitest with a shared `vitest.config.ts` base
 - `describe`, `it`, `expect` imported from `vitest` — same API as Jest
 - `bench()` used in `tests/e2e/critical-path.bench.ts` for SLA verification

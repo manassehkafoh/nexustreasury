@@ -4,14 +4,14 @@ Welcome to the NexusTreasury engineering team. This guide takes you from zero to
 
 ## Onboarding modules
 
-| Day | Module | Goal |
-|---|---|---|
-| Day 1 | [01 — Dev environment setup](./01-dev-environment.md) | Running `pnpm test` locally |
-| Day 1–2 | [02 — Architecture primer](./02-architecture-primer.md) | Understanding the 14-service monorepo |
-| Day 2–3 | [03 — Domain model deep dive](./03-domain-model.md) | Navigating DDD aggregates and bounded contexts |
-| Day 3–4 | [04 — Adding a new service](./04-adding-a-service.md) | Step-by-step: scaffold → test → deploy |
-| Day 4–5 | [05 — Testing guide](./05-testing-guide.md) | Unit, integration, contract, E2E, k6 performance |
-| Day 5 | [06 — First week checklist](./06-first-week-checklist.md) | Verify you can ship |
+| Day     | Module                                                    | Goal                                             |
+| ------- | --------------------------------------------------------- | ------------------------------------------------ |
+| Day 1   | [01 — Dev environment setup](./01-dev-environment.md)     | Running `pnpm test` locally                      |
+| Day 1–2 | [02 — Architecture primer](./02-architecture-primer.md)   | Understanding the 14-service monorepo            |
+| Day 2–3 | [03 — Domain model deep dive](./03-domain-model.md)       | Navigating DDD aggregates and bounded contexts   |
+| Day 3–4 | [04 — Adding a new service](./04-adding-a-service.md)     | Step-by-step: scaffold → test → deploy           |
+| Day 4–5 | [05 — Testing guide](./05-testing-guide.md)               | Unit, integration, contract, E2E, k6 performance |
+| Day 5   | [06 — First week checklist](./06-first-week-checklist.md) | Verify you can ship                              |
 
 ## Repository
 

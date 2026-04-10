@@ -41,15 +41,17 @@ export class InMemoryBudgetRepository implements BudgetRepository {
     return this._store.get(budgetId) ?? null;
   }
   async findByTenant(tenantId: string, fiscalYear?: number): Promise<BudgetPlan[]> {
-    return Array.from(this._store.values()).filter(p =>
-      p.tenantId === tenantId && (!fiscalYear || p.fiscalYear === fiscalYear)
+    return Array.from(this._store.values()).filter(
+      (p) => p.tenantId === tenantId && (!fiscalYear || p.fiscalYear === fiscalYear),
     );
   }
   async update(plan: BudgetPlan): Promise<void> {
     if (!this._store.has(plan.budgetId)) throw new Error(`Budget ${plan.budgetId} not found`);
     this._store.set(plan.budgetId, plan);
   }
-  async delete(budgetId: string): Promise<void> { this._store.delete(budgetId); }
+  async delete(budgetId: string): Promise<void> {
+    this._store.delete(budgetId);
+  }
 }
 
 /**
@@ -65,9 +67,11 @@ export class InMemoryBudgetRepository implements BudgetRepository {
  * ```
  */
 export class PostgresBudgetRepository implements BudgetRepository {
-  constructor(private readonly _pool: {
-    query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
-  }) {}
+  constructor(
+    private readonly _pool: {
+      query(sql: string, params?: unknown[]): Promise<{ rows: Record<string, unknown>[] }>;
+    },
+  ) {}
 
   async save(plan: BudgetPlan): Promise<void> {
     await this._pool.query(
@@ -77,14 +81,21 @@ export class PostgresBudgetRepository implements BudgetRepository {
        ON CONFLICT (budget_id) DO UPDATE
          SET payload = EXCLUDED.payload, status = EXCLUDED.status,
              updated_at = NOW()`,
-      [plan.budgetId, plan.tenantId, plan.fiscalYear, plan.scenario, plan.status,
-       JSON.stringify(plan)]
+      [
+        plan.budgetId,
+        plan.tenantId,
+        plan.fiscalYear,
+        plan.scenario,
+        plan.status,
+        JSON.stringify(plan),
+      ],
     );
   }
 
   async findById(budgetId: string): Promise<BudgetPlan | null> {
     const { rows } = await this._pool.query(
-      'SELECT payload FROM nexus_budget_plans WHERE budget_id = $1', [budgetId]
+      'SELECT payload FROM nexus_budget_plans WHERE budget_id = $1',
+      [budgetId],
     );
     return rows.length ? (rows[0]['payload'] as BudgetPlan) : null;
   }
@@ -95,13 +106,13 @@ export class PostgresBudgetRepository implements BudgetRepository {
       : 'SELECT payload FROM nexus_budget_plans WHERE tenant_id=$1 ORDER BY created_at DESC';
     const params = fiscalYear ? [tenantId, fiscalYear] : [tenantId];
     const { rows } = await this._pool.query(sql, params);
-    return rows.map(r => r['payload'] as BudgetPlan);
+    return rows.map((r) => r['payload'] as BudgetPlan);
   }
 
   async update(plan: BudgetPlan): Promise<void> {
     const { rows } = await this._pool.query(
       'UPDATE nexus_budget_plans SET payload=$1::jsonb, status=$2, updated_at=NOW() WHERE budget_id=$3 RETURNING budget_id',
-      [JSON.stringify(plan), plan.status, plan.budgetId]
+      [JSON.stringify(plan), plan.status, plan.budgetId],
     );
     if (!rows.length) throw new Error(`Budget ${plan.budgetId} not found`);
   }

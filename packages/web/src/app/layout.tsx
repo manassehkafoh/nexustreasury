@@ -8,11 +8,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}): JSX.Element {
+export default function RootLayout({ children }: { children: React.ReactNode }): JSX.Element {
   // Resolve brand from environment / request headers (server component)
   const brand = resolveBrand({
     envBrandId: process.env['NEXT_PUBLIC_BRAND_ID'],
@@ -22,14 +18,17 @@ export default function RootLayout({
   const brandCSS = generateCSSVariables(brand);
 
   return (
-    <html lang={brand.locale.language} dir={brand.locale.rtl ? 'rtl' : 'ltr'} className="dark" data-brand={brand.id}>
+    <html
+      lang={brand.locale.language}
+      dir={brand.locale.rtl ? 'rtl' : 'ltr'}
+      className="dark"
+      data-brand={brand.id}
+    >
       <head>
         <style id={`nexus-brand-${brand.id}`} dangerouslySetInnerHTML={{ __html: brandCSS }} />
         {brand.favicon && <link rel="icon" href={brand.favicon} />}
       </head>
-      <body style={{ fontFamily: brand.typography.fontBody }}>
-        {children}
-      </body>
+      <body style={{ fontFamily: brand.typography.fontBody }}>{children}</body>
     </html>
   );
 }

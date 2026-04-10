@@ -1,12 +1,30 @@
 import { describe, it, expect } from 'vitest';
 import { SWIFTISO20022Migrator, MTMessageType, MXMessageType } from './swift-iso20022-migrator.js';
 
-const migrator = new SWIFTISO20022Migrator({ dualRunMode:true, lei:'549300EXAMPLE00001' });
-const MT103 = { transactionRef:'REF001', valueDate:'2026-04-10', currency:'USD', amount:500_000,
-  orderingCustomer:'Acme Corp', beneficiaryName:'Beta Ltd', beneficiaryIBAN:'GB29NWBK60161331926819',
-  orderingBankBIC:'BARCGB2L', receiverBankBIC:'CITIUS33', remittanceInfo:'Invoice 2026-001', purposeCode:'SUPP' };
-const MT202 = { transactionRef:'REF002', valueDate:'2026-04-10', currency:'USD', amount:5_000_000,
-  orderingBankBIC:'BARCGB2L', receiverBankBIC:'CITIUS33', beneficiaryBIC:'DEUTDEFF', uetr:'12345678-1234-4abc-89ab-123456789abc' };
+const migrator = new SWIFTISO20022Migrator({ dualRunMode: true, lei: '549300EXAMPLE00001' });
+const MT103 = {
+  transactionRef: 'REF001',
+  valueDate: '2026-04-10',
+  currency: 'USD',
+  amount: 500_000,
+  orderingCustomer: 'Acme Corp',
+  beneficiaryName: 'Beta Ltd',
+  beneficiaryIBAN: 'GB29NWBK60161331926819',
+  orderingBankBIC: 'BARCGB2L',
+  receiverBankBIC: 'CITIUS33',
+  remittanceInfo: 'Invoice 2026-001',
+  purposeCode: 'SUPP',
+};
+const MT202 = {
+  transactionRef: 'REF002',
+  valueDate: '2026-04-10',
+  currency: 'USD',
+  amount: 5_000_000,
+  orderingBankBIC: 'BARCGB2L',
+  receiverBankBIC: 'CITIUS33',
+  beneficiaryBIC: 'DEUTDEFF',
+  uetr: '12345678-1234-4abc-89ab-123456789abc',
+};
 
 describe('SWIFTISO20022Migrator — Sprint 10.3', () => {
   it('MT103 → pacs.008 msgType is correct', () => {
@@ -16,7 +34,9 @@ describe('SWIFTISO20022Migrator — Sprint 10.3', () => {
   });
   it('UETR is a valid UUID format', () => {
     const r = migrator.convertMT103ToPacs008(MT103);
-    expect(r.uetr).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(r.uetr).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
   });
   it('pacs.008 contains original transaction ref', () => {
     const r = migrator.convertMT103ToPacs008(MT103);
@@ -33,7 +53,7 @@ describe('SWIFTISO20022Migrator — Sprint 10.3', () => {
   it('MT103 without IBAN fails validation', () => {
     const noIban = { ...MT103, beneficiaryIBAN: undefined };
     const r = migrator.convertMT103ToPacs008(noIban);
-    expect(r.validationErrors.some(e => e.includes('IBAN'))).toBe(true);
+    expect(r.validationErrors.some((e) => e.includes('IBAN'))).toBe(true);
   });
   it('dual-run flag is active when configured', () => {
     const r = migrator.convertMT103ToPacs008(MT103);

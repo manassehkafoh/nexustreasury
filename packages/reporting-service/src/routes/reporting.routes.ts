@@ -10,22 +10,23 @@ import { ReportBuilder } from '../application/report-builder.js';
 import { RegulatorySubmissionEngine } from '../application/regulatory-submission.js';
 import { TreasuryAIAssistant } from '../application/treasury-ai-assistant.js';
 
-const corep  = new COREPEngine();
+const corep = new COREPEngine();
 const finrep = new FINREPEngine();
-const raroc  = new RAROCEngine();
+const raroc = new RAROCEngine();
 const reports = new ReportBuilder();
 const submissions = new RegulatorySubmissionEngine();
 const ai = new TreasuryAIAssistant();
 
 export async function reportingRoutes(app: FastifyInstance): Promise<void> {
-
   /** POST /api/v1/reporting/corep */
   app.post('/api/v1/reporting/corep', async (req, reply) => {
     try {
       const body = req.body as Parameters<COREPEngine['generate']>[0];
       return reply.send(corep.generate(body));
     } catch (err) {
-      return reply.code(400).send({ error: err instanceof Error ? err.message : 'COREP generation failed' });
+      return reply
+        .code(400)
+        .send({ error: err instanceof Error ? err.message : 'COREP generation failed' });
     }
   });
 
@@ -38,7 +39,9 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
       };
       return reply.send(finrep.generateReport(balanceSheet, pl));
     } catch (err) {
-      return reply.code(400).send({ error: err instanceof Error ? err.message : 'FINREP generation failed' });
+      return reply
+        .code(400)
+        .send({ error: err instanceof Error ? err.message : 'FINREP generation failed' });
     }
   });
 
@@ -58,7 +61,9 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
       const body = req.body as Parameters<ReportBuilder['define']>[0];
       return reply.code(201).send(reports.define(body));
     } catch (err) {
-      return reply.code(400).send({ error: err instanceof Error ? err.message : 'Report definition failed' });
+      return reply
+        .code(400)
+        .send({ error: err instanceof Error ? err.message : 'Report definition failed' });
     }
   });
 
@@ -86,7 +91,9 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
       const result = await ai.ask(body);
       return reply.send(result);
     } catch (err) {
-      return reply.code(500).send({ error: err instanceof Error ? err.message : 'AI assistant error' });
+      return reply
+        .code(500)
+        .send({ error: err instanceof Error ? err.message : 'AI assistant error' });
     }
   });
 
@@ -96,7 +103,9 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
       const body = req.body as Parameters<RegulatorySubmissionEngine['submit']>[0];
       return reply.code(201).send(submissions.submit(body));
     } catch (err) {
-      return reply.code(400).send({ error: err instanceof Error ? err.message : 'Submission failed' });
+      return reply
+        .code(400)
+        .send({ error: err instanceof Error ? err.message : 'Submission failed' });
     }
   });
 
@@ -112,6 +121,6 @@ export async function reportingRoutes(app: FastifyInstance): Promise<void> {
 
   /** GET /health */
   app.get('/health', async (_req, reply) =>
-    reply.send({ service: 'reporting-service', status: 'ok', ts: new Date().toISOString() })
+    reply.send({ service: 'reporting-service', status: 'ok', ts: new Date().toISOString() }),
   );
 }

@@ -60,18 +60,18 @@ import type {
 /** Configuration for the WasmExoticPricerPool. */
 export interface WasmExoticPricerPoolConfig {
   /** Number of pre-warmed instances (default: 4). */
-  readonly poolSize?:          number;
+  readonly poolSize?: number;
   /** Max wait time (ms) for an available instance before fallback (default: 50ms). */
-  readonly acquireTimeoutMs?:  number;
+  readonly acquireTimeoutMs?: number;
   /** Enable verbose pool metrics logging. */
-  readonly debugLogging?:      boolean;
+  readonly debugLogging?: boolean;
 }
 
 /** Internal instance state. */
 interface PoolInstance {
-  readonly id:   number;
-  pricer:        IExoticPricer;
-  busy:          boolean;
+  readonly id: number;
+  pricer: IExoticPricer;
+  busy: boolean;
   requestsServed: number;
 }
 
@@ -84,26 +84,26 @@ interface PoolInstance {
  * @implements {IExoticPricer}
  */
 export class WasmExoticPricerPool implements IExoticPricer {
-  static readonly DEFAULT_POOL_SIZE     = 4;
-  static readonly DEFAULT_TIMEOUT_MS    = 50;
+  static readonly DEFAULT_POOL_SIZE = 4;
+  static readonly DEFAULT_TIMEOUT_MS = 50;
 
-  private readonly _instances:       PoolInstance[];
+  private readonly _instances: PoolInstance[];
   private readonly _acquireTimeoutMs: number;
-  private readonly _debugLogging:     boolean;
-  private _totalRequests    = 0;
+  private readonly _debugLogging: boolean;
+  private _totalRequests = 0;
   private _fallbackInvocations = 0;
   private readonly _fallback: IExoticPricer;
 
   constructor(config: WasmExoticPricerPoolConfig = {}) {
     const poolSize = config.poolSize ?? WasmExoticPricerPool.DEFAULT_POOL_SIZE;
     this._acquireTimeoutMs = config.acquireTimeoutMs ?? WasmExoticPricerPool.DEFAULT_TIMEOUT_MS;
-    this._debugLogging     = config.debugLogging     ?? false;
+    this._debugLogging = config.debugLogging ?? false;
 
     // Warm up N instances at construction (eliminates cold-start penalty)
     this._instances = Array.from({ length: poolSize }, (_, id) => ({
       id,
-      pricer:         new TsExoticPricer(), // WASM adapter will replace this
-      busy:           false,
+      pricer: new TsExoticPricer(), // WASM adapter will replace this
+      busy: false,
       requestsServed: 0,
     }));
 
@@ -118,25 +118,25 @@ export class WasmExoticPricerPool implements IExoticPricer {
   // ── IExoticPricer implementation ───────────────────────────────────────────
 
   priceBarrier(input: BarrierOptionInput): BarrierOptionResult {
-    return this._withInstance(inst => inst.priceBarrier(input));
+    return this._withInstance((inst) => inst.priceBarrier(input));
   }
 
   priceLookback(input: LookbackOptionInput): LookbackOptionResult {
-    return this._withInstance(inst => inst.priceLookback(input));
+    return this._withInstance((inst) => inst.priceLookback(input));
   }
 
   priceBermudanSwaption(input: BermudanSwaptionInput): BermudanSwaptionResult {
-    return this._withInstance(inst => inst.priceBermudanSwaption(input));
+    return this._withInstance((inst) => inst.priceBermudanSwaption(input));
   }
 
   getPoolStatus(): PricerPoolStatus {
-    const busy = this._instances.filter(i => i.busy).length;
+    const busy = this._instances.filter((i) => i.busy).length;
     return {
-      poolSize:           this._instances.length,
+      poolSize: this._instances.length,
       availableInstances: this._instances.length - busy,
-      busyInstances:      busy,
+      busyInstances: busy,
       implementationType: 'TYPESCRIPT', // change to 'WASM' when QuantLib is wired
-      warmUpComplete:     true,
+      warmUpComplete: true,
     };
   }
 
@@ -171,7 +171,9 @@ export class WasmExoticPricerPool implements IExoticPricer {
       // All instances busy — use synchronous fallback
       this._fallbackInvocations++;
       if (this._debugLogging) {
-        console.warn(`[WasmExoticPricerPool] Pool exhausted — using fallback (req #${this._totalRequests})`);
+        console.warn(
+          `[WasmExoticPricerPool] Pool exhausted — using fallback (req #${this._totalRequests})`,
+        );
       }
       return operation(this._fallback);
     }
@@ -185,7 +187,7 @@ export class WasmExoticPricerPool implements IExoticPricer {
 
   private _acquireInstance(): PoolInstance | null {
     // Round-robin selection among available instances
-    const available = this._instances.filter(i => !i.busy);
+    const available = this._instances.filter((i) => !i.busy);
     if (available.length === 0) return null;
     const inst = available[this._totalRequests % available.length];
     inst.busy = true;

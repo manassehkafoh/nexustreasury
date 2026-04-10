@@ -21,11 +21,10 @@ const { like, regex, decimal } = MatchersV3;
 const pact = new PactV3({
   consumer: 'notification-service',
   provider: 'risk-service',
-  spec:     SpecificationVersion.SPECIFICATION_VERSION_V4,
+  spec: SpecificationVersion.SPECIFICATION_VERSION_V4,
 });
 
 describe('Contract: notification-service ← risk-service (nexus.risk.limit-breach)', () => {
-
   it('receives a LimitBreach event with routing fields', async () => {
     await pact
       .addInteraction({
@@ -33,32 +32,32 @@ describe('Contract: notification-service ← risk-service (nexus.risk.limit-brea
         uponReceiving: 'a nexus.risk.limit-breach event',
         withRequest: {
           method: 'POST',
-          path:   '/api/v1/risk/limits/breach',
+          path: '/api/v1/risk/limits/breach',
           headers: { 'Content-Type': 'application/json' },
           body: {
-            limitId:         like('lim-cp-3fa85f64'),
-            counterpartyId:  like('3fa85f64-5717-4562-b3fc-2c963f66afa6'),
-            utilisationPct:  decimal(102.4),
+            limitId: like('lim-cp-3fa85f64'),
+            counterpartyId: like('3fa85f64-5717-4562-b3fc-2c963f66afa6'),
+            utilisationPct: decimal(102.4),
           },
         },
         willRespondWith: {
           status: 201,
           body: {
             // notification-service requires these fields for alert routing:
-            eventId:        like('evt-001'),
-            tenantId:       like('bank-001'),
-            limitId:        like('lim-cp-3fa85f64'),
-            limitType:      regex('CREDIT|MARKET|CONCENTRATION', 'CREDIT'),
+            eventId: like('evt-001'),
+            tenantId: like('bank-001'),
+            limitId: like('lim-cp-3fa85f64'),
+            limitType: regex('CREDIT|MARKET|CONCENTRATION', 'CREDIT'),
             counterpartyId: like('3fa85f64-5717-4562-b3fc-2c963f66afa6'),
             utilisationPct: decimal(102.4),
-            currency:       regex('^[A-Z]{3}$', 'USD'),
-            breachedAt:     like('2026-04-09T09:30:00.000Z'),
+            currency: regex('^[A-Z]{3}$', 'USD'),
+            breachedAt: like('2026-04-09T09:30:00.000Z'),
           },
         },
       })
       .executeTest(async (mockServer) => {
         const resp = await fetch(`${mockServer.url}/api/v1/risk/limits/breach`, {
-          method:  'POST',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             limitId: 'lim-cp-3fa85f64',
@@ -67,7 +66,7 @@ describe('Contract: notification-service ← risk-service (nexus.risk.limit-brea
           }),
         });
 
-        const body = await resp.json() as Record<string, unknown>;
+        const body = (await resp.json()) as Record<string, unknown>;
 
         // notification-service routing invariants
         expect(body['eventId']).toBeTruthy();

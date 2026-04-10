@@ -6,14 +6,14 @@ Welcome to NexusTreasury. This guide gets you from zero to a running local platf
 
 ## Prerequisites
 
-| Tool | Version | Purpose |
-|---|---|---|
-| Node.js | 22 LTS | Runtime |
-| pnpm | 9.x | Package manager |
-| Docker Desktop | 4.x+ | Local infrastructure |
-| Git | Any | Version control |
-| k6 | Latest | Performance tests (optional) |
-| Newman | Latest | API tests (optional) |
+| Tool           | Version | Purpose                      |
+| -------------- | ------- | ---------------------------- |
+| Node.js        | 22 LTS  | Runtime                      |
+| pnpm           | 9.x     | Package manager              |
+| Docker Desktop | 4.x+    | Local infrastructure         |
+| Git            | Any     | Version control              |
+| k6             | Latest  | Performance tests (optional) |
+| Newman         | Latest  | API tests (optional)         |
 
 ---
 
@@ -34,6 +34,7 @@ The recommended path. Everything is pre-configured.
 5. Open `http://localhost:3000` — the dashboard auto-opens in your browser
 
 **What's pre-configured in the Dev Container:**
+
 - Node.js 22, Docker-in-Docker, kubectl, Helm, GitHub CLI
 - 10 VS Code extensions: ESLint, Prettier, Vitest Explorer, OpenAPI viewer, REST Client, GitLens, Kubernetes tools, GitHub PR, Thunder Client
 - All 13 service ports forwarded (3000, 4001–4011)
@@ -143,6 +144,7 @@ make postman-import # Show Postman import instructions
 ### Option 1: Mock Server (no setup required)
 
 The mock server runs live at:
+
 ```
 https://eeed7962-2b7b-495b-b197-03bb48aaae11.mock.pstmn.io
 ```
@@ -156,6 +158,7 @@ make postman-import   # Shows import instructions
 ```
 
 Import both files into Postman:
+
 - `docs/NexusTreasury_API_Collection.postman_collection.json` — 17 requests, 9 examples
 - `docs/NexusTreasury_Local.postman_environment.json` — pre-configured for localhost
 
@@ -179,16 +182,16 @@ make api-test           # Runs all 17 requests, generates HTML report
 
 All local development environment variables are set in `.env.local` (copy from `.env.example`):
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `NODE_ENV` | `development` | Environment mode |
-| `PORT` | Service-specific | Fastify listen port |
-| `DATABASE_URL` | `postgresql://nexus:nexus_dev@localhost:5432/nexustreasury` | PostgreSQL |
-| `KAFKA_BROKERS` | `localhost:9092` | Kafka bootstrap |
-| `REDIS_URL` | `redis://localhost:6379` | Redis |
-| `JWT_SECRET` | `dev-secret-not-for-prod` | JWT signing (dev only) |
-| `AUDIT_HMAC_KEY` | `dev-hmac-key-32-chars!!!!!!!!` | HMAC audit signing (dev only) |
-| `KEYCLOAK_URL` | `http://localhost:8080` | Identity provider |
+| Variable         | Default                                                     | Purpose                       |
+| ---------------- | ----------------------------------------------------------- | ----------------------------- |
+| `NODE_ENV`       | `development`                                               | Environment mode              |
+| `PORT`           | Service-specific                                            | Fastify listen port           |
+| `DATABASE_URL`   | `postgresql://nexus:nexus_dev@localhost:5432/nexustreasury` | PostgreSQL                    |
+| `KAFKA_BROKERS`  | `localhost:9092`                                            | Kafka bootstrap               |
+| `REDIS_URL`      | `redis://localhost:6379`                                    | Redis                         |
+| `JWT_SECRET`     | `dev-secret-not-for-prod`                                   | JWT signing (dev only)        |
+| `AUDIT_HMAC_KEY` | `dev-hmac-key-32-chars!!!!!!!!`                             | HMAC audit signing (dev only) |
+| `KEYCLOAK_URL`   | `http://localhost:8080`                                     | Identity provider             |
 
 > **Never commit real secrets.** Production secrets are managed by HashiCorp Vault (see [Production Runbook](production-runbook.md)).
 

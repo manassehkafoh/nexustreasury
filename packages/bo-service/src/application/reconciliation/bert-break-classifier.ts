@@ -37,23 +37,23 @@ import { BreakType } from './nostro-reconciliation.service.js';
 /** BERT inference server configuration. */
 export interface BERTConfig {
   /** TorchServe inference endpoint (default: http://ml-platform:8080) */
-  readonly inferenceUrl?:     string;
+  readonly inferenceUrl?: string;
   /** Request timeout ms (default: 5_000) */
-  readonly timeoutMs?:        number;
+  readonly timeoutMs?: number;
   /** Auto-resolve confidence threshold (default: 0.92) */
   readonly autoResolveThreshold?: number;
   /** Human review threshold (default: 0.70) */
-  readonly reviewThreshold?:  number;
+  readonly reviewThreshold?: number;
   /** Enable SWIFT gpi enrichment for MISSING_PAYMENT (default: true) */
   readonly enableGPIEnrichment?: boolean;
 }
 
 /** BERT raw prediction from the inference server. */
 interface BERTPrediction {
-  breakType:   BreakType;
-  confidence:  number;
+  breakType: BreakType;
+  confidence: number;
   probabilities: Record<BreakType, number>;
-  gpiData?:    { paymentLocation: string; lastUpdatedAt: string };
+  gpiData?: { paymentLocation: string; lastUpdatedAt: string };
 }
 
 /**
@@ -64,23 +64,24 @@ interface BERTPrediction {
 export class BERTBreakClassifier implements BreakClassifierModel {
   static readonly MODEL_VERSION = 'finbert-recon-v3.2-sprint8';
 
-  private readonly _inferenceUrl:         string;
-  private readonly _timeoutMs:            number;
+  private readonly _inferenceUrl: string;
+  private readonly _timeoutMs: number;
   private readonly _autoResolveThreshold: number;
-  private readonly _reviewThreshold:      number;
-  private readonly _enableGPI:            boolean;
+  private readonly _reviewThreshold: number;
+  private readonly _enableGPI: boolean;
 
-  private _totalClassified    = 0;
-  private _autoResolved       = 0;
-  private _manualReviews      = 0;
+  private _totalClassified = 0;
+  private _autoResolved = 0;
+  private _manualReviews = 0;
   private _fallbackInvocations = 0;
 
   constructor(config: BERTConfig = {}) {
-    this._inferenceUrl         = config.inferenceUrl         ?? 'http://ml-platform:8080/v1/models/finbert-recon:predict';
-    this._timeoutMs            = config.timeoutMs            ?? 5_000;
+    this._inferenceUrl =
+      config.inferenceUrl ?? 'http://ml-platform:8080/v1/models/finbert-recon:predict';
+    this._timeoutMs = config.timeoutMs ?? 5_000;
     this._autoResolveThreshold = config.autoResolveThreshold ?? 0.92;
-    this._reviewThreshold      = config.reviewThreshold      ?? 0.70;
-    this._enableGPI            = config.enableGPIEnrichment  ?? true;
+    this._reviewThreshold = config.reviewThreshold ?? 0.7;
+    this._enableGPI = config.enableGPIEnrichment ?? true;
   }
 
   /**
@@ -89,10 +90,10 @@ export class BERTBreakClassifier implements BreakClassifierModel {
    * Falls back to rule-based classification if the ML endpoint is unavailable.
    */
   async classify(params: {
-    breakType:   BreakType;
-    amount:      number;
-    currency:    string;
-    breakDays:   number;
+    breakType: BreakType;
+    amount: number;
+    currency: string;
+    breakDays: number;
     description: string;
   }): Promise<BreakInsight> {
     this._totalClassified++;
@@ -111,29 +112,30 @@ export class BERTBreakClassifier implements BreakClassifierModel {
 
   get metrics() {
     return {
-      totalClassified:     this._totalClassified,
-      autoResolved:        this._autoResolved,
-      manualReviews:       this._manualReviews,
+      totalClassified: this._totalClassified,
+      autoResolved: this._autoResolved,
+      manualReviews: this._manualReviews,
       fallbackInvocations: this._fallbackInvocations,
-      autoResolveRate:     this._totalClassified > 0
-        ? this._autoResolved / this._totalClassified
-        : 0,
-      modelVersion:        BERTBreakClassifier.MODEL_VERSION,
+      autoResolveRate: this._totalClassified > 0 ? this._autoResolved / this._totalClassified : 0,
+      modelVersion: BERTBreakClassifier.MODEL_VERSION,
     };
   }
 
   // ── Private: BERT inference ────────────────────────────────────────────────
 
   private async _callInference(params: {
-    breakType: BreakType; amount: number; currency: string;
-    breakDays: number; description: string;
+    breakType: BreakType;
+    amount: number;
+    currency: string;
+    breakDays: number;
+    description: string;
   }): Promise<BERTPrediction> {
     const ctrl = new AbortController();
-    const tid  = setTimeout(() => ctrl.abort(), this._timeoutMs);
+    const tid = setTimeout(() => ctrl.abort(), this._timeoutMs);
 
     try {
       const response = await fetch(this._inferenceUrl, {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           // FinBERT input: structured text prompt from break attributes
@@ -145,8 +147,9 @@ export class BERTBreakClassifier implements BreakClassifierModel {
 
       if (!response.ok) throw new Error(`BERT inference failed: HTTP ${response.status}`);
 
-      const data = await response.json() as {
-        breakType: BreakType; confidence: number;
+      const data = (await response.json()) as {
+        breakType: BreakType;
+        confidence: number;
         probabilities: Record<BreakType, number>;
       };
 
@@ -163,8 +166,11 @@ export class BERTBreakClassifier implements BreakClassifierModel {
   }
 
   private _buildPrompt(params: {
-    breakType: BreakType; amount: number; currency: string;
-    breakDays: number; description: string;
+    breakType: BreakType;
+    amount: number;
+    currency: string;
+    breakDays: number;
+    description: string;
   }): string {
     return [
       `Break type: ${params.breakType}`,
@@ -174,23 +180,32 @@ export class BERTBreakClassifier implements BreakClassifierModel {
     ].join('. ');
   }
 
-  private async _fetchGPIData(description: string): Promise<{ paymentLocation: string; lastUpdatedAt: string }> {
+  private async _fetchGPIData(
+    description: string,
+  ): Promise<{ paymentLocation: string; lastUpdatedAt: string }> {
     // SWIFT gpi Tracker API — extract UETR from description if present
-    const uetrMatch = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.exec(description);
+    const uetrMatch = /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i.exec(
+      description,
+    );
     if (!uetrMatch) throw new Error('No UETR in description');
 
     // In production: call SWIFT gpi Tracker API
     // GET https://api.swift.com/swift-apitracker/v4/payments/{uetr}
     return {
       paymentLocation: 'INTERMEDIATE_BANK_CITI_NY',
-      lastUpdatedAt:   new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
     };
   }
 
-  private _buildInsight(prediction: BERTPrediction, params: {
-    breakType: BreakType; amount: number; currency: string;
-    breakDays: number;
-  }): BreakInsight {
+  private _buildInsight(
+    prediction: BERTPrediction,
+    params: {
+      breakType: BreakType;
+      amount: number;
+      currency: string;
+      breakDays: number;
+    },
+  ): BreakInsight {
     const { confidence, breakType, gpiData } = prediction;
 
     let suggestedAction: string;
@@ -235,29 +250,33 @@ export class BERTBreakClassifier implements BreakClassifierModel {
 
   /** Rule-based fallback when BERT endpoint is unavailable. */
   private _ruleBasedFallback(params: {
-    breakType: BreakType; amount: number; breakDays: number; description: string; currency: string;
+    breakType: BreakType;
+    amount: number;
+    breakDays: number;
+    description: string;
+    currency: string;
   }): BreakInsight {
     switch (params.breakType) {
       case 'TIMING_DIFFERENCE':
         return {
-          likelyCause:     'Timing difference (rule-based fallback)',
-          confidence:      0.75,
+          likelyCause: 'Timing difference (rule-based fallback)',
+          confidence: 0.75,
           suggestedAction: 'REVIEW_QUEUE',
-          isFraudFlag:     false,
+          isFraudFlag: false,
         };
       case 'AMOUNT_MISMATCH':
         return {
-          likelyCause:     `Amount mismatch of ${params.currency} ${params.amount} (rule-based)`,
-          confidence:      0.70,
+          likelyCause: `Amount mismatch of ${params.currency} ${params.amount} (rule-based)`,
+          confidence: 0.7,
           suggestedAction: 'REVIEW_QUEUE',
-          isFraudFlag:     false,
+          isFraudFlag: false,
         };
       default:
         return {
-          likelyCause:     `${params.breakType} detected (ML unavailable, rule-based fallback)`,
-          confidence:      0.50,
+          likelyCause: `${params.breakType} detected (ML unavailable, rule-based fallback)`,
+          confidence: 0.5,
           suggestedAction: 'MANUAL_REVIEW',
-          isFraudFlag:     params.amount > 1_000_000,
+          isFraudFlag: params.amount > 1_000_000,
         };
     }
   }

@@ -17,15 +17,15 @@ Use **HMAC-SHA256 with append-only Elasticsearch** and HashiCorp Vault-managed k
 
 ## Rationale
 
-| Criterion | Blockchain/DLT | HMAC-SHA256 | Winner |
-|---|---|---|---|
-| Write latency P99 | ~500ms (consensus) | < 50ms | HMAC |
-| Throughput | ~500 TPS | Unlimited | HMAC |
-| Operational complexity | Requires 4-node Fabric network | Single Elasticsearch cluster | HMAC |
-| Key rotation | Complex (re-signing) | Vault KV rotate | HMAC |
-| SOC 2 acceptance | Accepted (rare) | Well-established | Tie |
-| Forensic tooling | Custom | Standard Elasticsearch DSL | HMAC |
-| Cost | $40K+/year | Included in existing ELK stack | HMAC |
+| Criterion              | Blockchain/DLT                 | HMAC-SHA256                    | Winner |
+| ---------------------- | ------------------------------ | ------------------------------ | ------ |
+| Write latency P99      | ~500ms (consensus)             | < 50ms                         | HMAC   |
+| Throughput             | ~500 TPS                       | Unlimited                      | HMAC   |
+| Operational complexity | Requires 4-node Fabric network | Single Elasticsearch cluster   | HMAC   |
+| Key rotation           | Complex (re-signing)           | Vault KV rotate                | HMAC   |
+| SOC 2 acceptance       | Accepted (rare)                | Well-established               | Tie    |
+| Forensic tooling       | Custom                         | Standard Elasticsearch DSL     | HMAC   |
+| Cost                   | $40K+/year                     | Included in existing ELK stack | HMAC   |
 
 **Tamper evidence**: HMAC-SHA256 over canonical string prevents any field mutation from
 going undetected. The HMAC key is stored exclusively in HashiCorp Vault with audit logging

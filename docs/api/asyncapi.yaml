@@ -58,7 +58,7 @@ channels:
         partitions: 12
         replicas: 3
         configs:
-          retention.ms: 604800000   # 7 days
+          retention.ms: 604800000 # 7 days
           cleanup.policy: delete
 
   nexus.trading.trades.amended:
@@ -120,7 +120,7 @@ channels:
         partitions: 6
         replicas: 3
         configs:
-          retention.ms: 86400000    # 1 day (rate data has short useful life)
+          retention.ms: 86400000 # 1 day (rate data has short useful life)
 
   # ── Risk ──────────────────────────────────────────────────────────────────────
 
@@ -253,7 +253,7 @@ channels:
         partitions: 3
         replicas: 3
         configs:
-          retention.ms: 7776000000  # 90 days (security events)
+          retention.ms: 7776000000 # 90 days (security events)
 
 components:
   messages:
@@ -280,9 +280,9 @@ components:
             counterpartyId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
             bookId: fx-prop-desk
             traderId: trader-alex-01
-            valueDate: "2026-04-11"
+            valueDate: '2026-04-11'
             status: PENDING_VALIDATION
-            occurredAt: "2026-04-09T09:30:00.000Z"
+            occurredAt: '2026-04-09T09:30:00.000Z'
 
     TradeAmended:
       name: TradeAmended
@@ -290,15 +290,15 @@ components:
       payload:
         type: object
         properties:
-          eventId:     { type: string }
-          tenantId:    { type: string }
-          tradeId:     { type: string }
+          eventId: { type: string }
+          tenantId: { type: string }
+          tradeId: { type: string }
           amendmentReason: { type: string }
           previousNotional: { type: number }
-          newNotional:  { type: number }
+          newNotional: { type: number }
           previousPrice: { type: number }
-          newPrice:     { type: number }
-          occurredAt:  { type: string, format: date-time }
+          newPrice: { type: number }
+          occurredAt: { type: string, format: date-time }
 
     TradeCancelled:
       name: TradeCancelled
@@ -306,12 +306,12 @@ components:
       payload:
         type: object
         properties:
-          eventId:     { type: string }
-          tenantId:    { type: string }
-          tradeId:     { type: string }
-          reason:      { type: string }
+          eventId: { type: string }
+          tenantId: { type: string }
+          tradeId: { type: string }
+          reason: { type: string }
           cancelledBy: { type: string }
-          occurredAt:  { type: string, format: date-time }
+          occurredAt: { type: string, format: date-time }
 
     PositionUpdated:
       name: PositionUpdated
@@ -319,14 +319,14 @@ components:
       payload:
         type: object
         properties:
-          eventId:     { type: string }
-          tenantId:    { type: string }
-          positionId:  { type: string }
-          bookId:      { type: string }
-          mtmValue:    { type: number }
+          eventId: { type: string }
+          tenantId: { type: string }
+          positionId: { type: string }
+          bookId: { type: string }
+          mtmValue: { type: number }
           unrealisedPnL: { type: number }
-          currency:    { type: string }
-          revaluedAt:  { type: string, format: date-time }
+          currency: { type: string }
+          revaluedAt: { type: string, format: date-time }
 
     RatesUpdated:
       name: RatesUpdated
@@ -334,17 +334,17 @@ components:
       payload:
         type: object
         properties:
-          snapshotId:   { type: string }
-          tenantId:     { type: string }
+          snapshotId: { type: string }
+          tenantId: { type: string }
           rates:
             type: array
             items:
               type: object
               properties:
-                pair:   { type: string, example: EUR/USD }
-                bid:    { type: number }
-                ask:    { type: number }
-                mid:    { type: number }
+                pair: { type: string, example: EUR/USD }
+                bid: { type: number }
+                ask: { type: number }
+                mid: { type: number }
                 source: { type: string }
           snapshotAt: { type: string, format: date-time }
 
@@ -354,16 +354,16 @@ components:
       payload:
         type: object
         properties:
-          eventId:        { type: string }
-          tenantId:       { type: string }
-          limitId:        { type: string }
-          limitType:      { type: string, enum: [CREDIT, MARKET, CONCENTRATION] }
+          eventId: { type: string }
+          tenantId: { type: string }
+          limitId: { type: string }
+          limitType: { type: string, enum: [CREDIT, MARKET, CONCENTRATION] }
           counterpartyId: { type: string }
-          utilisationPct: { type: number, description: "Current utilisation as % of limit" }
+          utilisationPct: { type: number, description: 'Current utilisation as % of limit' }
           hardLimitAmount: { type: number }
           currentExposure: { type: number }
-          currency:        { type: string }
-          breachedAt:      { type: string, format: date-time }
+          currency: { type: string }
+          breachedAt: { type: string, format: date-time }
 
     GreeksCalculated:
       name: GreeksCalculated
@@ -371,14 +371,14 @@ components:
       payload:
         type: object
         properties:
-          bookId:   { type: string }
+          bookId: { type: string }
           tenantId: { type: string }
-          delta:    { type: number }
-          gamma:    { type: number }
-          vega:     { type: number }
-          theta:    { type: number }
-          dv01:     { type: number }
-          fxDelta:  { type: number }
+          delta: { type: number }
+          gamma: { type: number }
+          vega: { type: number }
+          theta: { type: number }
+          dv01: { type: number }
+          fxDelta: { type: number }
           calculatedAt: { type: string, format: date-time }
 
     VaRResult:
@@ -387,15 +387,15 @@ components:
       payload:
         type: object
         properties:
-          portfolioId:       { type: string }
-          tenantId:          { type: string }
-          method:            { type: string, enum: [HISTORICAL, STRESSED, MONTE_CARLO] }
-          var1Day:           { type: number }
-          var10Day:          { type: number }
+          portfolioId: { type: string }
+          tenantId: { type: string }
+          method: { type: string, enum: [HISTORICAL, STRESSED, MONTE_CARLO] }
+          var1Day: { type: number }
+          var10Day: { type: number }
           expectedShortfall: { type: number }
-          confidenceLevel:   { type: number }
-          currency:          { type: string }
-          computedAt:        { type: string, format: date-time }
+          confidenceLevel: { type: number }
+          currency: { type: string }
+          computedAt: { type: string, format: date-time }
 
     JournalEntryPosted:
       name: JournalEntryPosted
@@ -403,15 +403,15 @@ components:
       payload:
         type: object
         properties:
-          id:            { type: string }
-          tenantId:      { type: string }
+          id: { type: string }
+          tenantId: { type: string }
           sourceTradeId: { type: string }
-          valueDate:     { type: string, format: date }
-          drTotal:       { type: number }
-          crTotal:       { type: number }
-          currency:      { type: string }
+          valueDate: { type: string, format: date }
+          drTotal: { type: number }
+          crTotal: { type: number }
+          currency: { type: string }
           ifrs9Category: { type: string }
-          postedAt:      { type: string, format: date-time }
+          postedAt: { type: string, format: date-time }
 
     SettlementInstruction:
       name: SettlementInstruction
@@ -419,16 +419,16 @@ components:
       payload:
         type: object
         properties:
-          id:          { type: string }
-          tenantId:    { type: string }
-          tradeRef:    { type: string }
+          id: { type: string }
+          tenantId: { type: string }
+          tradeRef: { type: string }
           messageType: { type: string, enum: [MT202, MT103, MT210, MX_PAIN001] }
-          valueDate:   { type: string, format: date }
-          amount:      { type: number }
-          currency:    { type: string }
+          valueDate: { type: string, format: date }
+          amount: { type: number }
+          currency: { type: string }
           beneficiaryBic: { type: string }
-          status:      { type: string }
-          createdAt:   { type: string, format: date-time }
+          status: { type: string }
+          createdAt: { type: string, format: date-time }
 
     ReconciliationBreak:
       name: ReconciliationBreak
@@ -437,14 +437,14 @@ components:
         type: object
         properties:
           statementEntryId: { type: string }
-          tenantId:         { type: string }
-          nostroAccount:    { type: string }
+          tenantId: { type: string }
+          nostroAccount: { type: string }
           breakType:
             type: string
             enum: [TIMING_DIFFERENCE, AMOUNT_MISMATCH, MISSING_PAYMENT, UNRECOGNISED, DUPLICATE]
-          breakAmount:      { type: number }
-          currency:         { type: string }
-          detectedAt:       { type: string, format: date-time }
+          breakAmount: { type: number }
+          currency: { type: string }
+          detectedAt: { type: string, format: date-time }
 
     LCRCalculated:
       name: LCRCalculated
@@ -452,14 +452,14 @@ components:
       payload:
         type: object
         properties:
-          reportId:        { type: string }
-          tenantId:        { type: string }
-          lcrRatio:        { type: number, description: "LCR ratio (e.g. 1.45 = 145%)" }
-          totalHQLA:       { type: number }
+          reportId: { type: string }
+          tenantId: { type: string }
+          lcrRatio: { type: number, description: 'LCR ratio (e.g. 1.45 = 145%)' }
+          totalHQLA: { type: number }
           netCashOutflows: { type: number }
-          isCompliant:     { type: boolean }
-          currency:        { type: string }
-          calculatedAt:    { type: string, format: date-time }
+          isCompliant: { type: boolean }
+          currency: { type: string }
+          calculatedAt: { type: string, format: date-time }
 
     LoginFailed:
       name: LoginFailed
@@ -467,38 +467,63 @@ components:
       payload:
         type: object
         properties:
-          eventId:    { type: string }
-          tenantId:   { type: string }
-          userId:     { type: string }
-          username:   { type: string }
-          ipAddress:  { type: string }
-          userAgent:  { type: string }
+          eventId: { type: string }
+          tenantId: { type: string }
+          userId: { type: string }
+          username: { type: string }
+          ipAddress: { type: string }
+          userAgent: { type: string }
           failureReason: { type: string }
-          attemptCount:  { type: integer, description: "Number of consecutive failures" }
+          attemptCount: { type: integer, description: 'Number of consecutive failures' }
           occurredAt: { type: string, format: date-time }
 
     # Shared payload schema for TradeBooked
     TradeBookedPayload:
       type: object
-      required: [eventId, tenantId, tradeId, assetClass, direction, notional, currency, counterpartyId, occurredAt]
+      required:
+        [
+          eventId,
+          tenantId,
+          tradeId,
+          assetClass,
+          direction,
+          notional,
+          currency,
+          counterpartyId,
+          occurredAt,
+        ]
       properties:
-        eventId:            { type: string, format: uuid }
-        tenantId:           { type: string }
-        tradeId:            { type: string, format: uuid }
-        reference:          { type: string, example: FX-20260409-A1B2C3 }
-        assetClass:         { type: string, enum: [FX, FIXED_INCOME, MONEY_MARKET, INTEREST_RATE_DERIVATIVE, EQUITY, COMMODITY, REPO, ISLAMIC_FINANCE] }
-        instrumentType:     { type: string }
-        direction:          { type: string, enum: [BUY, SELL] }
-        notional:           { type: number }
-        currency:           { type: string }
+        eventId: { type: string, format: uuid }
+        tenantId: { type: string }
+        tradeId: { type: string, format: uuid }
+        reference: { type: string, example: FX-20260409-A1B2C3 }
+        assetClass:
+          {
+            type: string,
+            enum:
+              [
+                FX,
+                FIXED_INCOME,
+                MONEY_MARKET,
+                INTEREST_RATE_DERIVATIVE,
+                EQUITY,
+                COMMODITY,
+                REPO,
+                ISLAMIC_FINANCE,
+              ],
+          }
+        instrumentType: { type: string }
+        direction: { type: string, enum: [BUY, SELL] }
+        notional: { type: number }
+        currency: { type: string }
         counterpartyCurrency: { type: string }
-        price:              { type: number }
-        counterpartyId:     { type: string, format: uuid }
-        bookId:             { type: string }
-        traderId:           { type: string }
-        valueDate:          { type: string, format: date }
-        status:             { type: string }
-        occurredAt:         { type: string, format: date-time }
+        price: { type: number }
+        counterpartyId: { type: string, format: uuid }
+        bookId: { type: string }
+        traderId: { type: string }
+        valueDate: { type: string, format: date }
+        status: { type: string }
+        occurredAt: { type: string, format: date-time }
 
   securitySchemes:
     sasl-scram:

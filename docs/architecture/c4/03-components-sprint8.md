@@ -23,6 +23,7 @@ Sprint 8 adds four major component families across three services.
 ```
 
 **Circuit Breaker State Transitions:**
+
 ```
 CLOSED ──(3 failures)──► OPEN ──(30s timeout)──► HALF_OPEN
   ▲                                                   │
@@ -88,5 +89,6 @@ CLOSED ──(3 failures)──► OPEN ──(30s timeout)──► HALF_OPEN
 ```
 
 **Mathematical references:**
+
 - Gatheral (2004): `w(k,τ) = a + b[ρ(k−m) + √((k−m)²+σ²)]`
 - Castagna-Mercurio (2007): `VV = BS + x₁(Vatm_mkt − Vatm_bs) + x₂(...) + x₃(...)`

@@ -33,55 +33,55 @@
 
 /** Sukuk structure type. */
 export const SukukType = {
-  IJARA:    'IJARA',    // Lease-backed — periodic rental payments
+  IJARA: 'IJARA', // Lease-backed — periodic rental payments
   MURABAHA: 'MURABAHA', // Cost-plus — single terminal profit payment
-  MUSHARAKA:'MUSHARAKA',// Partnership — profit/loss sharing
-  WAKALA:   'WAKALA',   // Agency — investment mandate
+  MUSHARAKA: 'MUSHARAKA', // Partnership — profit/loss sharing
+  WAKALA: 'WAKALA', // Agency — investment mandate
 } as const;
 export type SukukType = (typeof SukukType)[keyof typeof SukukType];
 
 /** AAOIFI credit quality categories for Basel III risk weight mapping. */
 export const SukukGrade = {
   INVESTMENT_GRADE: 'INVESTMENT_GRADE',
-  SUB_INVESTMENT:   'SUB_INVESTMENT',
-  UNRATED:          'UNRATED',
+  SUB_INVESTMENT: 'SUB_INVESTMENT',
+  UNRATED: 'UNRATED',
 } as const;
 export type SukukGrade = (typeof SukukGrade)[keyof typeof SukukGrade];
 
 /** Input for Ijara Sukuk pricing. */
 export interface IjaraSukukInput {
-  readonly sukukType:       'IJARA';
+  readonly sukukType: 'IJARA';
   /** Face value (principal) of the Sukuk */
-  readonly faceValue:        number;
+  readonly faceValue: number;
   /** Periodic rental rate (ujrah) as a decimal — replaces coupon rate */
-  readonly rentalRate:       number;
+  readonly rentalRate: number;
   /** Payment frequency per year (typically 2 or 4) */
-  readonly frequency:        number;
+  readonly frequency: number;
   /** Remaining tenor in years */
-  readonly tenorYears:       number;
+  readonly tenorYears: number;
   /** Islamic benchmark rate used for discounting (IIBOR proxy, NOT riba) */
-  readonly discountRate:     number;
+  readonly discountRate: number;
   /** Currency */
-  readonly currency:         string;
+  readonly currency: string;
   /** AAOIFI credit grade for regulatory risk weight */
-  readonly grade:            SukukGrade;
+  readonly grade: SukukGrade;
   /** Underlying asset description (for AAOIFI FAS 28 disclosure) */
   readonly underlyingAsset?: string;
 }
 
 /** Input for Murabaha Sukuk pricing. */
 export interface MurabahaSukukInput {
-  readonly sukukType:    'MURABAHA';
+  readonly sukukType: 'MURABAHA';
   /** Principal amount */
-  readonly faceValue:    number;
+  readonly faceValue: number;
   /** Profit rate (ribh rate) — simple, no compounding (AAOIFI Standard 17) */
-  readonly ribhRate:     number;
+  readonly ribhRate: number;
   /** Tenor in years */
-  readonly tenorYears:   number;
+  readonly tenorYears: number;
   /** Discount rate for NPV calculation */
   readonly discountRate: number;
-  readonly currency:     string;
-  readonly grade:        SukukGrade;
+  readonly currency: string;
+  readonly grade: SukukGrade;
 }
 
 export type SukukInput = IjaraSukukInput | MurabahaSukukInput;
@@ -89,31 +89,31 @@ export type SukukInput = IjaraSukukInput | MurabahaSukukInput;
 /** Sukuk pricing result. */
 export interface SukukResult {
   /** Dirty price (full price including accrued) */
-  readonly dirtyPrice:        number;
+  readonly dirtyPrice: number;
   /** Clean price */
-  readonly cleanPrice:        number;
+  readonly cleanPrice: number;
   /** Sharia-compliant yield (analogous to YTM but labelled as profit rate) */
-  readonly profitRate:        number;
+  readonly profitRate: number;
   /** DV01 (price sensitivity to 1bp change in discount rate) */
-  readonly dv01:               number;
+  readonly dv01: number;
   /** Modified duration */
-  readonly modifiedDuration:   number;
+  readonly modifiedDuration: number;
   /** Basel III risk weight (%) per IFSB-7 */
-  readonly riskWeightPct:      number;
+  readonly riskWeightPct: number;
   /** Regulatory capital charge (Basel III SA approach) */
-  readonly reguCapitalCharge:  number;
+  readonly reguCapitalCharge: number;
   /** Sharia compliance note */
-  readonly shariaNote:         string;
+  readonly shariaNote: string;
   /** AAOIFI standard referenced */
-  readonly aaoifiStandard:     string;
-  readonly processingMs:       number;
+  readonly aaoifiStandard: string;
+  readonly processingMs: number;
 }
 
 // ── Basel III risk weights for Sukuk (IFSB-7 Table 1) ─────────────────────────
 const RISK_WEIGHTS: Record<SukukGrade, number> = {
-  INVESTMENT_GRADE: 0.20,  // 20% — qualifying investment-grade
-  SUB_INVESTMENT:   1.50,  // 150% — below investment grade
-  UNRATED:          0.50,  // 50% — unrated (Sharia-compliant treatment)
+  INVESTMENT_GRADE: 0.2, // 20% — qualifying investment-grade
+  SUB_INVESTMENT: 1.5, // 150% — below investment grade
+  UNRATED: 0.5, // 50% — unrated (Sharia-compliant treatment)
 };
 
 const CAPITAL_RATIO = 0.08; // 8% Basel III minimum capital ratio
@@ -139,8 +139,15 @@ export class SukukPricer {
   // ── Private: Ijara pricing ─────────────────────────────────────────────────
 
   private _priceIjara(input: IjaraSukukInput, t0: number): SukukResult {
-    const { faceValue: F, rentalRate: c, frequency: freq,
-            tenorYears: T, discountRate: r, grade, currency } = input;
+    const {
+      faceValue: F,
+      rentalRate: c,
+      frequency: freq,
+      tenorYears: T,
+      discountRate: r,
+      grade,
+      currency,
+    } = input;
 
     const periodicCoupon = (c * F) / freq;
     const n = Math.round(T * freq);
@@ -174,36 +181,35 @@ export class SukukPricer {
     const modifiedDuration = macaulay / (1 + profitRate / freq);
 
     // Basel III risk weight and capital charge
-    const riskWeightPct  = RISK_WEIGHTS[grade] * 100;
+    const riskWeightPct = RISK_WEIGHTS[grade] * 100;
     const reguCapitalCharge = dirtyPrice * RISK_WEIGHTS[grade] * CAPITAL_RATIO;
 
     return {
-      dirtyPrice:        parseFloat(dirtyPrice.toFixed(4)),
-      cleanPrice:        parseFloat(cleanPrice.toFixed(4)),
-      profitRate:        parseFloat(profitRate.toFixed(6)),
-      dv01:               parseFloat(dv01.toFixed(4)),
-      modifiedDuration:   parseFloat(modifiedDuration.toFixed(4)),
+      dirtyPrice: parseFloat(dirtyPrice.toFixed(4)),
+      cleanPrice: parseFloat(cleanPrice.toFixed(4)),
+      profitRate: parseFloat(profitRate.toFixed(6)),
+      dv01: parseFloat(dv01.toFixed(4)),
+      modifiedDuration: parseFloat(modifiedDuration.toFixed(4)),
       riskWeightPct,
-      reguCapitalCharge:  parseFloat(reguCapitalCharge.toFixed(2)),
-      shariaNote:         'Ijara (lease): rental payments are ujrah, not riba. AAOIFI FAS 28 compliant.',
-      aaoifiStandard:     'AAOIFI Sharia Standard 9 (Ijara)',
-      processingMs:       parseFloat((performance.now() - t0).toFixed(2)),
+      reguCapitalCharge: parseFloat(reguCapitalCharge.toFixed(2)),
+      shariaNote: 'Ijara (lease): rental payments are ujrah, not riba. AAOIFI FAS 28 compliant.',
+      aaoifiStandard: 'AAOIFI Sharia Standard 9 (Ijara)',
+      processingMs: parseFloat((performance.now() - t0).toFixed(2)),
     };
   }
 
   // ── Private: Murabaha pricing ──────────────────────────────────────────────
 
   private _priceMurabaha(input: MurabahaSukukInput, t0: number): SukukResult {
-    const { faceValue: F, ribhRate: ribh, tenorYears: T,
-            discountRate: r, grade } = input;
+    const { faceValue: F, ribhRate: ribh, tenorYears: T, discountRate: r, grade } = input;
 
     // Murabaha terminal value = principal + simple profit (AAOIFI Standard 17: no compounding)
     const totalProfit = F * ribh * T;
     const terminalValue = F + totalProfit;
 
     // Current dirty price = PV of terminal value
-    const dirtyPrice  = terminalValue * Math.exp(-r * T);
-    const cleanPrice  = dirtyPrice;
+    const dirtyPrice = terminalValue * Math.exp(-r * T);
+    const cleanPrice = dirtyPrice;
 
     // Effective annualised profit rate (equivalent yield)
     const profitRate = (terminalValue / dirtyPrice - 1) / T;
@@ -212,21 +218,22 @@ export class SukukPricer {
     const priceBump = terminalValue * Math.exp(-(r + 0.0001) * T);
     const dv01 = Math.abs(priceBump - dirtyPrice);
 
-    const modifiedDuration = T * (terminalValue * Math.exp(-r * T)) / dirtyPrice;
+    const modifiedDuration = (T * (terminalValue * Math.exp(-r * T))) / dirtyPrice;
     const riskWeightPct = RISK_WEIGHTS[grade] * 100;
     const reguCapitalCharge = dirtyPrice * RISK_WEIGHTS[grade] * CAPITAL_RATIO;
 
     return {
-      dirtyPrice:        parseFloat(dirtyPrice.toFixed(4)),
-      cleanPrice:        parseFloat(cleanPrice.toFixed(4)),
-      profitRate:        parseFloat(profitRate.toFixed(6)),
-      dv01:               parseFloat(dv01.toFixed(4)),
-      modifiedDuration:   parseFloat(modifiedDuration.toFixed(4)),
+      dirtyPrice: parseFloat(dirtyPrice.toFixed(4)),
+      cleanPrice: parseFloat(cleanPrice.toFixed(4)),
+      profitRate: parseFloat(profitRate.toFixed(6)),
+      dv01: parseFloat(dv01.toFixed(4)),
+      modifiedDuration: parseFloat(modifiedDuration.toFixed(4)),
       riskWeightPct,
-      reguCapitalCharge:  parseFloat(reguCapitalCharge.toFixed(2)),
-      shariaNote:         'Murabaha: single profit payment at maturity. Simple profit only — no compounding (AAOIFI Standard 17).',
-      aaoifiStandard:     'AAOIFI Sharia Standard 17 (Murabaha)',
-      processingMs:       parseFloat((performance.now() - t0).toFixed(2)),
+      reguCapitalCharge: parseFloat(reguCapitalCharge.toFixed(2)),
+      shariaNote:
+        'Murabaha: single profit payment at maturity. Simple profit only — no compounding (AAOIFI Standard 17).',
+      aaoifiStandard: 'AAOIFI Sharia Standard 17 (Murabaha)',
+      processingMs: parseFloat((performance.now() - t0).toFixed(2)),
     };
   }
 
@@ -234,14 +241,20 @@ export class SukukPricer {
 
   private _computePrice(coupon: number, face: number, freq: number, n: number, r: number): number {
     let p = 0;
-    for (let i = 1; i <= n; i++) p += coupon * Math.exp(-r * i / freq);
-    return p + face * Math.exp(-r * n / freq);
+    for (let i = 1; i <= n; i++) p += coupon * Math.exp((-r * i) / freq);
+    return p + face * Math.exp((-r * n) / freq);
   }
 
-  private _solveYield(coupon: number, face: number, freq: number, n: number, price: number): number {
-    let y = coupon * freq / face; // initial guess = running yield
+  private _solveYield(
+    coupon: number,
+    face: number,
+    freq: number,
+    n: number,
+    price: number,
+  ): number {
+    let y = (coupon * freq) / face; // initial guess = running yield
     for (let i = 0; i < 200; i++) {
-      const p  = this._computePrice(coupon, face, freq, n, y);
+      const p = this._computePrice(coupon, face, freq, n, y);
       // Analytical derivative: d(price)/dy (negative — price falls as yield rises)
       const dp = this._computePrice(coupon, face, freq, n, y + 0.0001) - p;
       const diff = p - price;

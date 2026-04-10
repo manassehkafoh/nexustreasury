@@ -10,13 +10,13 @@ Each service that consumes a Kafka event defines a **Pact contract** specifying 
 
 ### Producer → Consumer relationships
 
-| Topic | Producer | Consumers |
-|---|---|---|
-| `nexus.trading.trades.booked` | trade-service | position-service, accounting-service, audit-service, notification-service |
-| `nexus.risk.limit-breach` | risk-service | notification-service, audit-service |
-| `nexus.risk.var-result` | risk-service | collateral-service, reporting-service |
-| `nexus.bo.reconciliation-break` | bo-service | notification-service, audit-service |
-| `nexus.alm.lcr-calculated` | alm-service | notification-service, reporting-service |
+| Topic                           | Producer      | Consumers                                                                 |
+| ------------------------------- | ------------- | ------------------------------------------------------------------------- |
+| `nexus.trading.trades.booked`   | trade-service | position-service, accounting-service, audit-service, notification-service |
+| `nexus.risk.limit-breach`       | risk-service  | notification-service, audit-service                                       |
+| `nexus.risk.var-result`         | risk-service  | collateral-service, reporting-service                                     |
+| `nexus.bo.reconciliation-break` | bo-service    | notification-service, audit-service                                       |
+| `nexus.alm.lcr-calculated`      | alm-service   | notification-service, reporting-service                                   |
 
 ## Run contracts
 

@@ -30,9 +30,9 @@
 /** Polynomial basis functions for LSM regression (Laguerre polynomials L0-L2). */
 function laguerre(x: number): [number, number, number] {
   return [
-    1,                                  // L0(x) = 1
-    1 - x,                              // L1(x) = 1 - x
-    0.5 * (2 - 4 * x + x * x),         // L2(x) = (2 - 4x + x²)/2
+    1, // L0(x) = 1
+    1 - x, // L1(x) = 1 - x
+    0.5 * (2 - 4 * x + x * x), // L2(x) = (2 - 4x + x²)/2
   ];
 }
 
@@ -92,7 +92,7 @@ export class BermudanSwaptionPricer {
   private static readonly ALGORITHM = 'LSM_LONGSTAFF_SCHWARTZ_2001';
   private static readonly DEFAULT_PATHS = 10_000;
   private static readonly SEED_MULTIPLIER = 1664525;
-  private static readonly SEED_INCREMENT  = 1013904223;
+  private static readonly SEED_INCREMENT = 1013904223;
 
   /**
    * Price a Bermudan swaption using LSM Monte Carlo.
@@ -106,8 +106,13 @@ export class BermudanSwaptionPricer {
 
     const numPaths = input.numPaths ?? BermudanSwaptionPricer.DEFAULT_PATHS;
     const {
-      swaptionType, notional, fixedRate, currentSwapRate,
-      exerciseDates, swaptionVol, discountRate,
+      swaptionType,
+      notional,
+      fixedRate,
+      currentSwapRate,
+      exerciseDates,
+      swaptionVol,
+      discountRate,
     } = input;
 
     const isPayer = swaptionType === 'PAYER';
@@ -116,17 +121,15 @@ export class BermudanSwaptionPricer {
     // ── Step 1: Simulate swap rate paths via GBM ─────────────────────────────
     // dS = μS dt + σS dW  →  S(t) = S(0) exp((μ - σ²/2)t + σ√t Z)
     // Under risk-neutral measure, μ = discountRate for swap rate
-    const times = exerciseDates.map(e => e.timeToExercise);
-    const paths = this._simulatePaths(
-      currentSwapRate, discountRate, swaptionVol, times, numPaths,
-    );
+    const times = exerciseDates.map((e) => e.timeToExercise);
+    const paths = this._simulatePaths(currentSwapRate, discountRate, swaptionVol, times, numPaths);
 
     // ── Step 2: Compute intrinsic values at each exercise date ────────────────
     const intrinsic: number[][] = Array.from({ length: M }, (_, m) => {
-      return paths.map(path => {
+      return paths.map((path) => {
         const remainingTenor = exerciseDates[m].remainingTenor;
         const annuity = this._annuityFactor(discountRate, remainingTenor);
-        const swapNPV  = notional * annuity * (isPayer ? 1 : -1) * (path[m] - fixedRate);
+        const swapNPV = notional * annuity * (isPayer ? 1 : -1) * (path[m] - fixedRate);
         return Math.max(0, swapNPV);
       });
     });
@@ -137,13 +140,11 @@ export class BermudanSwaptionPricer {
     const exerciseProbs: number[] = new Array(M).fill(0);
 
     for (let m = M - 2; m >= 0; m--) {
-      const dt    = times[m + 1] - times[m];
-      const dfDt  = Math.exp(-discountRate * dt);
+      const dt = times[m + 1] - times[m];
+      const dfDt = Math.exp(-discountRate * dt);
 
       // Select in-the-money paths for regression
-      const itmIdx = cashflows
-        .map((_, i) => i)
-        .filter(i => intrinsic[m][i] > 0);
+      const itmIdx = cashflows.map((_, i) => i).filter((i) => intrinsic[m][i] > 0);
 
       if (itmIdx.length < 3) {
         // Not enough ITM paths — don't exercise
@@ -152,8 +153,8 @@ export class BermudanSwaptionPricer {
       }
 
       // Fit continuation value: E[CV | S_m] ≈ β₀L₀ + β₁L₁ + β₂L₂
-      const X  = itmIdx.map(i => laguerre(paths[i][m] / currentSwapRate));
-      const yy = itmIdx.map(i => cashflows[i] * dfDt);
+      const X = itmIdx.map((i) => laguerre(paths[i][m] / currentSwapRate));
+      const yy = itmIdx.map((i) => cashflows[i] * dfDt);
       const beta = ols(X, yy);
 
       // Exercise decision
@@ -174,7 +175,7 @@ export class BermudanSwaptionPricer {
       }
       exerciseProbs[m] = exercised / numPaths;
     }
-    exerciseProbs[M - 1] = cashflows.filter(c => c > 0).length / numPaths;
+    exerciseProbs[M - 1] = cashflows.filter((c) => c > 0).length / numPaths;
 
     // ── Step 4: Discount all cashflows to t=0 ─────────────────────────────────
     const df0 = Math.exp(-discountRate * times[0]);
@@ -190,7 +191,7 @@ export class BermudanSwaptionPricer {
     const dv01 = Math.abs(priceBump - price);
 
     // Exercise boundary: earliest date where exercise prob > 50%
-    const exerciseBoundary = exerciseProbs.findIndex(p => p > 0.5);
+    const exerciseBoundary = exerciseProbs.findIndex((p) => p > 0.5);
 
     return {
       price: Math.max(0, price),
@@ -205,13 +206,21 @@ export class BermudanSwaptionPricer {
   /** Internal pricing without DV01 (avoids recursive heap growth). */
   private _priceInternal(input: BermudanSwaptionInput): number {
     const numPaths = input.numPaths ?? BermudanSwaptionPricer.DEFAULT_PATHS;
-    const { swaptionType, notional, fixedRate, currentSwapRate, exerciseDates, swaptionVol, discountRate } = input;
+    const {
+      swaptionType,
+      notional,
+      fixedRate,
+      currentSwapRate,
+      exerciseDates,
+      swaptionVol,
+      discountRate,
+    } = input;
     const isPayer = swaptionType === 'PAYER';
     const M = exerciseDates.length;
-    const times = exerciseDates.map(e => e.timeToExercise);
+    const times = exerciseDates.map((e) => e.timeToExercise);
     const paths = this._simulatePaths(currentSwapRate, discountRate, swaptionVol, times, numPaths);
     const intrinsic: number[][] = Array.from({ length: M }, (_, m) => {
-      return paths.map(path => {
+      return paths.map((path) => {
         const annuity = this._annuityFactor(discountRate, exerciseDates[m].remainingTenor);
         const swapNPV = notional * annuity * (isPayer ? 1 : -1) * (path[m] - fixedRate);
         return Math.max(0, swapNPV);
@@ -221,18 +230,23 @@ export class BermudanSwaptionPricer {
     for (let m = M - 2; m >= 0; m--) {
       const dt = times[m + 1] - times[m];
       const dfDt = Math.exp(-discountRate * dt);
-      const itmIdx = cashflows.map((_, i) => i).filter(i => intrinsic[m][i] > 0);
-      if (itmIdx.length < 3) { for (let i = 0; i < numPaths; i++) cashflows[i] *= dfDt; continue; }
-      const X = itmIdx.map(i => laguerre(paths[i][m] / currentSwapRate));
-      const yy = itmIdx.map(i => cashflows[i] * dfDt);
+      const itmIdx = cashflows.map((_, i) => i).filter((i) => intrinsic[m][i] > 0);
+      if (itmIdx.length < 3) {
+        for (let i = 0; i < numPaths; i++) cashflows[i] *= dfDt;
+        continue;
+      }
+      const X = itmIdx.map((i) => laguerre(paths[i][m] / currentSwapRate));
+      const yy = itmIdx.map((i) => cashflows[i] * dfDt);
       const beta = ols(X, yy);
       for (const i of itmIdx) {
         const basis = laguerre(paths[i][m] / currentSwapRate);
-        const contValue = beta[0]*basis[0] + beta[1]*basis[1] + beta[2]*basis[2];
+        const contValue = beta[0] * basis[0] + beta[1] * basis[1] + beta[2] * basis[2];
         if (intrinsic[m][i] > contValue) cashflows[i] = intrinsic[m][i];
         else cashflows[i] *= dfDt;
       }
-      for (let i = 0; i < numPaths; i++) { if (!itmIdx.includes(i)) cashflows[i] *= dfDt; }
+      for (let i = 0; i < numPaths; i++) {
+        if (!itmIdx.includes(i)) cashflows[i] *= dfDt;
+      }
     }
     const df0 = Math.exp(-discountRate * times[0]);
     return Math.max(0, (cashflows.reduce((s, c) => s + c, 0) / numPaths) * df0);
@@ -240,15 +254,19 @@ export class BermudanSwaptionPricer {
 
   /** Simulate numPaths rate paths at all exercise times (GBM). */
   private _simulatePaths(
-    S0: number, mu: number, sigma: number,
-    times: number[], numPaths: number,
+    S0: number,
+    mu: number,
+    sigma: number,
+    times: number[],
+    numPaths: number,
   ): number[][] {
     const M = times.length;
     // Deterministic seeded LCG for reproducibility
     let seed = 42;
     const lcg = () => {
-      seed = (seed * BermudanSwaptionPricer.SEED_MULTIPLIER +
-              BermudanSwaptionPricer.SEED_INCREMENT) >>> 0;
+      seed =
+        (seed * BermudanSwaptionPricer.SEED_MULTIPLIER + BermudanSwaptionPricer.SEED_INCREMENT) >>>
+        0;
       return seed / 0x100000000;
     };
     const boxMuller = (): number => {
@@ -261,7 +279,7 @@ export class BermudanSwaptionPricer {
       let S = S0;
       return times.map((t, m) => {
         const dt = m === 0 ? t : t - times[m - 1];
-        const z  = boxMuller();
+        const z = boxMuller();
         S = S * Math.exp((mu - 0.5 * sigma * sigma) * dt + sigma * Math.sqrt(dt) * z);
         return Math.max(S, 1e-8); // floor at near-zero
       });
@@ -279,11 +297,14 @@ export class BermudanSwaptionPricer {
   }
 
   private _validate(input: BermudanSwaptionInput): void {
-    if (input.notional         <= 0) throw new Error('BermudanSwaptionPricer: notional must be > 0');
-    if (input.swaptionVol      <= 0) throw new Error('BermudanSwaptionPricer: swaptionVol must be > 0');
-    if (input.currentSwapRate  <= 0) throw new Error('BermudanSwaptionPricer: currentSwapRate must be > 0');
-    if (input.exerciseDates.length === 0) throw new Error('BermudanSwaptionPricer: must have ≥1 exercise date');
+    if (input.notional <= 0) throw new Error('BermudanSwaptionPricer: notional must be > 0');
+    if (input.swaptionVol <= 0) throw new Error('BermudanSwaptionPricer: swaptionVol must be > 0');
+    if (input.currentSwapRate <= 0)
+      throw new Error('BermudanSwaptionPricer: currentSwapRate must be > 0');
+    if (input.exerciseDates.length === 0)
+      throw new Error('BermudanSwaptionPricer: must have ≥1 exercise date');
     const sorted = [...input.exerciseDates].sort((a, b) => a.timeToExercise - b.timeToExercise);
-    if (sorted[0].timeToExercise <= 0) throw new Error('BermudanSwaptionPricer: exercise times must be > 0');
+    if (sorted[0].timeToExercise <= 0)
+      throw new Error('BermudanSwaptionPricer: exercise times must be > 0');
   }
 }

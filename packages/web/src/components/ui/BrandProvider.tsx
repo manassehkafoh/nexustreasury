@@ -29,45 +29,52 @@ import {
 // ── Context ───────────────────────────────────────────────────────────────────
 
 interface BrandContextValue {
-  brand:    BrandConfig;
+  brand: BrandConfig;
   setBrand: (config: BrandConfig) => void;
   /** Switch to a named preset (e.g. 'republic-bank', 'minimal') */
   loadPreset: (id: string) => void;
 }
 
 const BrandContext = createContext<BrandContextValue>({
-  brand:      NEXUSTREASURY_BRAND,
-  setBrand:   () => {},
+  brand: NEXUSTREASURY_BRAND,
+  setBrand: () => {},
   loadPreset: () => {},
 });
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 interface BrandProviderProps {
-  brand?:    BrandConfig;
-  children:  React.ReactNode;
+  brand?: BrandConfig;
+  children: React.ReactNode;
 }
 
-export function BrandProvider({ brand: initialBrand = NEXUSTREASURY_BRAND, children }: BrandProviderProps): JSX.Element {
+export function BrandProvider({
+  brand: initialBrand = NEXUSTREASURY_BRAND,
+  children,
+}: BrandProviderProps): JSX.Element {
   const [brand, setBrandState] = useState<BrandConfig>(initialBrand);
 
   // Inject CSS variables into :root whenever the brand changes
   useEffect(() => {
     const existingStyle = document.getElementById('nt-brand-vars');
-    const style = existingStyle ?? ((): HTMLStyleElement => {
-      const el = document.createElement('style');
-      el.id = 'nt-brand-vars';
-      document.head.appendChild(el);
-      return el;
-    })();
+    const style =
+      existingStyle ??
+      ((): HTMLStyleElement => {
+        const el = document.createElement('style');
+        el.id = 'nt-brand-vars';
+        document.head.appendChild(el);
+        return el;
+      })();
     style.textContent = generateCSSVariables(brand);
 
     // Sync lang + dir attributes for RTL locales
     document.documentElement.lang = brand.locale.language;
-    document.documentElement.dir  = brand.locale.rtl ? 'rtl' : 'ltr';
+    document.documentElement.dir = brand.locale.rtl ? 'rtl' : 'ltr';
   }, [brand]);
 
-  const setBrand   = (config: BrandConfig): void => { setBrandState(config); };
+  const setBrand = (config: BrandConfig): void => {
+    setBrandState(config);
+  };
   const loadPreset = (id: string): void => {
     const preset = BRAND_PRESETS[id];
     if (preset) setBrandState(preset);

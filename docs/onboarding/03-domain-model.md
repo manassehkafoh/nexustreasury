@@ -3,6 +3,7 @@
 ## Aggregates you'll work with most
 
 ### LimitAggregate (`risk-service`)
+
 The pre-deal check gate. Every trade booking calls `Limit.checkPreDeal()` synchronously before writing the trade. The `Limit` class enforces the invariant that projected utilisation never silently exceeds 100% of the hard limit — it throws `LimitDomainError` instead.
 
 ```typescript
@@ -15,9 +16,11 @@ const events = limit.pullDomainEvents(); // drain and dispatch to Kafka
 ```
 
 ### LiquidityGapReport (`alm-service`)
+
 Immutable value object created by `LiquidityGapReport.generate()`. Contains the full LCR/NSFR calculation from raw bucket inflows/outflows. Never mutate — create a new report for each reporting period.
 
 ### PricingEngine (`domain`)
+
 The main pricing facade. Accepts all instrument types via typed input interfaces. Behind the scenes delegates to specialised pricers (FXPricer, BondPricer, IRSPricer, BarrierOptionPricer, SukukPricer, VannaVolgaPricer). Always instantiate a single engine per request context — it is not thread-safe across concurrent requests in the same instance.
 
 ---

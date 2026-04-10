@@ -16,12 +16,12 @@ Leverage Ratio = Tier 1 Capital / Total Exposure            (minimum: 3%)
 
 **RWA** (Risk-Weighted Assets) is not the same as total assets. Each asset is multiplied by its risk weight:
 
-| Asset | Typical SA risk weight |
-|---|---|
-| OECD sovereign | 0% |
-| Residential mortgage | 35% |
-| Corporate loan (investment grade) | 100% |
-| Sub-investment grade | 150% |
+| Asset                             | Typical SA risk weight |
+| --------------------------------- | ---------------------- |
+| OECD sovereign                    | 0%                     |
+| Residential mortgage              | 35%                    |
+| Corporate loan (investment grade) | 100%                   |
+| Sub-investment grade              | 150%                   |
 
 ---
 
@@ -29,13 +29,13 @@ Leverage Ratio = Tier 1 Capital / Total Exposure            (minimum: 3%)
 
 The `CapitalStressTester` runs five EBA-calibrated scenarios simultaneously:
 
-| Scenario | GDP shock | Rate shift | Equity shock |
-|---|---|---|---|
-| BASELINE | −0.5pp | +50bp | −5% |
-| ADVERSE | −2.5pp | +300bp | −30% |
-| SEVERELY_ADVERSE | −5.0pp | +500bp | −50% |
-| IDIOSYNCRATIC | −1.0pp | +100bp | −20% |
-| COMBINED | −4.0pp | +400bp | −45% |
+| Scenario         | GDP shock | Rate shift | Equity shock |
+| ---------------- | --------- | ---------- | ------------ |
+| BASELINE         | −0.5pp    | +50bp      | −5%          |
+| ADVERSE          | −2.5pp    | +300bp     | −30%         |
+| SEVERELY_ADVERSE | −5.0pp    | +500bp     | −50%         |
+| IDIOSYNCRATIC    | −1.0pp    | +100bp     | −20%         |
+| COMBINED         | −4.0pp    | +400bp     | −45%         |
 
 For each scenario it calculates **stressed CET1**, **stressed RWA**, and — critically — **survival horizon**: the number of days before capital would hit the regulatory floor under the scenario's daily burn rate.
 
@@ -53,6 +53,7 @@ Economic Capital = RWA × 8% × (1 + stress buffer)
 ```
 
 NexusTreasury's `RAROCEngine` computes RAROC across five dimensions:
+
 - Business unit
 - Customer (relationship-level)
 - Product

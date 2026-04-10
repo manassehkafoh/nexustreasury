@@ -27,41 +27,41 @@ Each tenant's brand config is stored in the `brand_config` table (PostgreSQL, RL
 
 ```typescript
 interface BrandConfig {
-  tenantId:    string;
+  tenantId: string;
   displayName: string;
 
   // Colours (CSS custom property values)
   colors: {
-    primary:     string;  // Main brand colour   — e.g. '#0A5F9E'
-    secondary:   string;  // Accent colour       — e.g. '#F5A623'
-    background:  string;  // App background      — e.g. '#F8FAFC'
-    surface:     string;  // Card/panel bg       — e.g. '#FFFFFF'
-    text:        string;  // Primary text        — e.g. '#1A1A2E'
+    primary: string; // Main brand colour   — e.g. '#0A5F9E'
+    secondary: string; // Accent colour       — e.g. '#F5A623'
+    background: string; // App background      — e.g. '#F8FAFC'
+    surface: string; // Card/panel bg       — e.g. '#FFFFFF'
+    text: string; // Primary text        — e.g. '#1A1A2E'
   };
 
   // Typography
   fonts: {
-    heading: string;   // Google Fonts family name — e.g. 'Inter'
-    body:    string;   // Body font               — e.g. 'Inter'
+    heading: string; // Google Fonts family name — e.g. 'Inter'
+    body: string; // Body font               — e.g. 'Inter'
   };
 
   // Assets
-  logoUrl:    string;  // Path to SVG logo
-  faviconUrl: string;  // Path to favicon
+  logoUrl: string; // Path to SVG logo
+  faviconUrl: string; // Path to favicon
 
   // Locale
-  locale:   string;   // BCP 47 locale          — e.g. 'en-US', 'ar-AE'
-  currency: string;   // Default ISO 4217 code  — e.g. 'USD', 'TTD', 'AED'
-  timezone: string;   // IANA timezone          — e.g. 'America/Port_of_Spain'
+  locale: string; // BCP 47 locale          — e.g. 'en-US', 'ar-AE'
+  currency: string; // Default ISO 4217 code  — e.g. 'USD', 'TTD', 'AED'
+  timezone: string; // IANA timezone          — e.g. 'America/Port_of_Spain'
 
   // Feature flags
   features: {
-    fxEDealing:       boolean;
-    irrbbReporting:   boolean;
-    collateralMgmt:   boolean;
-    islamicFinance:   boolean;
-    aiInsights:       boolean;
-    marketData:       boolean;
+    fxEDealing: boolean;
+    irrbbReporting: boolean;
+    collateralMgmt: boolean;
+    islamicFinance: boolean;
+    aiInsights: boolean;
+    marketData: boolean;
   };
 }
 ```
@@ -143,6 +143,7 @@ curl -X PATCH https://admin.nexustreasury.io/api/v1/tenants/republic-bank/brand 
 ## Adding a New Brand
 
 1. Create the brand directory:
+
    ```bash
    mkdir -p packages/web/public/brands/my-bank
    cp my-bank-logo.svg packages/web/public/brands/my-bank/logo.svg
@@ -150,6 +151,7 @@ curl -X PATCH https://admin.nexustreasury.io/api/v1/tenants/republic-bank/brand 
    ```
 
 2. Add the brand config to `packages/web/src/lib/branding.ts`:
+
    ```typescript
    export const BRAND_CONFIGS: Record<string, BrandConfig> = {
      'my-bank': {
@@ -171,11 +173,13 @@ curl -X PATCH https://admin.nexustreasury.io/api/v1/tenants/republic-bank/brand 
 CSS custom properties are injected into the `<html>` element by the Next.js layout server component:
 
 ```html
-<html style="
+<html
+  style="
   --color-primary: #C8102E;
   --color-secondary: #FFD700;
   --font-heading: 'Inter', sans-serif;
-">
+"
+></html>
 ```
 
 All Tailwind utility classes reference these CSS variables, so the entire UI theme updates without any JavaScript.

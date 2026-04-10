@@ -18,10 +18,10 @@ describe('BloombergBPIPEAdapter', () => {
   it('starts emitting rates after subscribe()', async () => {
     const a = new BloombergBPIPEAdapter({ ...CONFIG, heartbeatMs: 100 });
     const rates: unknown[] = [];
-    a.onRate(r => rates.push(r));
+    a.onRate((r) => rates.push(r));
     a.subscribe(['EURUSD Curncy']);
 
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400));
     await a.disconnect();
 
     expect(rates.length).toBeGreaterThan(0);
@@ -31,10 +31,12 @@ describe('BloombergBPIPEAdapter', () => {
   it('emits BLOOMBERG source on rates', async () => {
     const a = new BloombergBPIPEAdapter(CONFIG);
     let lastRate: { source?: string } | null = null;
-    a.onRate(r => { lastRate = r; });
+    a.onRate((r) => {
+      lastRate = r;
+    });
     a.subscribe(['EURUSD Curncy']);
 
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 300));
     await a.disconnect();
 
     expect(lastRate?.source).toBe('BLOOMBERG');
@@ -43,10 +45,10 @@ describe('BloombergBPIPEAdapter', () => {
   it('multi-instrument subscription emits rates for all instruments', async () => {
     const a = new BloombergBPIPEAdapter(CONFIG);
     const instruments = new Set<string>();
-    a.onRate(r => instruments.add(r.instrument));
+    a.onRate((r) => instruments.add(r.instrument));
     a.subscribe(['EURUSD Curncy', 'GBPUSD Curncy']);
 
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400));
     await a.disconnect();
 
     expect(instruments.size).toBeGreaterThanOrEqual(1);
@@ -57,11 +59,11 @@ describe('BloombergBPIPEAdapter', () => {
     let count = 0;
     a.onRate(() => count++);
     a.subscribe(['EURUSD Curncy']);
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
 
     const countAtDisconnect = count;
     await a.disconnect();
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
 
     expect(count).toBe(countAtDisconnect); // no more ticks after disconnect
   });
@@ -69,8 +71,9 @@ describe('BloombergBPIPEAdapter', () => {
   it('resetCircuit() moves circuit from OPEN to CLOSED', () => {
     const a = new BloombergBPIPEAdapter({ ...CONFIG, failureThreshold: 1 });
     // Force circuit open by triggering failures
-    (a as unknown as { _handleConnectionFailure: (e: Error) => void })
-      ._handleConnectionFailure(new Error('test failure'));
+    (a as unknown as { _handleConnectionFailure: (e: Error) => void })._handleConnectionFailure(
+      new Error('test failure'),
+    );
     a.disconnect();
     a.resetCircuit();
     expect(a.circuitState).toBe(CircuitState.CLOSED);
@@ -88,7 +91,7 @@ describe('BloombergBPIPEAdapter', () => {
 describe('AdaptiveMarketDataAdapter', () => {
   it('initialises with BLOOMBERG as active source', () => {
     const a = new AdaptiveMarketDataAdapter({
-      bloomberg:      CONFIG,
+      bloomberg: CONFIG,
       useMockFallback: true,
     });
     expect(a.activeSource).toBe('BLOOMBERG');
@@ -97,14 +100,14 @@ describe('AdaptiveMarketDataAdapter', () => {
 
   it('receives rates from subscribe()', async () => {
     const a = new AdaptiveMarketDataAdapter({
-      bloomberg:      CONFIG,
+      bloomberg: CONFIG,
       useMockFallback: true,
     });
     const rates: unknown[] = [];
-    a.onRate(r => rates.push(r));
+    a.onRate((r) => rates.push(r));
     a.subscribe(['EURUSD Curncy']);
 
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise((r) => setTimeout(r, 400));
     await a.disconnect();
 
     expect(rates.length).toBeGreaterThan(0);
