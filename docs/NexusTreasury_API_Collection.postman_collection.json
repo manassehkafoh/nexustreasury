@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "NexusTreasury Platform API \u2014 Complete Collection",
-    "description": "Production-ready collection for all 11 NexusTreasury REST microservices.\nIncludes realistic request bodies, pre-request auth scripts, and test assertions.\n\nQuick Start:\n1. Set environment: baseUrl, accessToken, tenantId\n2. Run Authentication request first\n3. Use folders in sequence for full lifecycle test",
+    "name": "NexusTreasury API v1.5.0",
+    "description": "NexusTreasury API v1.5.0 \u2014 Sprints 1-11. Covers trade capture, ALM/IRRBB, risk, back-office, Islamic finance, financial planning, RAROC, capital stress, COREP/FINREP, FX portal, AI assistant, and SSE streaming.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_postman_id": "29ab24d8-a136-4200-b9a3-f67cbc22c874",
     "uid": "24370565-29ab24d8-a136-4200-b9a3-f67cbc22c874"
@@ -599,6 +599,263 @@
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/ready"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 9-A \u2014 Financial Planning & Budgeting",
+      "description": "Budget lifecycle: create, approve, re-forecast, generate report. Closes FIS BSM gap.",
+      "item": [
+        {
+          "name": "Create annual budget (BASE scenario)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/budgets",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"bank-001\",\n  \"fiscalYear\": 2027,\n  \"scenario\": \"BASE\",\n  \"entries\": [\n    {\n      \"businessUnit\": \"FX_TRADING\",\n      \"period\": \"ANNUAL\",\n      \"currency\": \"USD\",\n      \"targetNII\": 5000000,\n      \"targetNIM\": 0.032,\n      \"nonInterestIncome\": 2000000,\n      \"opex\": 1500000,\n      \"rwa\": 80000000,\n      \"capitalAllocated\": 8000000\n    },\n    {\n      \"businessUnit\": \"RETAIL_BANKING\",\n      \"period\": \"ANNUAL\",\n      \"currency\": \"USD\",\n      \"targetNII\": 12000000,\n      \"targetNIM\": 0.028,\n      \"nonInterestIncome\": 1000000,\n      \"opex\": 4000000,\n      \"rwa\": 200000000,\n      \"capitalAllocated\": 20000000\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate budget report (NII, RAROC, mismatch, FTP)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/budgets/BPLM-2027-BASE-0001/report"
+          }
+        },
+        {
+          "name": "Approve budget",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/budgets/BPLM-2027-BASE-0001/approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"approvedBy\": \"cfo@bank.com\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 9-B \u2014 RAROC Profitability Analytics",
+      "description": "Multi-dimensional RAROC: BU, customer, product, trader, geography. Closes FIS BSM gap.",
+      "item": [
+        {
+          "name": "Generate profitability report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/raroc/report",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inputs\": [\n    {\n      \"entityId\": \"FX_TRADING\",\n      \"dimension\": \"BUSINESS_UNIT\",\n      \"period\": \"FY-2027\",\n      \"currency\": \"USD\",\n      \"grossRevenue\": 5000000,\n      \"directCosts\": 1200000,\n      \"ftpCharge\": 300000,\n      \"ftpCredit\": 100000,\n      \"expectedLoss\": 50000,\n      \"rwa\": 80000000,\n      \"capitalAllocated\": 8000000\n    },\n    {\n      \"entityId\": \"RETAIL\",\n      \"dimension\": \"BUSINESS_UNIT\",\n      \"period\": \"FY-2027\",\n      \"currency\": \"USD\",\n      \"grossRevenue\": 12000000,\n      \"directCosts\": 4000000,\n      \"ftpCharge\": 600000,\n      \"ftpCredit\": 200000,\n      \"expectedLoss\": 400000,\n      \"rwa\": 200000000,\n      \"capitalAllocated\": 20000000\n    }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 10-A \u2014 Capital Stress Testing",
+      "description": "5 EBA ICAAP scenarios with survival horizon. Closes FIS BSM Capital Stress gap.",
+      "item": [
+        {
+          "name": "Run capital stress test (5 scenarios)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/capital/stress-test",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"bank-001\",\n  \"reportingDate\": \"2026-04-09\",\n  \"currency\": \"USD\",\n  \"cet1Capital\": 800000000,\n  \"at1Capital\": 100000000,\n  \"tier2Capital\": 200000000,\n  \"rwa\": 6000000000,\n  \"totalExposure\": 10000000000,\n  \"grossLoans\": 4000000000,\n  \"nii\": 400000000,\n  \"ppop\": 250000000,\n  \"ccybRate\": 0.01,\n  \"gsibSurcharge\": 0.005,\n  \"horizonYears\": 3\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 10-B \u2014 FX Auto-Hedging Portal",
+      "description": "Customer FX portal deal submission with auto-hedging and dealing limits.",
+      "item": [
+        {
+          "name": "Submit customer FX deal (EUR/USD BUY)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/fx/portal/deal",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dealId\": \"D-2026-001\",\n  \"customerId\": \"CUST-ACME-001\",\n  \"baseCurrency\": \"EUR\",\n  \"quoteCurrency\": \"USD\",\n  \"side\": \"BUY\",\n  \"notional\": 500000,\n  \"valueDate\": \"2026-04-12\",\n  \"channel\": \"WEB\",\n  \"indicativeRate\": 1.0842\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 10.1-10.2 \u2014 COREP / FINREP Regulatory Reporting",
+      "description": "EBA COREP C 01.00 capital adequacy and FINREP F 01.01/F 02.00 financial reporting.",
+      "item": [
+        {
+          "name": "Generate COREP capital adequacy report",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reporting/corep",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"bank-001\",\n  \"reportingDate\": \"2026-04-09\",\n  \"currency\": \"USD\",\n  \"cet1Gross\": 800000000,\n  \"at1Capital\": 100000000,\n  \"tier2Capital\": 200000000,\n  \"creditRiskExposures\": [\n    {\n      \"exposureClass\": \"CORPORATE\",\n      \"grossExposure\": 3000000000,\n      \"crmCredit\": 200000000,\n      \"riskWeightPct\": 100\n    },\n    {\n      \"exposureClass\": \"RETAIL\",\n      \"grossExposure\": 1000000000,\n      \"crmCredit\": 50000000,\n      \"riskWeightPct\": 75\n    },\n    {\n      \"exposureClass\": \"SOVEREIGN\",\n      \"grossExposure\": 500000000,\n      \"crmCredit\": 0,\n      \"riskWeightPct\": 0\n    }\n  ],\n  \"marketRiskPositions\": [\n    {\n      \"riskClass\": \"FX\",\n      \"grossSensitivity\": 50000000,\n      \"riskWeight\": 0.04\n    }\n  ],\n  \"opRisk\": {\n    \"avgGrossIncome\": 200000000,\n    \"bicMultiplier\": 0.15,\n    \"lossComponent\": 10000000\n  },\n  \"ccybRate\": 0.01,\n  \"gsibSurcharge\": 0.005,\n  \"srepAddOn\": 0.005\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 11.1 \u2014 AI Treasury Assistant",
+      "description": "Natural language Q&A over live treasury data powered by Claude claude-sonnet-4-20250514.",
+      "item": [
+        {
+          "name": "Ask AI: FX exposure question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/ai/ask",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"bank-001\",\n  \"userId\": \"trader-01\",\n  \"question\": \"What is our EUR/USD FX exposure and how does it compare to our limit?\",\n  \"context\": {\n    \"snapshotDate\": \"2026-04-10\",\n    \"fxPositions\": [\n      {\n        \"pair\": \"EUR/USD\",\n        \"netPosition\": 50000000,\n        \"mtm\": 54200000\n      }\n    ],\n    \"limitUtilisation\": [\n      {\n        \"counterpartyId\": \"DB\",\n        \"utilisedPct\": 72.5,\n        \"headroomUSD\": 2750000\n      }\n    ],\n    \"lcrRatio\": 142.5,\n    \"cet1RatioPct\": 13.2\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Ask AI: Which counterparties approaching limits",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/ai/ask",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantId\": \"bank-001\",\n  \"userId\": \"risk-01\",\n  \"question\": \"Which counterparties are above 80% limit utilisation?\",\n  \"context\": {\n    \"snapshotDate\": \"2026-04-10\",\n    \"limitUtilisation\": [\n      {\n        \"counterpartyId\": \"CITI\",\n        \"utilisedPct\": 88.3,\n        \"headroomUSD\": 1170000\n      },\n      {\n        \"counterpartyId\": \"BARCL\",\n        \"utilisedPct\": 52.1,\n        \"headroomUSD\": 4790000\n      },\n      {\n        \"counterpartyId\": \"HSBC\",\n        \"utilisedPct\": 91.7,\n        \"headroomUSD\": 830000\n      }\n    ]\n  }\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sprint 11.2 \u2014 Self-Service Report Builder",
+      "description": "Define, schedule, and run reports across 8 pre-built templates.",
+      "item": [
+        {
+          "name": "Define daily LCR report (scheduled)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reports",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Daily LCR Dashboard\",\n  \"tenantId\": \"bank-001\",\n  \"createdBy\": \"alm-manager-01\",\n  \"template\": \"LCR\",\n  \"dimensions\": [\n    \"LEGAL_ENTITY\",\n    \"CURRENCY\"\n  ],\n  \"format\": \"PDF\",\n  \"schedule\": {\n    \"frequency\": \"DAILY\",\n    \"cronExpression\": \"0 8 * * 1-5\",\n    \"timezone\": \"UTC\",\n    \"startDate\": \"2026-05-01\",\n    \"active\": true\n  },\n  \"delivery\": {\n    \"method\": \"EMAIL\",\n    \"recipients\": [\n      \"alco@bank.com\"\n    ],\n    \"subjectTemplate\": \"Daily LCR Report \\u2014 {date}\"\n  }\n}"
+            }
+          }
+        },
+        {
+          "name": "Run report on demand",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/reports/RPT-000001/run"
           }
         }
       ]

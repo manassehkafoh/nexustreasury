@@ -987,6 +987,295 @@ paths:
         '403':
           description: Insufficient permissions
 
+  /api/v1/budgets:
+    post:
+      summary: Create annual budget plan
+      operationId: createBudget
+      tags: [Financial Planning]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenantId: { type: string }
+                fiscalYear: { type: integer, example: 2027 }
+                scenario: { type: string, enum: [BASE, OPTIMISTIC, STRESS, CUSTOM] }
+                entries:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      businessUnit: { type: string }
+                      targetNII: { type: number }
+                      targetNIM: { type: number }
+                      opex: { type: number }
+                      rwa: { type: number }
+                      capitalAllocated: { type: number }
+      responses:
+        '201':
+          description: Budget plan created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  budgetId: { type: string, example: BPLM-2027-BASE-0001 }
+                  status: { type: string, example: DRAFT }
+                  fiscalYear: { type: integer, example: 2027 }
+
+  /api/v1/budgets/{budgetId}/report:
+    get:
+      summary: Generate budget analytics report
+      operationId: getBudgetReport
+      tags: [Financial Planning]
+      parameters:
+        - name: budgetId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Budget report with NII, RAROC, mismatch analysis and FTP assessment
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalNII: { type: number }
+                  costToIncomeRatio: { type: number }
+                  targetRAROC: { type: number }
+                  misMatchAnalysis:
+                    type: object
+                    properties:
+                      niiShockUp100bps: { type: number }
+                      niiShockDown100bps: { type: number }
+                      sensitivityNote: { type: string }
+                  ftpAssessment:
+                    type: object
+                    properties:
+                      netFTPMarginBps: { type: number }
+                      recommendation: { type: string }
+
+  /api/v1/capital/stress-test:
+    post:
+      summary: Run capital stress test (5 EBA ICAAP scenarios)
+      operationId: runCapitalStressTest
+      tags: [Capital & Risk]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cet1Capital: { type: number }
+                rwa: { type: number }
+                grossLoans: { type: number }
+                horizonYears: { type: number, example: 3 }
+                ccybRate: { type: number, example: 0.01 }
+      responses:
+        '200':
+          description: Capital stress test results for all 5 scenarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  baselineCET1RatioPct: { type: number }
+                  worstCase:
+                    type: object
+                    properties:
+                      scenario: { type: string }
+                      stressedCET1RatioPct: { type: number }
+                      survivalHorizonDays: { type: integer }
+                  cfpTriggerScenario: { type: string, nullable: true }
+                  overallAssessment: { type: string }
+
+  /api/v1/reporting/corep:
+    post:
+      summary: Generate COREP capital adequacy report (CRD V / CRR III)
+      operationId: generateCOREP
+      tags: [Regulatory Reporting]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cet1Gross: { type: number }
+                creditRiskExposures: { type: array }
+                marketRiskPositions: { type: array }
+                opRisk: { type: object }
+      responses:
+        '200':
+          description: COREP report with CET1, T1, total capital ratios and compliance status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cet1RatioPct: { type: number }
+                  totalRWA: { type: number }
+                  isCompliant: { type: boolean }
+                  xbrlTemplate: { type: string, example: 'COREP C 01.00 — Own funds (CRR III)' }
+
+  /api/v1/reporting/finrep:
+    post:
+      summary: Generate FINREP balance sheet and P&L (EBA taxonomy v3.3)
+      operationId: generateFINREP
+      tags: [Regulatory Reporting]
+      responses:
+        '200':
+          description: FINREP report with total assets, NPL ratio, ROA/ROE, cost-to-income
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalAssets: { type: number }
+                  nplRatioPct: { type: number }
+                  returnOnEquityPct: { type: number }
+                  costToIncomePct: { type: number }
+                  ebaTemplate: { type: string }
+
+  /api/v1/ai/ask:
+    post:
+      summary: Ask the AI Treasury Assistant a natural language question
+      operationId: askAIAssistant
+      tags: [AI & Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, userId, question]
+              properties:
+                tenantId: { type: string }
+                userId: { type: string }
+                question:
+                  type: string
+                  example: What is our EUR/USD FX exposure vs last month?
+                context:
+                  type: object
+                  properties:
+                    snapshotDate: { type: string, format: date }
+                    lcrRatio: { type: number }
+                    cet1RatioPct: { type: number }
+      responses:
+        '200':
+          description: AI-generated answer grounded in treasury data context
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer: { type: string }
+                  category: { type: string, example: FX_EXPOSURE }
+                  confidence: { type: string, enum: [HIGH, MEDIUM, LOW] }
+                  followUpQuestions: { type: array, items: { type: string } }
+                  disclaimers: { type: array, items: { type: string } }
+
+  /api/v1/reports:
+    post:
+      summary: Define a self-service report
+      operationId: defineReport
+      tags: [AI & Analytics]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                template: { type: string, enum: [BLOTTER, PNL, POSITION, LCR, IRRBB, COLLATERAL, CAPITAL, CUSTOM] }
+                dimensions: { type: array, items: { type: string } }
+                format: { type: string, enum: [PDF, EXCEL, CSV] }
+                schedule:
+                  type: object
+                  properties:
+                    frequency: { type: string, enum: [DAILY, WEEKLY, MONTHLY, ON_DEMAND] }
+                    cronExpression: { type: string, example: '0 8 * * 1-5' }
+      responses:
+        '201':
+          description: Report definition created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, example: RPT-000001 }
+                  name: { type: string }
+                  template: { type: string }
+
+  /api/v1/fx/portal/deal:
+    post:
+      summary: Submit customer FX deal via portal (triggers auto-hedging)
+      operationId: submitPortalFXDeal
+      tags: [FX Portal]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dealId, customerId, baseCurrency, quoteCurrency, side, notional]
+              properties:
+                dealId: { type: string }
+                customerId: { type: string }
+                baseCurrency: { type: string, example: EUR }
+                quoteCurrency: { type: string, example: USD }
+                side: { type: string, enum: [BUY, SELL] }
+                notional: { type: number, example: 500000 }
+                indicativeRate: { type: number, example: 1.0842 }
+                channel: { type: string, enum: [BRANCH, WEB, API] }
+      responses:
+        '201':
+          description: Deal priced and hedged
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [HEDGED, FAILED_LIMIT, FAILED_MARKET] }
+                  customerRate: { type: number }
+                  hedgeRate: { type: number }
+                  lockedProfit: { type: number }
+                  hedgeRef: { type: string }
+
+  /api/v1/stream/{tenantId}:
+    get:
+      summary: Subscribe to real-time SSE dashboard stream
+      operationId: subscribeSSEStream
+      tags: [Streaming]
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: events
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [position.mtm.updated, limit.utilisation.tick, rate.feed.tick, lcr.intraday.updated]
+      responses:
+        '200':
+          description: SSE stream (text/event-stream)
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                example: |
+                  id: EVT-00000001
+                  event: position.mtm.updated
+                  data: {"pair":"EUR/USD","mtm":54200000,"timestamp":"2026-04-10T08:00:00Z"}
+
 components:
   securitySchemes:
     BearerAuth:
