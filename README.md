@@ -1,7 +1,7 @@
 # NexusTreasury
 
 > **Cloud-Native Treasury Management Platform** — Real-time, event-driven, SOC 2 compliant.  
-> The next-generation alternative to Calypso, Murex, and Finastra.
+> The next-generation alternative to Calypso, Murex, FIS and Finastra.
 
 [![CI Pipeline](https://github.com/manassehkafoh/nexustreasury/actions/workflows/ci.yml/badge.svg)](https://github.com/manassehkafoh/nexustreasury/actions/workflows/ci.yml)
 [![Security Patch](https://github.com/manassehkafoh/nexustreasury/actions/workflows/security-patch.yml/badge.svg)](https://github.com/manassehkafoh/nexustreasury/actions/workflows/security-patch.yml)
