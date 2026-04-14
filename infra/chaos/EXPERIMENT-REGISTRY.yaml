@@ -129,7 +129,7 @@ experiments:
     risk: low
     approved-environments: [dev, staging, production]
     approval-required: false
-    scheduled: "last Sunday of March and October"
+    scheduled: 'last Sunday of March and October'
     owner: sre-team
 
   - id: EXP-017
@@ -153,10 +153,10 @@ experiments:
 
 blackout-windows:
   - description: Pre-market open
-    schedule: "weekdays 07:00-09:00 UTC"
+    schedule: 'weekdays 07:00-09:00 UTC'
   - description: FX weekly fixing window
-    schedule: "Fridays 14:00-17:00 UTC"
+    schedule: 'Fridays 14:00-17:00 UTC'
   - description: Month-end reporting
-    schedule: "last 2 business days of each month"
+    schedule: 'last 2 business days of each month'
   - description: Quarter-end reporting
-    schedule: "last 5 business days of each quarter"
+    schedule: 'last 5 business days of each quarter'
