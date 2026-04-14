@@ -1,0 +1,162 @@
+# NexusTreasury — Chaos Experiment Registry
+# All experiments defined here; YAML specs live in infra/chaos/experiments/
+# See docs/sre/CHAOS-MONKEY.md for the full experiment catalogue.
+
+experiments:
+  - id: EXP-001
+    name: Trade service single pod kill
+    category: pod-lifecycle
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-002
+    name: Trade service 33% pod kill
+    category: pod-lifecycle
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-003
+    name: risk-service pod kill during active trading
+    category: pod-lifecycle
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-004
+    name: audit-service pod restart mid-chain
+    category: pod-lifecycle
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-005
+    name: Bloomberg B-PIPE network partition
+    category: network
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-006
+    name: Inter-service latency injection risk-to-trade
+    category: network
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-007
+    name: Complete AZ network partition simulation
+    category: network
+    risk: high
+    approved-environments: [dev, staging]
+    approval-required: true
+    owner: sre-team
+
+  - id: EXP-008
+    name: Kafka broker network partition (1 of 3)
+    category: network
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-009
+    name: CPU stress on accounting-service
+    category: resource-stress
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-010
+    name: Memory pressure on reporting-service (COREP)
+    category: resource-stress
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-011
+    name: PgBouncer connection pool exhaustion
+    category: resource-stress
+    risk: medium
+    approved-environments: [dev, staging]
+    approval-required: true
+    owner: sre-team
+
+  - id: EXP-012
+    name: Anthropic API timeout (AI assistant)
+    category: external-dependency
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-013
+    name: TorchServe (FinBERT) crash
+    category: external-dependency
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-014
+    name: Keycloak (IdP) restart
+    category: external-dependency
+    risk: medium
+    approved-environments: [dev, staging, production]
+    approval-required: true
+    owner: sre-team
+
+  - id: EXP-015
+    name: Clock skew injection on accounting-service
+    category: time-chaos
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    owner: sre-team
+
+  - id: EXP-016
+    name: DST boundary scheduled test
+    category: time-chaos
+    risk: low
+    approved-environments: [dev, staging, production]
+    approval-required: false
+    scheduled: "last Sunday of March and October"
+    owner: sre-team
+
+  - id: EXP-017
+    name: Database failover during peak trading (GameDay)
+    category: cascading-failure
+    risk: critical
+    approved-environments: [staging, production]
+    approval-required: true
+    approval-authority: engineering-director
+    frequency: quarterly
+    owner: sre-team
+
+  - id: EXP-018
+    name: Multiple simultaneous failures (compound chaos)
+    category: cascading-failure
+    risk: high
+    approved-environments: [staging, production]
+    approval-required: true
+    approval-authority: sre-lead
+    owner: sre-team
+
+blackout-windows:
+  - description: Pre-market open
+    schedule: "weekdays 07:00-09:00 UTC"
+  - description: FX weekly fixing window
+    schedule: "Fridays 14:00-17:00 UTC"
+  - description: Month-end reporting
+    schedule: "last 2 business days of each month"
+  - description: Quarter-end reporting
+    schedule: "last 5 business days of each quarter"
