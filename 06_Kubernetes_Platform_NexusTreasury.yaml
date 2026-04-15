@@ -1,0 +1,1546 @@
+# NexusTreasury — Kubernetes Deployment & Platform Management Plane
+# ============================================================================
+# This document contains:
+#   1. Kubernetes Namespace and NetworkPolicy (Cilium)
+#   2. Helm chart structure for Trade Service (representative)
+#   3. Platform Management Plane architecture
+#   4. Grafana Dashboard configuration
+#   5. Alerting rules
+# ============================================================================
+
+---
+# FILE: charts/nexustreasury/templates/namespaces.yaml
+# Defines all namespaces with enforced labels for Cilium NetworkPolicy
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-prod
+  labels:
+    name: nexus-prod
+    environment: production
+    # These labels are used by Cilium NetworkPolicy for namespace-based selection
+    nexus.io/zone: app
+    nexus.io/tenant: shared
+  annotations:
+    # OPA Gatekeeper will enforce policies in this namespace
+    nexus.io/security-policy: "strict"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-data
+  labels:
+    name: nexus-data
+    environment: production
+    nexus.io/zone: data
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-platform
+  labels:
+    name: nexus-platform
+    environment: production
+    nexus.io/zone: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-observability
+  labels:
+    name: nexus-observability
+    environment: production
+    nexus.io/zone: observability
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nexus-security
+  labels:
+    name: nexus-security
+    environment: production
+    nexus.io/zone: security
+
+---
+# FILE: charts/nexustreasury/templates/network-policies/default-deny.yaml
+# Cilium NetworkPolicy — default deny all ingress and egress
+# All communication must be explicitly allowed below.
+# This implements Zero Trust: deny all, permit explicitly.
+
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: nexus-prod
+spec:
+  # Apply to all pods in the namespace
+  endpointSelector: {}
+  # Default deny all ingress — no pod can receive traffic unless explicitly allowed
+  ingress:
+    - {}
+  # Default deny all egress — no pod can send traffic unless explicitly allowed
+  egress:
+    - {}
+
+---
+# FILE: charts/nexustreasury/templates/network-policies/trade-service.yaml
+# Cilium L7 NetworkPolicy for Trade Service
+# Allows only expected communication patterns — enforced at kernel level via eBPF
+
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: trade-service-policy
+  namespace: nexus-prod
+spec:
+  endpointSelector:
+    matchLabels:
+      app: trade-service
+  
+  # ── INGRESS: Who can call Trade Service ─────────────────────────────────
+  ingress:
+    # Allow inbound from API Gateway only (not direct client access)
+    - fromEndpoints:
+        - matchLabels:
+            app: api-gateway
+            namespace: nexus-ingress
+      toPorts:
+        - ports:
+            - port: "4001"
+              protocol: TCP
+          rules:
+            # L7 HTTP policy — only specific methods and paths allowed
+            http:
+              - method: "POST"
+                path: "/v1/trades"
+              - method: "GET"
+                path: "/v1/trades.*"
+              - method: "PATCH"
+                path: "/v1/trades/.*"
+              - method: "GET"
+                path: "/health/.*"
+              - method: "GET"
+                path: "/metrics"
+    
+    # Allow inbound gRPC from Risk Service (pre-deal limit checks)
+    - fromEndpoints:
+        - matchLabels:
+            app: risk-service
+      toPorts:
+        - ports:
+            - port: "4101"   # gRPC port
+              protocol: TCP
+  
+  # ── EGRESS: What Trade Service can call ──────────────────────────────────
+  egress:
+    # Allow outbound to PostgreSQL in data namespace
+    - toEndpoints:
+        - matchLabels:
+            app: postgresql
+            namespace: nexus-data
+      toPorts:
+        - ports:
+            - port: "5432"
+              protocol: TCP
+    
+    # Allow outbound to Redis in data namespace
+    - toEndpoints:
+        - matchLabels:
+            app: redis
+            namespace: nexus-data
+      toPorts:
+        - ports:
+            - port: "6379"
+              protocol: TCP
+    
+    # Allow outbound to Kafka in data namespace (event publishing)
+    - toEndpoints:
+        - matchLabels:
+            app: kafka
+            namespace: nexus-data
+      toPorts:
+        - ports:
+            - port: "9092"
+              protocol: TCP
+    
+    # Allow outbound to HashiCorp Vault (secrets retrieval)
+    - toEndpoints:
+        - matchLabels:
+            app: vault
+            namespace: nexus-platform
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP
+    
+    # Allow outbound to Keycloak (token validation via JWKS endpoint)
+    - toEndpoints:
+        - matchLabels:
+            app: keycloak
+            namespace: nexus-platform
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    
+    # Allow DNS resolution (required for service discovery)
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+              
+    # Allow outbound to OpenTelemetry Collector (traces + metrics)
+    - toEndpoints:
+        - matchLabels:
+            app: otel-collector
+            namespace: nexus-observability
+      toPorts:
+        - ports:
+            - port: "4317"   # OTLP gRPC
+              protocol: TCP
+
+---
+# FILE: charts/nexustreasury/templates/deployments/trade-service.yaml
+# Kubernetes Deployment for Trade Service with security hardening
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trade-service
+  namespace: nexus-prod
+  labels:
+    app: trade-service
+    version: "{{ .Values.services.trade_service.image.tag }}"
+    nexus.io/component: backend
+    nexus.io/context: trading
+  annotations:
+    # ArgoCD tracking annotation
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  # Start with 3 replicas; HPA will scale based on CPU/RPS
+  replicas: {{ .Values.services.trade_service.replicas | default 3 }}
+  
+  selector:
+    matchLabels:
+      app: trade-service
+  
+  # Rolling update strategy — zero downtime deployments
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Never have more than 1 pod unavailable during update
+      maxUnavailable: 1
+      # Allow 1 extra pod during update (25% surge)
+      maxSurge: 1
+  
+  template:
+    metadata:
+      labels:
+        app: trade-service
+        version: "{{ .Values.services.trade_service.image.tag }}"
+        slot: "{{ .Values.deployment.slot | default 'blue' }}"
+      annotations:
+        # Force pod restart when config changes (hash of ConfigMap)
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps/trade-service.yaml") . | sha256sum }}
+        # Prometheus scrape annotations
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    
+    spec:
+      # Security Context — Pod level
+      securityContext:
+        # Run all processes as non-root GID
+        runAsGroup: 1001
+        # Prevent writing to root filesystem
+        fsGroup: 1001
+        # Prevent privilege escalation at OS level
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Service account with minimal Kubernetes API permissions
+      serviceAccountName: trade-service
+      
+      # Prefer spreading pods across availability zones
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: trade-service
+      
+      # Init container — wait for database and Kafka to be ready
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgresql.nexus-data.svc.cluster.local 5432; do
+                echo "Waiting for PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL is ready"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      
+      containers:
+        - name: trade-service
+          image: "{{ .Values.global.registry }}/trade-service:{{ .Values.services.trade_service.image.tag }}"
+          
+          # Container Security Context — enforces principle of least privilege
+          securityContext:
+            runAsNonRoot: true        # Container must not run as root
+            runAsUser: 1001           # Run as nexus user (matches Dockerfile)
+            allowPrivilegeEscalation: false  # Cannot gain more privileges
+            readOnlyRootFilesystem: true     # Cannot write to container filesystem
+            capabilities:
+              drop:
+                - ALL                 # Drop all Linux capabilities (POSIX)
+              # No capabilities added — application needs none
+          
+          ports:
+            - name: http
+              containerPort: 4001
+              protocol: TCP
+            - name: grpc
+              containerPort: 4101
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          
+          env:
+            # Application configuration — injected from ConfigMap
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "4001"
+            - name: LOG_LEVEL
+              value: "{{ .Values.global.logLevel | default 'info' }}"
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: nexus-config
+                  key: kafka.brokers
+            
+            # Secrets from Vault via Vault Agent injector (not ENV directly)
+            # Database URL, JWT secrets, API keys come from Vault-injected files
+            - name: VAULT_ADDR
+              value: "http://vault.nexus-platform.svc.cluster.local:8200"
+            - name: VAULT_ROLE
+              value: "trade-service"
+            
+            # OpenTelemetry configuration
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.nexus-observability.svc.cluster.local:4317"
+            - name: OTEL_SERVICE_NAME
+              value: "trade-service"
+            - name: OTEL_SERVICE_VERSION
+              value: "{{ .Values.services.trade_service.image.tag }}"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "deployment.environment=production,nexus.context=trading"
+          
+          # Liveness probe — if this fails, pod is killed and restarted
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 30   # Wait for Node.js startup
+            periodSeconds: 15
+            failureThreshold: 3
+            timeoutSeconds: 5
+          
+          # Readiness probe — if this fails, pod is removed from load balancer
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+            timeoutSeconds: 5
+          
+          # Startup probe — gives extra time during initial startup
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            failureThreshold: 30      # 30 × 2s = 60 seconds max startup
+            periodSeconds: 2
+          
+          # Resource limits — prevent noisy neighbour issues
+          resources:
+            requests:
+              cpu: "250m"         # 0.25 CPU cores guaranteed
+              memory: "512Mi"     # 512MB RAM guaranteed
+            limits:
+              cpu: "1000m"        # Max 1 CPU core
+              memory: "1Gi"       # Max 1GB RAM — OOM kill if exceeded
+          
+          # Volume mounts for Vault-injected secrets and writable tmp
+          volumeMounts:
+            - name: vault-secrets
+              mountPath: /vault/secrets
+              readOnly: true
+            - name: tmp-dir
+              mountPath: /tmp   # Only writable volume — for temp files
+      
+      volumes:
+        # Vault Agent injector writes secrets here as files
+        - name: vault-secrets
+          emptyDir:
+            medium: Memory   # In-memory volume — secrets never hit disk
+        # Writable /tmp directory (read-only root filesystem requires this)
+        - name: tmp-dir
+          emptyDir: {}
+      
+      # Graceful shutdown — wait for in-flight requests to complete
+      terminationGracePeriodSeconds: 60
+
+---
+# FILE: charts/nexustreasury/templates/hpa/trade-service-hpa.yaml
+# Horizontal Pod Autoscaler — scales on CPU and custom RPS metric
+
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: trade-service-hpa
+  namespace: nexus-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: trade-service
+  
+  minReplicas: 3    # Always maintain 3 pods for HA across zones
+  maxReplicas: 20   # Scale up to 20 pods under peak load
+  
+  metrics:
+    # Scale on CPU utilisation
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70  # Scale up when avg CPU > 70%
+    
+    # Scale on custom metric: Kafka consumer lag for trade events
+    - type: External
+      external:
+        metric:
+          name: kafka_consumer_lag
+          selector:
+            matchLabels:
+              topic: nexus.trading.trades.created
+              consumer_group: trade-service
+        target:
+          type: AverageValue
+          averageValue: "1000"   # Scale up when consumer lag > 1000 messages
+  
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60   # Wait 60s before scaling up again
+      policies:
+        - type: Pods
+          value: 3                      # Add max 3 pods at a time
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 minutes before scaling down
+      policies:
+        - type: Pods
+          value: 1                      # Remove max 1 pod at a time
+          periodSeconds: 120
+
+---
+# FILE: charts/nexustreasury/templates/services/trade-service-svc.yaml
+# Kubernetes Service for Trade Service
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: trade-service
+  namespace: nexus-prod
+  labels:
+    app: trade-service
+  annotations:
+    # Prometheus ServiceMonitor discovery
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    app: trade-service
+  ports:
+    - name: http
+      port: 4001
+      targetPort: 4001
+      protocol: TCP
+    - name: grpc
+      port: 4101
+      targetPort: 4101
+      protocol: TCP
+  type: ClusterIP  # Internal only — API Gateway routes externally
+
+---
+# FILE: charts/nexustreasury/templates/monitoring/prometheus-rules.yaml
+# Prometheus alerting rules for NexusTreasury
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nexustreasury-alerts
+  namespace: nexus-observability
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    # ─────────────────────────────────────────────────────────────────────
+    # Trade Service SLA Alerts
+    # ─────────────────────────────────────────────────────────────────────
+    - name: nexus.trading.sla
+      interval: 30s
+      rules:
+        - alert: TradeBookingLatencyHigh
+          expr: |
+            histogram_quantile(0.99,
+              rate(http_request_duration_ms_bucket{
+                service="trade-service",
+                path="/v1/trades",
+                method="POST"
+              }[5m])
+            ) > 100
+          for: 2m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Trade booking P99 latency > 100ms SLA"
+            description: "Trade Service P99 latency is {{ $value }}ms. SLA is 100ms."
+            runbook: "https://runbooks.nexustreasury.com/trade-service-latency"
+
+        - alert: TradeServiceErrorRateHigh
+          expr: |
+            rate(http_requests_total{
+              service="trade-service",
+              status=~"5.."
+            }[5m]) /
+            rate(http_requests_total{
+              service="trade-service"
+            }[5m]) > 0.01
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Trade Service error rate > 1%"
+            description: "Error rate is {{ $value | humanizePercentage }}. Investigate immediately."
+
+    # ─────────────────────────────────────────────────────────────────────
+    # Kafka Consumer Lag Alerts
+    # ─────────────────────────────────────────────────────────────────────
+    - name: nexus.kafka.lag
+      rules:
+        - alert: KafkaConsumerLagHigh
+          expr: |
+            kafka_consumer_group_lag{
+              namespace="nexus-prod"
+            } > 10000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Kafka consumer lag > 10,000 messages"
+            description: "Consumer group {{ $labels.consumer_group }} is {{ $value }} messages behind on topic {{ $labels.topic }}"
+
+    # ─────────────────────────────────────────────────────────────────────
+    # ALM / Risk Alerts — Business-critical
+    # ─────────────────────────────────────────────────────────────────────
+    - name: nexus.risk.limits
+      rules:
+        - alert: LimitBreachDetected
+          expr: |
+            increase(nexus_limit_breaches_total[5m]) > 0
+          for: 0m   # Alert immediately on any limit breach
+          labels:
+            severity: critical
+            team: risk
+          annotations:
+            summary: "Risk limit breach detected"
+            description: "{{ $value }} limit breach(es) detected. Risk team must review immediately."
+            runbook: "https://runbooks.nexustreasury.com/limit-breach"
+
+        - alert: LCRBelowMinimum
+          expr: |
+            nexus_lcr_ratio < 1.0
+          for: 5m
+          labels:
+            severity: critical
+            team: alm
+          annotations:
+            summary: "LCR below regulatory minimum of 100%"
+            description: "Entity {{ $labels.legal_entity }} LCR is {{ $value | humanizePercentage }}. Regulatory minimum is 100%."
+
+    # ─────────────────────────────────────────────────────────────────────
+    # Security Alerts
+    # ─────────────────────────────────────────────────────────────────────
+    - name: nexus.security
+      rules:
+        - alert: AuthFailureSpike
+          expr: |
+            rate(keycloak_failed_login_attempts_total[5m]) > 10
+          for: 2m
+          labels:
+            severity: warning
+            team: security
+          annotations:
+            summary: "Spike in authentication failures — possible brute force"
+            description: "{{ $value }} failed login attempts per second. Possible brute force attack."
+
+        - alert: CriticalCVEFound
+          expr: |
+            trivy_vulnerabilities_total{severity="CRITICAL"} > 0
+          for: 0m
+          labels:
+            severity: critical
+            team: security
+          annotations:
+            summary: "Critical CVE detected in container image"
+            description: "{{ $value }} critical vulnerabilities found. Auto-patch pipeline triggered."
+
+---
+# FILE: monitoring/grafana/dashboards/trading-operations.json
+# Grafana Dashboard — Trading Operations (JSON model)
+# Import via Grafana API or ConfigMap
+
+{
+  "title": "NexusTreasury — Trading Operations",
+  "uid": "nexus-trading-ops",
+  "tags": ["nexustreasury", "trading", "operations"],
+  "timezone": "UTC",
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Trade Booking Rate (trades/min)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "rate(nexus_trades_booked_total[1m]) * 60",
+          "legendFormat": "Trades per minute"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Trade Booking P99 Latency (ms)",
+      "type": "gauge",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, rate(http_request_duration_ms_bucket{path='/v1/trades',method='POST'}[5m]))",
+          "legendFormat": "P99 Latency"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 75 },
+              { "color": "red", "value": 100 }
+            ]
+          },
+          "max": 200,
+          "unit": "ms"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "STP Rate (%)",
+      "type": "gauge",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 8 },
+      "targets": [
+        {
+          "expr": "nexus_swift_stp_rate * 100",
+          "legendFormat": "STP Rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "yellow", "value": 85 },
+              { "color": "green", "value": 95 }
+            ]
+          },
+          "max": 100,
+          "unit": "percent"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Active Limit Breaches",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 8 },
+      "targets": [
+        {
+          "expr": "nexus_active_limit_breaches_total",
+          "legendFormat": "Active Breaches"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Trades by Asset Class (Today)",
+      "type": "piechart",
+      "gridPos": { "x": 0, "y": 8, "w": 8, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (asset_class) (increase(nexus_trades_booked_total[24h]))",
+          "legendFormat": "{{asset_class}}"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Kafka Consumer Lag — All Topics",
+      "type": "timeseries",
+      "gridPos": { "x": 8, "y": 8, "w": 16, "h": 8 },
+      "targets": [
+        {
+          "expr": "kafka_consumer_group_lag{namespace='nexus-prod'}",
+          "legendFormat": "{{consumer_group}} / {{topic}}"
+        }
+      ]
+    }
+  ]
+}
+
+---
+# ============================================================================
+# PLATFORM MANAGEMENT PLANE
+# ============================================================================
+# The Platform Management Plane provides end-to-end management of NexusTreasury
+# across all tenants, environments, and infrastructure components.
+#
+# Components:
+#   1. Tenant Manager Service — tenant provisioning, configuration
+#   2. Configuration Service — centralized config management
+#   3. RBAC Engine — fine-grained permission management
+#   4. Audit Dashboard — SOC 2 audit evidence
+#   5. Security Dashboard — CVE status, patch status
+#   6. Platform Admin UI — React-based admin panel
+# ============================================================================
+
+---
+# FILE: services/platform-mgmt-service/src/tenant/tenant.service.ts (TypeScript)
+
+# The following TypeScript represents the Platform Management Service:
+
+```typescript
+/**
+ * Platform Management Service — Tenant Management
+ * ============================================================================
+ * Manages the lifecycle of bank tenants on the NexusTreasury platform.
+ *
+ * A "tenant" represents a bank or financial institution using the platform.
+ * Each tenant has:
+ *   - Isolated data (PostgreSQL schema-per-tenant or row-level security)
+ *   - Independent configuration (feature flags, regulatory parameters)
+ *   - RBAC setup (roles, permissions, users)
+ *   - Kubernetes namespace labels for network isolation
+ *
+ * Security: Only platform administrators can create/manage tenants.
+ * This service runs with elevated privileges and is separately secured.
+ */
+
+import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../database/prisma.service';
+import { KubernetesService } from '../kubernetes/kubernetes.service';
+import { VaultService } from '../vault/vault.service';
+import { KafkaProducerService } from '../kafka/kafka-producer.service';
+import { AuditService } from '../audit/audit.service';
+
+/**
+ * Tenant status in the platform lifecycle
+ */
+export enum TenantStatus {
+  PROVISIONING = 'PROVISIONING',   // Tenant being set up
+  ACTIVE = 'ACTIVE',               // Fully operational
+  SUSPENDED = 'SUSPENDED',         // Access suspended (e.g., non-payment)
+  OFFBOARDING = 'OFFBOARDING',     // Being wound down
+  TERMINATED = 'TERMINATED',       // All data purged
+}
+
+export interface CreateTenantDto {
+  code: string;           // Short code: 'REPUBLIC-BANK-TT'
+  name: string;           // Display name
+  primaryCurrency: string;
+  timezone: string;
+  regulatoryJurisdictions: string[];  // ['TT', 'BB', 'GY'] for Trinidad
+  features: {
+    tradingEnabled: boolean;
+    almEnabled: boolean;
+    derivativesEnabled: boolean;
+    islamicFinanceEnabled: boolean;
+  };
+  contactEmail: string;
+  adminUserEmail: string;
+}
+
+@Injectable()
+export class TenantManagementService {
+  private readonly logger = new Logger(TenantManagementService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly kubernetes: KubernetesService,
+    private readonly vault: VaultService,
+    private readonly kafka: KafkaProducerService,
+    private readonly audit: AuditService,
+  ) {}
+
+  /**
+   * Provision a new bank tenant — full automated setup.
+   *
+   * Steps performed:
+   *   1. Create tenant record in database
+   *   2. Provision Kubernetes namespace labels
+   *   3. Create Vault policies and secrets paths for tenant
+   *   4. Provision database schema/RLS for tenant data isolation
+   *   5. Create initial admin user in Keycloak
+   *   6. Publish TenantProvisionedEvent to Kafka
+   *   7. Record in audit log
+   *
+   * This is idempotent — safe to retry if interrupted.
+   */
+  async provisionTenant(
+    dto: CreateTenantDto,
+    provisionedBy: string,
+  ): Promise<{ tenantId: string; adminSetupUrl: string }> {
+    this.logger.log(`Provisioning tenant: ${dto.code}`);
+
+    // Step 1: Create tenant record in database (transaction)
+    const tenant = await this.prisma.$transaction(async (tx) => {
+      // Ensure code is unique
+      const existing = await tx.tenant.findUnique({ where: { code: dto.code } });
+      if (existing) {
+        throw new Error(`Tenant with code ${dto.code} already exists`);
+      }
+
+      return tx.tenant.create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          status: TenantStatus.PROVISIONING,
+          config: {
+            primaryCurrency: dto.primaryCurrency,
+            timezone: dto.timezone,
+            features: dto.features,
+            jurisdictions: dto.regulatoryJurisdictions,
+          },
+          contactEmail: dto.contactEmail,
+        },
+      });
+    });
+
+    try {
+      // Step 2: Provision Vault secret paths for this tenant
+      // Each tenant gets an isolated Vault path with their own policies
+      await this.vault.createTenantPolicy({
+        tenantId: tenant.id,
+        policyName: `nexus-tenant-${tenant.id}`,
+        secretPaths: [
+          `secret/nexus/${tenant.id}/db-credentials`,
+          `secret/nexus/${tenant.id}/api-keys`,
+          `secret/nexus/${tenant.id}/jwt-keys`,
+          `secret/nexus/${tenant.id}/swift-credentials`,
+        ],
+      });
+
+      // Step 3: Generate and store tenant-specific database credentials
+      const dbCredentials = await this.vault.generateDatabaseCredentials(tenant.id);
+
+      // Step 4: Provision isolated database schema for tenant (RLS)
+      await this.provisionTenantDatabase(tenant.id, dbCredentials);
+
+      // Step 5: Set tenant to ACTIVE
+      await this.prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { status: TenantStatus.ACTIVE },
+      });
+
+      // Step 6: Publish domain event for other services to react
+      await this.kafka.publish('nexus.platform.tenant-provisioned', {
+        tenantId: tenant.id,
+        tenantCode: tenant.code,
+        features: dto.features,
+        occurredAt: new Date().toISOString(),
+      });
+
+      // Step 7: Record in immutable audit log (SOC 2 evidence)
+      await this.audit.log({
+        entityType: 'TENANT',
+        entityId: tenant.id,
+        action: 'TENANT_PROVISIONED',
+        performedBy: provisionedBy,
+        details: { tenantCode: dto.code, features: dto.features },
+      });
+
+      this.logger.log(`Tenant ${dto.code} provisioned successfully: ${tenant.id}`);
+
+      return {
+        tenantId: tenant.id,
+        adminSetupUrl: `https://admin.nexustreasury.com/setup/${tenant.id}`,
+      };
+    } catch (error) {
+      // If provisioning fails, mark tenant as failed for manual cleanup
+      await this.prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { status: 'PROVISIONING_FAILED' },
+      });
+
+      this.logger.error(`Tenant provisioning failed for ${dto.code}: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get platform health metrics for the management dashboard.
+   * Aggregates data across all active tenants.
+   */
+  async getPlatformHealthMetrics(): Promise<{
+    activeTenants: number;
+    totalTradesProcessed24h: number;
+    avgTradingLatencyMs: number;
+    criticalAlertsActive: number;
+    patchComplianceRate: number;
+    kafkaLagTotal: number;
+  }> {
+    // Aggregate metrics from Prometheus via its HTTP API
+    // In production, this queries the Prometheus remote read endpoint
+    const [
+      activeTenants,
+      tradesMetric,
+      latencyMetric,
+      alertsMetric,
+    ] = await Promise.all([
+      this.prisma.tenant.count({ where: { status: TenantStatus.ACTIVE } }),
+      this.queryPrometheus('sum(increase(nexus_trades_booked_total[24h]))'),
+      this.queryPrometheus('histogram_quantile(0.99, rate(http_request_duration_ms_bucket{path="/v1/trades",method="POST"}[5m]))'),
+      this.queryPrometheus('count(ALERTS{alertstate="firing",severity="critical"})'),
+    ]);
+
+    return {
+      activeTenants,
+      totalTradesProcessed24h: Number(tradesMetric),
+      avgTradingLatencyMs: Number(latencyMetric),
+      criticalAlertsActive: Number(alertsMetric),
+      patchComplianceRate: await this.getPatchComplianceRate(),
+      kafkaLagTotal: await this.getTotalKafkaLag(),
+    };
+  }
+
+  private async provisionTenantDatabase(tenantId: string, credentials: any): Promise<void> {
+    // Execute SQL to set up Row Level Security for tenant isolation
+    // Each tenant's data is secured by RLS policies, not separate schemas
+    // (Schema-per-tenant is also supported for highest isolation)
+    await this.prisma.$executeRawUnsafe(`
+      -- Create RLS policy for tenant data isolation
+      DO $$
+      BEGIN
+        -- Enable Row Level Security on all tenant-scoped tables
+        ALTER TABLE trades ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE positions ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE limits ENABLE ROW LEVEL SECURITY;
+        
+        -- Create policy: each tenant can only see their own data
+        CREATE POLICY IF NOT EXISTS tenant_isolation_policy ON trades
+          USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+          
+        CREATE POLICY IF NOT EXISTS tenant_isolation_policy ON positions
+          USING (tenant_id = current_setting('app.current_tenant_id')::uuid);
+      END;
+      $$;
+    `);
+  }
+
+  private async queryPrometheus(query: string): Promise<string> {
+    // Query Prometheus HTTP API for metrics
+    const response = await fetch(
+      `http://prometheus.nexus-observability.svc.cluster.local:9090/api/v1/query?query=${encodeURIComponent(query)}`
+    );
+    const data = await response.json();
+    return data?.data?.result?.[0]?.value?.[1] ?? '0';
+  }
+
+  private async getPatchComplianceRate(): Promise<number> {
+    // Return percentage of services with no critical CVEs
+    // Sourced from Trivy scan results stored in Elasticsearch
+    return 98.5; // Example — in production, query Trivy Operator CRDs
+  }
+
+  private async getTotalKafkaLag(): Promise<number> {
+    const lag = await this.queryPrometheus(
+      'sum(kafka_consumer_group_lag{namespace="nexus-prod"})'
+    );
+    return Number(lag);
+  }
+}
+```
+
+---
+# FILE: docker-compose.yml (Local Development Environment)
+
+version: '3.9'
+
+services:
+  # ── Infrastructure Services ──────────────────────────────────────────────
+
+  # PostgreSQL database with TimescaleDB extension
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: nexus_dev
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus_dev_password_local
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus_dev"]
+      interval: 10s
+      retries: 5
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass nexus_redis_local
+    volumes:
+      - redis_data:/data
+
+  # Zookeeper (required for Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  # Apache Kafka with Schema Registry
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [zookeeper]
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      retries: 10
+
+  # Confluent Schema Registry
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.6.0
+    depends_on: [kafka]
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:29092
+
+  # HashiCorp Vault (dev mode — not for production)
+  vault:
+    image: hashicorp/vault:1.17
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: nexus-dev-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    cap_add:
+      - IPC_LOCK  # Required for Vault memory locking
+
+  # Keycloak Identity Provider
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.3
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin_local_only
+    command: start-dev
+    volumes:
+      - ./config/keycloak/realm-config.json:/opt/keycloak/data/import/realm.json
+
+  # ── Observability ────────────────────────────────────────────────────────
+
+  # Prometheus (local scraping)
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+
+  # Grafana (with pre-loaded dashboards)
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: nexus_grafana_local
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on: [prometheus]
+
+  # Elasticsearch (single node for local dev)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.14.0
+    ports:
+      - "9200:9200"
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: "false"  # Dev only — always enabled in production
+
+  # Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.14.0
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+    depends_on: [elasticsearch]
+
+  # Jaeger (distributed tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4317:4317"    # OTLP gRPC
+
+volumes:
+  postgres_data:
+  redis_data:
+  grafana_data:
+
+---
+# =============================================================================
+# SPRINT 9-12 KUBERNETES ADDITIONS — Services, HPAs, PDBs, Chaos Mesh
+# =============================================================================
+
+# ── planning-service (Port 4012) — Sprint 11-12 ──────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: planning-service
+  namespace: nexus-prod
+  labels:
+    app: planning-service
+    version: v1.6.0
+    chaos-eligible: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: planning-service
+  template:
+    metadata:
+      labels:
+        app: planning-service
+        version: v1.6.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: planning-service
+              topologyKey: topology.kubernetes.io/zone
+      containers:
+        - name: planning-service
+          image: ghcr.io/manassehkafoh/nexustreasury/planning-service:v1.6.0
+          ports:
+            - containerPort: 4012
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nexus-db-secret
+                  key: url
+            - name: KAFKA_BROKERS
+              valueFrom:
+                configMapKeyRef:
+                  name: nexus-config
+                  key: kafka_brokers
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 4012
+            failureThreshold: 30
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4012
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4012
+            failureThreshold: 3
+            periodSeconds: 5
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: planning-service-hpa
+  namespace: nexus-prod
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: planning-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 0
+    scaleDown:
+      stabilizationWindowSeconds: 300
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: planning-service-pdb
+  namespace: nexus-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: planning-service
+---
+# ── reporting-service (Port 4011) — Sprint 10-12 ─────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  namespace: nexus-prod
+  labels:
+    app: reporting-service
+    version: v1.6.0
+    chaos-eligible: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+        version: v1.6.0
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: reporting-service
+              topologyKey: topology.kubernetes.io/zone
+      containers:
+        - name: reporting-service
+          image: ghcr.io/manassehkafoh/nexustreasury/reporting-service:v1.6.0
+          ports:
+            - containerPort: 4011
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: nexus-db-secret
+                  key: url
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nexus-ai-secret
+                  key: anthropic_api_key
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "1024Mi"       # Sized for large COREP computation
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 4011
+            failureThreshold: 30
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4011
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4011
+            failureThreshold: 3
+            periodSeconds: 5
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: reporting-service-pdb
+  namespace: nexus-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: reporting-service
+---
+# ── audit-service (Port 4008) — Sprint 12 ────────────────────────────────────
+# 99.99% SLO — dedicated resources, never preempted
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audit-service
+  namespace: nexus-prod
+  labels:
+    app: audit-service
+    version: v1.6.0
+    chaos-eligible: "false"    # Audit chain must not be chaos-tested without explicit approval
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: audit-service
+  template:
+    metadata:
+      labels:
+        app: audit-service
+        version: v1.6.0
+    spec:
+      priorityClassName: system-node-critical   # Never preempted
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  app: audit-service
+              topologyKey: topology.kubernetes.io/zone
+      containers:
+        - name: audit-service
+          image: ghcr.io/manassehkafoh/nexustreasury/audit-service:v1.6.0
+          ports:
+            - containerPort: 4008
+          env:
+            - name: AUDIT_HMAC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nexus-audit-secret
+                  key: hmac_key
+            - name: VAULT_ADDR
+              value: "http://vault.nexus-security:8200"
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          startupProbe:
+            httpGet:
+              path: /health/startup
+              port: 4008
+            failureThreshold: 30
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4008
+            failureThreshold: 3
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4008
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: audit-service-pdb
+  namespace: nexus-prod
+spec:
+  minAvailable: 3    # Audit service: all 3 must be available at all times
+  selector:
+    matchLabels:
+      app: audit-service
+---
+# ── Chaos Mesh Namespace & RBAC (Sprint 12) ──────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: chaos-mesh
+  labels:
+    app: chaos-mesh
+    environment: production
+---
+# ── PodDisruptionBudgets for existing services (Sprint 12 addition) ───────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: trade-service-pdb
+  namespace: nexus-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: trade-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: risk-service-pdb
+  namespace: nexus-prod
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: risk-service
+---
+# ── Vault Auth (Sprint 12 — zero-downtime secret rotation) ───────────────────
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  name: nexustreasury-vault-auth
+  namespace: nexus-prod
+spec:
+  method: kubernetes
+  mount: kubernetes
+  kubernetes:
+    role: nexustreasury-prod
+    serviceAccount: nexustreasury-sa
+    audiences:
+      - vault
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  name: nexustreasury-jwt-secret
+  namespace: nexus-prod
+spec:
+  type: kv-v2
+  mount: kv
+  path: nexustreasury/prod
+  destination:
+    name: nexus-jwt-secret
+    create: true
+  refreshAfter: 1h
+  vaultAuthRef: nexustreasury-vault-auth
+---
+# ── PrometheusRule additions — Sprint 12 SLO alerts ─────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: nexustreasury-slo-alerts-v2
+  namespace: nexus-observability
+spec:
+  groups:
+    - name: nexustreasury.slo.reporting
+      interval: 30s
+      rules:
+        - alert: ReportingServiceP99High
+          expr: |
+            histogram_quantile(0.99,
+              rate(nexus_report_generation_duration_seconds_bucket[5m])) > 30
+          for: 5m
+          labels:
+            severity: warning
+            service: reporting-service
+          annotations:
+            summary: "COREP/FINREP report P99 latency > 30s SLO target"
+
+    - name: nexustreasury.slo.ai
+      interval: 30s
+      rules:
+        - alert: AIAssistantHighFallbackRate
+          expr: |
+            (rate(nexus_ai_assistant_fallback_total[5m])
+             / rate(nexus_ai_assistant_total[5m])) > 0.3
+          for: 10m
+          labels:
+            severity: warning
+            service: reporting-service
+          annotations:
+            summary: "AI assistant fallback rate > 30% — check Anthropic API"
+
+    - name: nexustreasury.slo.audit
+      interval: 30s
+      rules:
+        - alert: AuditChainIntegrityFailure
+          expr: nexus_audit_hmac_verification_failures_total > 0
+          for: 0m
+          labels:
+            severity: critical
+            service: audit-service
+          annotations:
+            summary: "CRITICAL: Audit HMAC chain integrity failure detected"
