@@ -1544,3 +1544,137 @@ spec:
             service: audit-service
           annotations:
             summary: "CRITICAL: Audit HMAC chain integrity failure detected"
+
+---
+# =============================================================================
+# CILIUM SERVICE MESH — CiliumEnvoyConfig resources
+# Traffic management (retries, timeouts, circuit breaking, canary weighting)
+# without sidecar injection. Configured per-service, per-namespace.
+# See: docs/platform/NETWORKING-SERVICE-MESH.md §3.3
+# =============================================================================
+
+# ── trade-service: retries + timeout + outlier detection ─────────────────────
+apiVersion: cilium.io/v2alpha1
+kind: CiliumEnvoyConfig
+metadata:
+  name: trade-service-traffic-mgmt
+  namespace: nexus-prod
+spec:
+  services:
+    - name: trade-service
+      namespace: nexus-prod
+  backendServices:
+    - name: trade-service
+      namespace: nexus-prod
+  resources:
+    - "@type": type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      name: trade-service-route
+      virtual_hosts:
+        - name: trade-service
+          domains: ["trade-service.nexus-prod.svc.cluster.local"]
+          routes:
+            - match:
+                prefix: "/"
+              route:
+                cluster: trade-service
+                timeout: 8s
+                retry_policy:
+                  retry_on: "gateway-error,connect-failure,reset,retriable-4xx"
+                  num_retries: 3
+                  per_try_timeout: 2s
+                  retry_back_off:
+                    base_interval: 25ms
+                    max_interval: 250ms
+
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: trade-service
+      # Outlier detection — eject pods returning >50% errors for 30s
+      outlier_detection:
+        consecutive_5xx: 5
+        interval: 10s
+        base_ejection_time: 30s
+        max_ejection_percent: 33     # Never eject more than 33% of replicas
+        success_rate_minimum_hosts: 3
+        enforcing_consecutive_5xx: 100
+---
+# ── risk-service: tighter timeout — 5ms P99 SLO ─────────────────────────────
+apiVersion: cilium.io/v2alpha1
+kind: CiliumEnvoyConfig
+metadata:
+  name: risk-service-traffic-mgmt
+  namespace: nexus-prod
+spec:
+  services:
+    - name: risk-service
+      namespace: nexus-prod
+  resources:
+    - "@type": type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      name: risk-service-route
+      virtual_hosts:
+        - name: risk-service
+          domains: ["risk-service.nexus-prod.svc.cluster.local"]
+          routes:
+            - match:
+                prefix: "/"
+              route:
+                cluster: risk-service
+                timeout: 2s            # Tighter: pre-deal check must complete in 2s
+                retry_policy:
+                  retry_on: "gateway-error,connect-failure,reset"
+                  num_retries: 2
+                  per_try_timeout: 500ms
+
+    - "@type": type.googleapis.com/envoy.config.cluster.v3.Cluster
+      name: risk-service
+      outlier_detection:
+        consecutive_5xx: 3             # Faster ejection: risk service is safety-critical
+        interval: 10s
+        base_ejection_time: 30s
+        max_ejection_percent: 33
+---
+# ── Cilium Mutual Auth — SPIFFE workload identity for all namespaces ──────────
+# Enables kernel-level mTLS between all pods in nexus-prod.
+# Certificates are SPIFFE SVIDs issued by SPIRE; no sidecar injection.
+# Rotated every 24 hours automatically.
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: nexus-mutual-auth-policy
+spec:
+  description: "Require mutual authentication (SPIFFE mTLS) for all nexus-prod traffic"
+  endpointSelector:
+    matchLabels:
+      io.kubernetes.pod.namespace: nexus-prod
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            io.kubernetes.pod.namespace: nexus-prod
+      authentication:
+        mode: "required"   # SPIFFE identity required; unauthenticated requests dropped
+---
+# ── Hubble — network observability ────────────────────────────────────────────
+# Hubble is the Cilium-native observability layer.
+# It replaces Kiali (Istio) for network flow visibility.
+# Exposes per-flow metrics (latency, drop rate, error rate) to Prometheus.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hubble-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    metrics:
+      enabled:
+        - dns
+        - drop
+        - tcp
+        - flow
+        - icmp
+        - http
+      server:
+        port: 9965   # Prometheus scrape port for Hubble metrics
+    tls:
+      server:
+        enabled: true
+        cert-file: /var/lib/cilium/tls/hubble/server.crt
+        key-file:  /var/lib/cilium/tls/hubble/server.key

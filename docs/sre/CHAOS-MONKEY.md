@@ -31,7 +31,7 @@ Chaos Monkey is the original chaos engineering tool created by Netflix in 2011. 
 
 ### 1.1 The core problem it solves
 
-NexusTreasury has 14 microservices, a 3-broker Kafka cluster, a Patroni-managed PostgreSQL HA pair, an Istio service mesh, and integrations with Bloomberg B-PIPE, TorchServe, and the Anthropic API. Our resilience design (see `docs/sre/SITE-RESILIENCE-DESIGN.md`) documents how each of these components should behave under failure. But documentation and design are not proof.
+NexusTreasury has 14 microservices, a 3-broker Kafka cluster, a Patroni-managed PostgreSQL HA pair, a Cilium service mesh (eBPF-based, sidecarless), and integrations with Bloomberg B-PIPE, TorchServe, and the Anthropic API. Our resilience design (see `docs/sre/SITE-RESILIENCE-DESIGN.md`) documents how each of these components should behave under failure. But documentation and design are not proof.
 
 Without chaos experiments we cannot answer questions like:
 
@@ -294,7 +294,7 @@ spec:
 
 #### EXP-006: Inter-service latency injection (risk → trade)
 
-**Hypothesis:** Injecting 50ms of latency on calls from `trade-service` to `risk-service` does not cause trade booking timeouts because the Istio per-try timeout (2s) and overall request timeout (8s) provide sufficient headroom.
+**Hypothesis:** Injecting 50ms of latency on calls from `trade-service` to `risk-service` does not cause trade booking timeouts because the Cilium Envoy traffic policy `per_try_timeout: 2s` and overall `timeout: 8s` (configured in `CiliumEnvoyConfig/trade-service-traffic-mgmt`) provide sufficient headroom.
 
 **Injection:**
 
@@ -688,7 +688,7 @@ All chaos experiment start and end events are emitted as Grafana annotations, ma
 
 ### 8.2 Chaos event correlation in traces
 
-Every Chaos Mesh experiment injects a `X-Chaos-Experiment-ID` header into affected requests via Istio. This header propagates through the trace and allows OpenTelemetry/Jaeger to flag traces that were affected by a chaos experiment — essential for distinguishing intentional degradation from coincidental bugs.
+Every Chaos Mesh experiment injects a `X-Chaos-Experiment-ID` header into affected requests via the Cilium Envoy sidecarless proxy (L7 filter chain). This header propagates through the trace and allows OpenTelemetry/Jaeger to flag traces that were affected by a chaos experiment — essential for distinguishing intentional degradation from coincidental bugs.
 
 ### 8.3 Automated result collection
 

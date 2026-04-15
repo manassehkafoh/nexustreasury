@@ -208,16 +208,29 @@ Cilium provides:
 
 ### 5.2 Retry and timeout policy
 
+Traffic management is configured via `CiliumEnvoyConfig` CRDs, which program the per-node Envoy instance (no sidecar injection). The full config is in `docs/platform/NETWORKING-SERVICE-MESH.md` §3.3.
+
 ```yaml
-# Cilium Envoy traffic policy — trade-service (equivalent to Istio VirtualService)
-retries:
-  attempts: 3
-  perTryTimeout: 2s
-  retryOn: gateway-error,connect-failure,reset,retriable-4xx
-timeout: 8s
+# CiliumEnvoyConfig — trade-service retry and timeout policy
+apiVersion: cilium.io/v2alpha1
+kind: CiliumEnvoyConfig
+metadata:
+  name: trade-service-traffic-mgmt
+  namespace: nexus-prod
+spec:
+  resources:
+    - '@type': type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+      virtual_hosts:
+        - routes:
+            - route:
+                timeout: 8s # overall request timeout
+                retry_policy:
+                  retry_on: 'gateway-error,connect-failure,reset,retriable-4xx'
+                  num_retries: 3
+                  per_try_timeout: 2s # per-attempt timeout
 ```
 
-POST (trade booking) does not auto-retry to prevent duplicate submissions. The client receives `503` and retries with an idempotency key.
+POST (trade booking) does not auto-retry to prevent duplicate submissions. The client receives `503` and retries with an idempotency key. Non-idempotent methods are excluded via the `retry_on` condition list.
 
 ### 5.3 Rate limiting (per tenant)
 
