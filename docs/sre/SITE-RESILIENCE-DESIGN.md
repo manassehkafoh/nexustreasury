@@ -195,9 +195,11 @@ Each tenant operates in its own Kubernetes namespace with:
 
 ## 5. Traffic management and load balancing
 
-### 5.1 Istio service mesh
+### 5.1 Cilium Service Mesh
 
-All inter-service communication runs through Istio, providing:
+All inter-service communication is governed by Cilium (CNI + service mesh). NexusTreasury does **not** use Istio — it was evaluated and rejected in ADR-005 due to high memory overhead (400MB/node) and sidecar injection latency incompatible with the 5ms pre-deal check SLO. See `docs/platform/NETWORKING-SERVICE-MESH.md` for the full design.
+
+Cilium provides:
 
 - **mTLS everywhere** — all pod-to-pod traffic encrypted; workload identity certs rotated every 24 hours
 - **Traffic weighting** — canary deployments route 5% traffic to new version while monitoring error rates
@@ -207,7 +209,7 @@ All inter-service communication runs through Istio, providing:
 ### 5.2 Retry and timeout policy
 
 ```yaml
-# Istio VirtualService — trade-service
+# Cilium Envoy traffic policy — trade-service (equivalent to Istio VirtualService)
 retries:
   attempts: 3
   perTryTimeout: 2s
@@ -625,7 +627,7 @@ T+04:45 — 05:00  PagerDuty resolution + stakeholder notification
 
 ### 14.1 Zero-trust network
 
-Every service-to-service call is authenticated with mTLS certificates issued by the Istio CA and rotated every 24 hours. No implicit trust from network location. Even intra-namespace calls require valid certificates.
+Every service-to-service call is authenticated using SPIFFE SVIDs issued by SPIRE and enforced by Cilium Mutual Auth, rotated every 24 hours. No implicit trust from network location. Even intra-namespace calls require valid SPIFFE identity. See `docs/platform/NETWORKING-SERVICE-MESH.md` §6 for the full mTLS and certificate rotation design.
 
 ### 14.2 Secret rotation (zero-downtime)
 

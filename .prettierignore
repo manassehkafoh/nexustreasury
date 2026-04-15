@@ -13,3 +13,4 @@ infra/helm/nexustreasury/templates/
 # Generated files
 packages/web/next-env.d.ts
 *.tsbuildinfo
+06_Kubernetes_Platform_NexusTreasury.yaml

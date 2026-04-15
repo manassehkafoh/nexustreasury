@@ -3,6 +3,7 @@
 ## Pipeline Architecture Overview
 
 The NexusTreasury deployment pipeline implements a full GitOps workflow with:
+
 - Automated dependency patching via Renovate Bot
 - Multi-stage security scanning (SAST, SCA, Container CVE, DAST)
 - Test gates (unit, integration, e2e, performance)
@@ -14,6 +15,7 @@ The NexusTreasury deployment pipeline implements a full GitOps workflow with:
 ---
 
 ## File: `.github/workflows/ci.yml`
+
 ```yaml
 # ============================================================================
 # NexusTreasury — Continuous Integration Pipeline
@@ -56,7 +58,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for Turborepo change detection
+          fetch-depth: 0 # Full history for Turborepo change detection
 
       - name: Setup pnpm package manager
         uses: pnpm/action-setup@v4
@@ -133,7 +135,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: '**/coverage/lcov.info'
-          fail_ci_if_error: true  # Enforce coverage thresholds
+          fail_ci_if_error: true # Enforce coverage thresholds
 
       # Fail build if coverage drops below 80%
       - name: Check coverage threshold
@@ -194,7 +196,7 @@ jobs:
     permissions:
       actions: read
       contents: read
-      security-events: write  # Required to upload SARIF results
+      security-events: write # Required to upload SARIF results
     strategy:
       matrix:
         language: ['javascript-typescript']
@@ -261,7 +263,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for blame information
+          fetch-depth: 0 # Full history for blame information
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@master
@@ -286,7 +288,7 @@ jobs:
     needs: [lint, unit-tests, sca-dependency-scan]
     permissions:
       contents: read
-      packages: write  # Required to push to GHCR
+      packages: write # Required to push to GHCR
     strategy:
       matrix:
         service:
@@ -376,11 +378,11 @@ jobs:
           output: 'trivy-${{ matrix.service }}.sarif'
           # Block on CRITICAL CVEs — HIGH CVEs trigger warning, not block
           severity: 'CRITICAL,HIGH'
-          exit-code: '1'  # Fail job if CRITICAL found
+          exit-code: '1' # Fail job if CRITICAL found
 
       - name: Upload Trivy results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
-        if: always()  # Upload even if scan found issues (for visibility)
+        if: always() # Upload even if scan found issues (for visibility)
         with:
           sarif_file: 'trivy-${{ matrix.service }}.sarif'
           category: 'trivy-${{ matrix.service }}'
@@ -432,6 +434,7 @@ jobs:
 ---
 
 ## File: `.github/workflows/cd-staging.yml`
+
 ```yaml
 # ============================================================================
 # NexusTreasury — Continuous Deployment to Staging
@@ -495,13 +498,13 @@ jobs:
           # Install ArgoCD CLI
           curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
           chmod +x argocd
-          
+
           # Login to ArgoCD
           ./argocd login ${{ secrets.ARGOCD_SERVER }} \
             --username admin \
             --password ${{ secrets.ARGOCD_PASSWORD }} \
             --insecure
-          
+
           # Wait for application to sync and be healthy (timeout: 10 minutes)
           ./argocd app wait nexustreasury-staging \
             --sync \
@@ -541,6 +544,7 @@ jobs:
 ---
 
 ## File: `.github/workflows/cd-production.yml`
+
 ```yaml
 # ============================================================================
 # NexusTreasury — Production Deployment Pipeline
@@ -588,7 +592,7 @@ jobs:
             -n nexus-prod \
             --kubeconfig $KUBECONFIG \
             -o jsonpath='{.spec.selector.slot}')
-          
+
           if [ "$ACTIVE" == "blue" ]; then
             echo "active=blue" >> $GITHUB_OUTPUT
             echo "target=green" >> $GITHUB_OUTPUT
@@ -607,7 +611,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: pre-deployment-checks
     environment:
-      name: production  # GitHub Environment with required reviewers configured
+      name: production # GitHub Environment with required reviewers configured
       url: https://nexustreasury.com
     steps:
       - name: Record deployment initiation in audit log
@@ -715,6 +719,7 @@ jobs:
 ---
 
 ## File: `.github/workflows/security-patch-automation.yml`
+
 ```yaml
 # ============================================================================
 # NexusTreasury — Automated Security Patch Management
@@ -772,14 +777,14 @@ jobs:
         run: |
           # Output audit results to JSON for processing
           pnpm audit --json > audit-results.json || true
-          
+
           # Count critical and high vulnerabilities
           CRITICAL=$(jq '.metadata.vulnerabilities.critical // 0' audit-results.json)
           HIGH=$(jq '.metadata.vulnerabilities.high // 0' audit-results.json)
-          
+
           echo "critical_npm=$CRITICAL" >> $GITHUB_OUTPUT
           echo "high_npm=$HIGH" >> $GITHUB_OUTPUT
-          
+
           echo "Found $CRITICAL critical and $HIGH high npm vulnerabilities"
 
       # Scan all Docker base images for OS-level CVEs
@@ -789,10 +794,10 @@ jobs:
           # Read base images from Dockerfiles
           IMAGES=$(grep -r "^FROM " services/*/Dockerfile | \
                    awk '{print $2}' | sort -u)
-          
+
           CRITICAL_COUNT=0
           HIGH_COUNT=0
-          
+
           for IMAGE in $IMAGES; do
             echo "Scanning base image: $IMAGE"
             
@@ -811,7 +816,7 @@ jobs:
             CRITICAL_COUNT=$((CRITICAL_COUNT + C))
             HIGH_COUNT=$((HIGH_COUNT + H))
           done
-          
+
           echo "critical_base=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
           echo "high_base=$HIGH_COUNT" >> $GITHUB_OUTPUT
 
@@ -823,12 +828,12 @@ jobs:
                              ${{ steps.trivy-base.outputs.critical_base }} ))
           TOTAL_HIGH=$(( ${{ steps.npm-audit.outputs.high_npm }} + \
                          ${{ steps.trivy-base.outputs.high_base }} ))
-          
+
           echo "critical_found=$( [ $TOTAL_CRITICAL -gt 0 ] && echo true || echo false )" \
             >> $GITHUB_OUTPUT
           echo "high_found=$( [ $TOTAL_HIGH -gt 0 ] && echo true || echo false )" \
             >> $GITHUB_OUTPUT
-          
+
           echo "=== VULNERABILITY SUMMARY ==="
           echo "Critical: $TOTAL_CRITICAL"
           echo "High: $TOTAL_HIGH"
@@ -841,7 +846,7 @@ jobs:
           **Date**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
           **Commit**: ${{ github.sha }}
           **Triggered by**: ${{ github.event_name }}
-          
+
           ## Summary
           | Severity | npm | Base Images | Total |
           |----------|-----|------------|-------|
@@ -857,7 +862,7 @@ jobs:
             security-scan-report.md
             audit-results.json
             trivy-*.json
-          retention-days: 90  # Keep 90 days for SOC 2 audit evidence
+          retention-days: 90 # Keep 90 days for SOC 2 audit evidence
 
   # ─────────────────────────────────────────────────────────────────────────
   # Auto-update dependencies with security fixes using Renovate
@@ -905,18 +910,18 @@ jobs:
               repo: context.repo.repo,
               ref: context.payload.pull_request.head.sha,
             });
-            
+
             // Verify all required checks passed
             const requiredChecks = ['lint', 'unit-tests', 'sast-codeql', 'trivy-scan'];
             const failedChecks = checks.data.check_runs.filter(
               c => requiredChecks.includes(c.name) && c.conclusion !== 'success'
             );
-            
+
             if (failedChecks.length > 0) {
               core.setFailed(`Required checks failed: ${failedChecks.map(c => c.name).join(', ')}`);
               return;
             }
-            
+
             core.setOutput('all-passed', 'true');
 
       # Auto-merge if all checks pass — squash merge for clean git history
@@ -971,11 +976,11 @@ jobs:
           # Find all Dockerfiles and update Node.js base image to latest LTS patch
           find services -name "Dockerfile" -exec sed -i \
             's|FROM node:22-alpine[0-9.]*|FROM node:22-alpine|g' {} \;
-          
+
           # Pull latest tags to verify they exist and get full digest
           docker pull node:22-alpine
           DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' node:22-alpine)
-          
+
           # Update Dockerfiles with pinned digest for reproducibility
           find services -name "Dockerfile" -exec sed -i \
             "s|FROM node:22-alpine$|FROM node:22-alpine # digest: $DIGEST|g" {} \;
@@ -988,18 +993,18 @@ jobs:
           title: 'security: automated Docker base image security update'
           body: |
             ## Automated Docker Base Image Security Update
-            
+
             This PR was automatically created by the security patch pipeline.
-            
+
             ### Changes
             - Updated Node.js base images to latest patch version
             - All base images pinned to content-addressable digests
-            
+
             ### Security
             - Triggered by: Critical CVE detection in vulnerability scan
             - SOC2 Control: CC6.8 - Vulnerability Management
             - Target SLA: Merge within 24 hours of CVE disclosure
-            
+
             ### Review Checklist
             - [ ] Trivy scan shows no critical CVEs
             - [ ] All CI tests pass
@@ -1048,15 +1053,12 @@ jobs:
 ---
 
 ## File: `renovate.json`
+
 ```json
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "NexusTreasury Renovate Bot Configuration — Automated Dependency Updates",
-  "extends": [
-    "config:recommended",
-    "security:openssf-scorecard",
-    ":dependencyDashboard"
-  ],
+  "extends": ["config:recommended", "security:openssf-scorecard", ":dependencyDashboard"],
   "timezone": "UTC",
   "schedule": ["every weekday"],
   "labels": ["dependencies"],
@@ -1146,6 +1148,7 @@ jobs:
 ---
 
 ## File: `Dockerfile` (Trade Service — Example)
+
 ```dockerfile
 # ============================================================================
 # NexusTreasury — Trade Service Dockerfile
@@ -1205,9 +1208,9 @@ WORKDIR /app
 
 # Install only production runtime dependencies
 RUN apk add --no-cache \
-    dumb-init \    
+    dumb-init \
     # dumb-init: proper PID 1 signal handling for graceful shutdown
-    curl            
+    curl
     # curl: for health check endpoint calls
 
 # Copy only production artifacts from builder
@@ -1250,35 +1253,36 @@ LABEL org.opencontainers.image.licenses="Proprietary"
 
 ### Fix History
 
-| Commit | Fix | Impact |
-|---|---|---|
-| `f5af31e` | Prettier: formatted 119 files across all sprints | Lint & Format Check ✅ |
-| `e123fcd` | 5 missing Dockerfiles (accounting, audit, notification, collateral, reporting), test:coverage scripts added to 8 packages | Docker Build ✅ |
-| `bad1214` | reporting-service coverage: routes/infra excluded (include-based scoping), 11 new branch tests, `\beve\b` classifier bug fix | Unit Tests ✅ |
-| `3a8088e` | alm/accounting/risk/planning/bo-service vitest coverage thresholds fixed | Unit Tests ✅ |
-| `3dd66ad` | Switch all vitest configs from exclude-based to include-based scoping (path-resolution-agnostic for CI); next.js 15.5.15 CVE patch | Unit Tests ✅, SCA ✅ |
-| `d6a8b1c` | P99 latency SLA test: 20-iteration JIT warmup + CI-aware threshold (500ms on GHA vs 10ms local) | Unit Tests ✅ |
-| `0665347` | Top-level `permissions: security-events: write` added to ci.yml; `continue-on-error: true` + `wait-for-processing: false` on all upload-sarif steps; docker actions v3→v4 in cd-staging.yml | SAST ✅ |
+| Commit    | Fix                                                                                                                                                                                         | Impact                 |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `f5af31e` | Prettier: formatted 119 files across all sprints                                                                                                                                            | Lint & Format Check ✅ |
+| `e123fcd` | 5 missing Dockerfiles (accounting, audit, notification, collateral, reporting), test:coverage scripts added to 8 packages                                                                   | Docker Build ✅        |
+| `bad1214` | reporting-service coverage: routes/infra excluded (include-based scoping), 11 new branch tests, `\beve\b` classifier bug fix                                                                | Unit Tests ✅          |
+| `3a8088e` | alm/accounting/risk/planning/bo-service vitest coverage thresholds fixed                                                                                                                    | Unit Tests ✅          |
+| `3dd66ad` | Switch all vitest configs from exclude-based to include-based scoping (path-resolution-agnostic for CI); next.js 15.5.15 CVE patch                                                          | Unit Tests ✅, SCA ✅  |
+| `d6a8b1c` | P99 latency SLA test: 20-iteration JIT warmup + CI-aware threshold (500ms on GHA vs 10ms local)                                                                                             | Unit Tests ✅          |
+| `0665347` | Top-level `permissions: security-events: write` added to ci.yml; `continue-on-error: true` + `wait-for-processing: false` on all upload-sarif steps; docker actions v3→v4 in cd-staging.yml | SAST ✅                |
 
 ### Coverage Strategy (post-Sprint 12)
 
 All 12 package vitest configs use `include: ['src/application/**']` (positive include rather than negative exclude). This is path-resolution-agnostic — the pattern works identically on local macOS, Linux dev, and the GitHub Actions runner regardless of working directory.
 
 Excluded from unit coverage (E2E-tested instead):
+
 - `src/routes/**` — thin HTTP adapters
 - `src/infrastructure/**` — require live PostgreSQL/Kafka/TorchServe
 - `src/index.ts`, `src/server.ts` — entry points
 
 ### Current Coverage Thresholds (all packages green)
 
-| Package | Lines | Branches | Functions | Threshold |
-|---|---|---|---|---|
-| reporting-service | 95.51% | 78.99% | 91.42% | 80/70/80 ✅ |
-| alm-service | 95.13% | 94.11% | 85.71% | 80/70/80 ✅ |
-| accounting-service | 94.19% | 72.48% | 98.14% | 80/70/80 ✅ |
-| risk-service | 94.9% | 75.44% | 88.88% | 80/70/80 ✅ |
-| planning-service | 100% | 70.58% | 100% | 80/70/80 ✅ |
-| bo-service | 84.9% | 60.04% | 94.82% | 80/45/80 ✅ |
+| Package            | Lines  | Branches | Functions | Threshold   |
+| ------------------ | ------ | -------- | --------- | ----------- |
+| reporting-service  | 95.51% | 78.99%   | 91.42%    | 80/70/80 ✅ |
+| alm-service        | 95.13% | 94.11%   | 85.71%    | 80/70/80 ✅ |
+| accounting-service | 94.19% | 72.48%   | 98.14%    | 80/70/80 ✅ |
+| risk-service       | 94.9%  | 75.44%   | 88.88%    | 80/70/80 ✅ |
+| planning-service   | 100%   | 70.58%   | 100%      | 80/70/80 ✅ |
+| bo-service         | 84.9%  | 60.04%   | 94.82%    | 80/45/80 ✅ |
 
 ### File: `.github/workflows/chaos-experiments.yml` (Sprint 12 addition)
 
@@ -1286,7 +1290,7 @@ Excluded from unit coverage (E2E-tested instead):
 name: Weekly Chaos Experiments (Staging)
 on:
   schedule:
-    - cron: '0 10 * * 2'   # Every Tuesday at 10:00 UTC
+    - cron: '0 10 * * 2' # Every Tuesday at 10:00 UTC
   workflow_dispatch:
     inputs:
       experiment_id:
@@ -1323,14 +1327,15 @@ jobs:
 
 ### Workflow Permissions Audit (all 6 workflow files, post-Sprint 12)
 
-| Workflow | Top-level permissions | security-events | SARIF continue-on-error | @v3 refs |
-|---|---|---|---|---|
-| `ci.yml` | ✅ (contents/security-events/actions) | ✅ write | ✅ | 0 |
-| `cd-staging.yml` | ✅ | n/a | n/a | 0 |
-| `cd-production.yml` | ✅ | n/a | n/a | 0 |
-| `security-patch.yml` | ✅ | ✅ write | ✅ | 0 |
-| `contract-tests.yml` | ✅ (contents/actions) | n/a | n/a | 0 |
-| `performance-tests.yml` | ✅ (contents/actions) | n/a | n/a | 0 |
+| Workflow                | Top-level permissions                 | security-events | SARIF continue-on-error | @v3 refs |
+| ----------------------- | ------------------------------------- | --------------- | ----------------------- | -------- |
+| `ci.yml`                | ✅ (contents/security-events/actions) | ✅ write        | ✅                      | 0        |
+| `cd-staging.yml`        | ✅                                    | n/a             | n/a                     | 0        |
+| `cd-production.yml`     | ✅                                    | n/a             | n/a                     | 0        |
+| `security-patch.yml`    | ✅                                    | ✅ write        | ✅                      | 0        |
+| `contract-tests.yml`    | ✅ (contents/actions)                 | n/a             | n/a                     | 0        |
+| `performance-tests.yml` | ✅ (contents/actions)                 | n/a             | n/a                     | 0        |
 
 ---
-*CI/CD document version updated: v1.6.0 — April 2026*
+
+_CI/CD document version updated: v1.6.0 — April 2026_

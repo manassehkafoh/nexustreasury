@@ -9,11 +9,11 @@
 
 ## Change Log
 
-| Version | Date | Change |
-|---------|------|--------|
-| 0.1 | 2026-03-01 | Initial architecture draft |
-| 0.5 | 2026-03-20 | Added event-driven design; Kafka topology |
-| 1.0 | 2026-04-07 | Final review approved |
+| Version | Date       | Change                                    |
+| ------- | ---------- | ----------------------------------------- |
+| 0.1     | 2026-03-01 | Initial architecture draft                |
+| 0.5     | 2026-03-20 | Added event-driven design; Kafka topology |
+| 1.0     | 2026-04-07 | Final review approved                     |
 
 ---
 
@@ -27,15 +27,15 @@ The architecture enforces **Zero Trust security**, **SOC 2 Type II** controls, *
 
 ## 2. Business Context & Drivers
 
-| Driver | Architectural Response |
-|--------|----------------------|
-| Real-time P&L and risk | Event-sourced position engine; Kafka streams for sub-second propagation |
-| Regulatory compliance | Dedicated compliance microservices; FRTB/IRRBB calculation engines |
-| Zero Trust security | mTLS between all services; Cilium NetworkPolicy; OPA policy engine |
-| SOC 2 Type II | Immutable audit log service; Vault secrets; automated evidence collection |
-| Cloud portability | Kubernetes-native; Helm charts; cloud-agnostic storage abstractions |
-| Developer velocity | Domain-isolated bounded contexts; GitOps; 2-week release cadence |
-| Automated security patching | Renovate Bot + GitHub Actions + Trivy CVE scanning + automated PR merge |
+| Driver                      | Architectural Response                                                    |
+| --------------------------- | ------------------------------------------------------------------------- |
+| Real-time P&L and risk      | Event-sourced position engine; Kafka streams for sub-second propagation   |
+| Regulatory compliance       | Dedicated compliance microservices; FRTB/IRRBB calculation engines        |
+| Zero Trust security         | mTLS between all services; Cilium NetworkPolicy; OPA policy engine        |
+| SOC 2 Type II               | Immutable audit log service; Vault secrets; automated evidence collection |
+| Cloud portability           | Kubernetes-native; Helm charts; cloud-agnostic storage abstractions       |
+| Developer velocity          | Domain-isolated bounded contexts; GitOps; 2-week release cadence          |
+| Automated security patching | Renovate Bot + GitHub Actions + Trivy CVE scanning + automated PR merge   |
 
 ---
 
@@ -514,21 +514,21 @@ erDiagram
 
 ### 5.3 Kafka Topic Topology
 
-| Topic | Partitions | Replication | Retention | Schema |
-|-------|-----------|-------------|-----------|--------|
-| `nexus.trading.trades.created` | 24 | 3 | 30 days | TradeCreatedEvent |
-| `nexus.trading.trades.amended` | 24 | 3 | 30 days | TradeAmendedEvent |
-| `nexus.trading.trades.cancelled` | 12 | 3 | 30 days | TradeCancelledEvent |
-| `nexus.positions.updated` | 24 | 3 | 7 days | PositionUpdatedEvent |
-| `nexus.risk.limit-breach` | 6 | 3 | 30 days | LimitBreachEvent |
-| `nexus.risk.var-calculated` | 12 | 3 | 7 days | VaRResultEvent |
-| `nexus.marketdata.rates` | 48 | 3 | 1 day | RateTickEvent |
-| `nexus.marketdata.curves` | 12 | 3 | 7 days | YieldCurveEvent |
-| `nexus.bo.confirmation-received` | 12 | 3 | 30 days | ConfirmationEvent |
-| `nexus.bo.settlement-instruction` | 12 | 3 | 30 days | SettlementEvent |
-| `nexus.accounting.journal-entries` | 24 | 3 | 365 days | JournalEntryEvent |
-| `nexus.alm.cashflow-updated` | 12 | 3 | 7 days | CashFlowEvent |
-| `nexus.platform.audit-log` | 48 | 3 | 3650 days | AuditLogEvent |
+| Topic                              | Partitions | Replication | Retention | Schema               |
+| ---------------------------------- | ---------- | ----------- | --------- | -------------------- |
+| `nexus.trading.trades.created`     | 24         | 3           | 30 days   | TradeCreatedEvent    |
+| `nexus.trading.trades.amended`     | 24         | 3           | 30 days   | TradeAmendedEvent    |
+| `nexus.trading.trades.cancelled`   | 12         | 3           | 30 days   | TradeCancelledEvent  |
+| `nexus.positions.updated`          | 24         | 3           | 7 days    | PositionUpdatedEvent |
+| `nexus.risk.limit-breach`          | 6          | 3           | 30 days   | LimitBreachEvent     |
+| `nexus.risk.var-calculated`        | 12         | 3           | 7 days    | VaRResultEvent       |
+| `nexus.marketdata.rates`           | 48         | 3           | 1 day     | RateTickEvent        |
+| `nexus.marketdata.curves`          | 12         | 3           | 7 days    | YieldCurveEvent      |
+| `nexus.bo.confirmation-received`   | 12         | 3           | 30 days   | ConfirmationEvent    |
+| `nexus.bo.settlement-instruction`  | 12         | 3           | 30 days   | SettlementEvent      |
+| `nexus.accounting.journal-entries` | 24         | 3           | 365 days  | JournalEntryEvent    |
+| `nexus.alm.cashflow-updated`       | 12         | 3           | 7 days    | CashFlowEvent        |
+| `nexus.platform.audit-log`         | 48         | 3           | 3650 days | AuditLogEvent        |
 
 ---
 
@@ -597,16 +597,16 @@ paths:
             schema:
               $ref: '#/components/schemas/CreateTradeRequest'
             example:
-              instrumentId: "550e8400-e29b-41d4-a716-446655440000"
-              counterpartyId: "550e8400-e29b-41d4-a716-446655440001"
-              bookId: "fx-trading-01"
-              direction: "BUY"
+              instrumentId: '550e8400-e29b-41d4-a716-446655440000'
+              counterpartyId: '550e8400-e29b-41d4-a716-446655440001'
+              bookId: 'fx-trading-01'
+              direction: 'BUY'
               notional: 10000000
-              currency: "USD"
-              settlementCurrency: "EUR"
+              currency: 'USD'
+              settlementCurrency: 'EUR'
               price: 1.0845
-              tradeDate: "2026-04-07"
-              valueDate: "2026-04-09"
+              tradeDate: '2026-04-07'
+              valueDate: '2026-04-09'
       responses:
         '201':
           description: Trade booked successfully
@@ -794,7 +794,8 @@ components:
   schemas:
     CreateTradeRequest:
       type: object
-      required: [instrumentId, counterpartyId, bookId, direction, notional, currency, tradeDate, valueDate]
+      required:
+        [instrumentId, counterpartyId, bookId, direction, notional, currency, tradeDate, valueDate]
       properties:
         instrumentId: { type: string, format: uuid }
         counterpartyId: { type: string, format: uuid }
@@ -931,18 +932,18 @@ sequenceDiagram
     Dealer->>UI: Enter trade details
     UI->>MD: Subscribe to rate stream (WebSocket)
     MD-->>UI: Streaming rates (250ms)
-    
+
     Dealer->>UI: Submit trade
     UI->>GW: POST /v1/trades (JWT Bearer)
     GW->>Auth: Validate JWT + RBAC check
     Auth-->>GW: Valid: dealer role, FX permission
     GW->>Trade: Forward request
-    
+
     Trade->>PreDeal: Check credit limit (counterparty)
     PreDeal->>Limit: GET remaining headroom
     Limit-->>PreDeal: 150M USD headroom available
     PreDeal-->>Trade: APPROVED
-    
+
     Trade->>Trade: Create Trade aggregate
     Trade->>Trade: Persist to PostgreSQL (ACID)
     Trade->>Kafka: Publish TradeCreatedEvent
@@ -954,14 +955,14 @@ sequenceDiagram
         Kafka-->>Position: TradeCreatedEvent
         Position->>Position: Update position aggregate
         Position->>Kafka: Publish PositionUpdatedEvent
-        
+
         Kafka-->>BO: TradeCreatedEvent
         BO->>BO: Create confirmation record
         BO->>BO: Generate SWIFT MT300 / SWIFT MX
-        
+
         Kafka-->>Acct: TradeCreatedEvent
         Acct->>Acct: Post IFRS9 accounting entries
-        
+
         Kafka-->>Limit: PositionUpdatedEvent
         Limit->>Limit: Recalculate utilisation
     end
@@ -986,7 +987,7 @@ sequenceDiagram
     BOSvc->>TradeSvc: gRPC: FindTradeByRef(tradeRef, ccy, notional, valueDate)
     TradeSvc-->>BOSvc: Trade found (tradeId, details)
     BOSvc->>BOSvc: Compare fields (notional, rate, dates, SSIs)
-    
+
     alt Perfect Match
         BOSvc->>BODB: Update confirmation status = MATCHED
         BOSvc->>Kafka: Publish ConfirmationMatchedEvent
@@ -1079,6 +1080,7 @@ graph TB
 ```
 
 **Zero Trust Controls:**
+
 - All service-to-service communication uses mTLS enforced by Cilium
 - JWT tokens expire in 15 minutes; refresh tokens rotated every 24 hours
 - HashiCorp Vault for dynamic database credentials (lease: 1 hour)
@@ -1088,16 +1090,16 @@ graph TB
 
 ### 8.3 Resilience Patterns
 
-| Pattern | Implementation | Service |
-|---------|---------------|---------|
-| Circuit Breaker | `opossum` npm library, threshold: 50% error rate | All outbound HTTP calls |
-| Retry with Backoff | Exponential backoff: 100ms, 200ms, 400ms, max 3 retries | Kafka producers, DB connections |
-| Bulkhead | Separate thread pools per downstream dependency | Risk calculations |
-| Idempotency | Idempotency key on trade creation; Kafka exactly-once semantics | Trade Service, BO Service |
-| Dead Letter Queue | `nexus.*.dlq` topics for failed event processing | All Kafka consumers |
-| Saga Pattern | Choreography-based sagas via events for cross-context operations | Trade booking workflow |
-| Health Checks | `/health/live` and `/health/ready` endpoints on all services | Kubernetes probes |
-| Rate Limiting | Redis-based sliding window rate limiter at API Gateway | All APIs |
+| Pattern            | Implementation                                                   | Service                         |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------- |
+| Circuit Breaker    | `opossum` npm library, threshold: 50% error rate                 | All outbound HTTP calls         |
+| Retry with Backoff | Exponential backoff: 100ms, 200ms, 400ms, max 3 retries          | Kafka producers, DB connections |
+| Bulkhead           | Separate thread pools per downstream dependency                  | Risk calculations               |
+| Idempotency        | Idempotency key on trade creation; Kafka exactly-once semantics  | Trade Service, BO Service       |
+| Dead Letter Queue  | `nexus.*.dlq` topics for failed event processing                 | All Kafka consumers             |
+| Saga Pattern       | Choreography-based sagas via events for cross-context operations | Trade booking workflow          |
+| Health Checks      | `/health/live` and `/health/ready` endpoints on all services     | Kubernetes probes               |
+| Rate Limiting      | Redis-based sliding window rate limiter at API Gateway           | All APIs                        |
 
 ### 8.4 Observability Architecture
 
@@ -1147,6 +1149,7 @@ graph LR
 ```
 
 **Key Grafana Dashboards:**
+
 1. **Trading Operations**: Live trade count, booking latency, STP rate, SWIFT message status
 2. **Risk Overview**: VaR by book, limit utilisation, breach count
 3. **ALM Dashboard**: LCR/NSFR real-time, liquidity gap waterfall, IRRBB NII
@@ -1202,94 +1205,94 @@ graph TB
 
 ### 9.2 Namespace Strategy
 
-| Namespace | Contents | Network Policy |
-|-----------|----------|---------------|
-| `nexus-prod` | All application microservices | Deny all, allow explicit |
-| `nexus-data` | PostgreSQL, Redis, Kafka | Allow from nexus-prod only |
-| `nexus-platform` | Vault, Keycloak, OPA | Allow from nexus-prod only |
-| `nexus-observability` | Prometheus, Grafana, ELK, Jaeger | Allow scrape from all |
-| `nexus-security` | Trivy, Falco | Privileged; allow cluster-wide |
-| `nexus-ingress` | Nginx Ingress Controller | Allow inbound 443 |
-| `argocd` | ArgoCD controllers | Allow from CI/CD only |
+| Namespace             | Contents                         | Network Policy                 |
+| --------------------- | -------------------------------- | ------------------------------ |
+| `nexus-prod`          | All application microservices    | Deny all, allow explicit       |
+| `nexus-data`          | PostgreSQL, Redis, Kafka         | Allow from nexus-prod only     |
+| `nexus-platform`      | Vault, Keycloak, OPA             | Allow from nexus-prod only     |
+| `nexus-observability` | Prometheus, Grafana, ELK, Jaeger | Allow scrape from all          |
+| `nexus-security`      | Trivy, Falco                     | Privileged; allow cluster-wide |
+| `nexus-ingress`       | Nginx Ingress Controller         | Allow inbound 443              |
+| `argocd`              | ArgoCD controllers               | Allow from CI/CD only          |
 
 ### 9.3 Environment Strategy
 
-| Environment | Purpose | Deployment Trigger | Data |
-|------------|---------|-------------------|------|
-| `dev` | Feature development | Auto on PR merge to `develop` | Synthetic |
-| `staging` | Integration & UAT | Auto on merge to `main` | Anonymised prod clone |
-| `prod-blue` | Production (active) | Manual approval + automated | Live |
-| `prod-green` | Production (standby) | Blue-green swap | Live |
+| Environment  | Purpose              | Deployment Trigger            | Data                  |
+| ------------ | -------------------- | ----------------------------- | --------------------- |
+| `dev`        | Feature development  | Auto on PR merge to `develop` | Synthetic             |
+| `staging`    | Integration & UAT    | Auto on merge to `main`       | Anonymised prod clone |
+| `prod-blue`  | Production (active)  | Manual approval + automated   | Live                  |
+| `prod-green` | Production (standby) | Blue-green swap               | Live                  |
 
 ---
 
 ## 10. Technology Stack
 
-| Layer | Technology | Version | Rationale |
-|-------|-----------|---------|-----------|
-| Frontend Framework | Next.js | 14.x | SSR, App Router, TypeScript, performance |
-| UI Library | React | 18.x | Component model, concurrent rendering |
-| Frontend Language | TypeScript | 5.x | Type safety, shared types FE/BE |
-| Styling | Tailwind CSS | 3.x | Utility-first, consistent design system |
-| UI Components | Radix UI + Shadcn | Latest | Accessible, unstyled, customisable |
-| Charts | Recharts + D3.js | Latest | Financial time series, custom visuals |
-| State Management | Zustand + React Query | Latest | Server state + client state separation |
-| WebSocket Client | Socket.io-client | 4.x | Real-time rates, P&L, alerts |
-| Backend Language | TypeScript | 5.x | Type safety, DDD value objects |
-| Backend Runtime | Node.js | 22 LTS | Performance, npm ecosystem, TypeScript |
-| Backend Framework | Fastify | 4.x | Performance > Express; TypeScript native |
-| ORM | Prisma | 5.x | Type-safe DB client, migrations |
-| Primary Database | PostgreSQL | 16.x | ACID, JSONB, extensible |
-| Time-Series Extension | TimescaleDB | 2.x | Market data, P&L history |
-| HA Database | Patroni | 3.x | PostgreSQL HA, automatic failover |
-| Caching | Redis Cluster | 7.x | Sub-ms latency, pub/sub |
-| Event Bus | Apache Kafka | 3.7.x | Durable events, stream processing |
-| Schema Registry | Confluent Schema Registry | 7.x | Avro schema enforcement |
-| Stream Processing | Kafka Streams (via kafkajs) | 3.x | Real-time position aggregation |
-| Container Runtime | Docker | 26.x | OCI image standard |
-| Orchestration | Kubernetes | 1.30 | Production-grade container orchestration |
-| CNI / Security | Cilium | 1.15 | eBPF networking, L7 policy, mTLS |
-| Service Mesh | Cilium (with Envoy) | 1.15 | Avoids Istio overhead |
-| API Gateway | Kong | 3.x | Rate limiting, plugin ecosystem |
-| Identity Provider | Keycloak | 24.x | OAuth2/OIDC, MFA, RBAC |
-| Secrets Management | HashiCorp Vault | 1.17 | Dynamic secrets, PKI, KMS |
-| Policy Engine | OPA (Open Policy Agent) | 0.65 | Declarative RBAC and admission control |
-| GitOps CD | ArgoCD | 2.11 | Declarative K8s deployment |
-| CI Pipeline | GitHub Actions | N/A | Automation, security scanning |
-| Helm | Helm | 3.x | Kubernetes package management |
-| Monitoring | Prometheus | 2.x | Metrics collection, alerting |
-| Dashboards | Grafana | 11.x | Unified observability UI |
-| Log Pipeline | Logstash + Filebeat | 8.x | Log aggregation and enrichment |
-| Log Storage | Elasticsearch | 8.x | Full-text search, SIEM |
-| Log Visualisation | Kibana | 8.x | Log dashboards, security analytics |
-| Distributed Tracing | Jaeger | 1.57 | Trace storage and UI |
-| Telemetry SDK | OpenTelemetry | 1.x | Vendor-neutral instrumentation |
-| CVE Scanning | Trivy | Latest | Container image vulnerability scanner |
-| Runtime Security | Falco | 0.38 | eBPF-based syscall monitoring |
-| Dependency Updates | Renovate Bot | Latest | Automated patch PRs |
-| Testing (Unit) | Jest + Vitest | Latest | Fast TypeScript testing |
-| Testing (Integration) | Supertest + TestContainers | Latest | API integration tests |
-| Testing (E2E) | Playwright | Latest | Browser automation |
-| Testing (Load) | k6 | Latest | Performance testing |
-| Code Quality | ESLint + Prettier + SonarQube | Latest | Code quality gates |
-| SAST | CodeQL | Latest | Static application security testing |
-| Monorepo | Turborepo + pnpm | Latest | Efficient monorepo builds |
+| Layer                 | Technology                    | Version | Rationale                                |
+| --------------------- | ----------------------------- | ------- | ---------------------------------------- |
+| Frontend Framework    | Next.js                       | 14.x    | SSR, App Router, TypeScript, performance |
+| UI Library            | React                         | 18.x    | Component model, concurrent rendering    |
+| Frontend Language     | TypeScript                    | 5.x     | Type safety, shared types FE/BE          |
+| Styling               | Tailwind CSS                  | 3.x     | Utility-first, consistent design system  |
+| UI Components         | Radix UI + Shadcn             | Latest  | Accessible, unstyled, customisable       |
+| Charts                | Recharts + D3.js              | Latest  | Financial time series, custom visuals    |
+| State Management      | Zustand + React Query         | Latest  | Server state + client state separation   |
+| WebSocket Client      | Socket.io-client              | 4.x     | Real-time rates, P&L, alerts             |
+| Backend Language      | TypeScript                    | 5.x     | Type safety, DDD value objects           |
+| Backend Runtime       | Node.js                       | 22 LTS  | Performance, npm ecosystem, TypeScript   |
+| Backend Framework     | Fastify                       | 4.x     | Performance > Express; TypeScript native |
+| ORM                   | Prisma                        | 5.x     | Type-safe DB client, migrations          |
+| Primary Database      | PostgreSQL                    | 16.x    | ACID, JSONB, extensible                  |
+| Time-Series Extension | TimescaleDB                   | 2.x     | Market data, P&L history                 |
+| HA Database           | Patroni                       | 3.x     | PostgreSQL HA, automatic failover        |
+| Caching               | Redis Cluster                 | 7.x     | Sub-ms latency, pub/sub                  |
+| Event Bus             | Apache Kafka                  | 3.7.x   | Durable events, stream processing        |
+| Schema Registry       | Confluent Schema Registry     | 7.x     | Avro schema enforcement                  |
+| Stream Processing     | Kafka Streams (via kafkajs)   | 3.x     | Real-time position aggregation           |
+| Container Runtime     | Docker                        | 26.x    | OCI image standard                       |
+| Orchestration         | Kubernetes                    | 1.30    | Production-grade container orchestration |
+| CNI / Security        | Cilium                        | 1.15    | eBPF networking, L7 policy, mTLS         |
+| Service Mesh          | Cilium (with Envoy)           | 1.15    | Avoids Istio overhead                    |
+| API Gateway           | Kong                          | 3.x     | Rate limiting, plugin ecosystem          |
+| Identity Provider     | Keycloak                      | 24.x    | OAuth2/OIDC, MFA, RBAC                   |
+| Secrets Management    | HashiCorp Vault               | 1.17    | Dynamic secrets, PKI, KMS                |
+| Policy Engine         | OPA (Open Policy Agent)       | 0.65    | Declarative RBAC and admission control   |
+| GitOps CD             | ArgoCD                        | 2.11    | Declarative K8s deployment               |
+| CI Pipeline           | GitHub Actions                | N/A     | Automation, security scanning            |
+| Helm                  | Helm                          | 3.x     | Kubernetes package management            |
+| Monitoring            | Prometheus                    | 2.x     | Metrics collection, alerting             |
+| Dashboards            | Grafana                       | 11.x    | Unified observability UI                 |
+| Log Pipeline          | Logstash + Filebeat           | 8.x     | Log aggregation and enrichment           |
+| Log Storage           | Elasticsearch                 | 8.x     | Full-text search, SIEM                   |
+| Log Visualisation     | Kibana                        | 8.x     | Log dashboards, security analytics       |
+| Distributed Tracing   | Jaeger                        | 1.57    | Trace storage and UI                     |
+| Telemetry SDK         | OpenTelemetry                 | 1.x     | Vendor-neutral instrumentation           |
+| CVE Scanning          | Trivy                         | Latest  | Container image vulnerability scanner    |
+| Runtime Security      | Falco                         | 0.38    | eBPF-based syscall monitoring            |
+| Dependency Updates    | Renovate Bot                  | Latest  | Automated patch PRs                      |
+| Testing (Unit)        | Jest + Vitest                 | Latest  | Fast TypeScript testing                  |
+| Testing (Integration) | Supertest + TestContainers    | Latest  | API integration tests                    |
+| Testing (E2E)         | Playwright                    | Latest  | Browser automation                       |
+| Testing (Load)        | k6                            | Latest  | Performance testing                      |
+| Code Quality          | ESLint + Prettier + SonarQube | Latest  | Code quality gates                       |
+| SAST                  | CodeQL                        | Latest  | Static application security testing      |
+| Monorepo              | Turborepo + pnpm              | Latest  | Efficient monorepo builds                |
 
 ---
 
 ## 11. Open Issues & Technical Debt Log
 
-| ID | Issue | Severity | Target Resolution |
-|----|-------|----------|------------------|
-| TD-001 | SWIFT MX (ISO 20022) full implementation (MT legacy supported in v1.0) | Medium | v1.1 |
-| TD-002 | FRTB Internal Models Approach (IMA) — SA only in v1.0 | High | v1.2 |
-| TD-003 | Kafka exactly-once semantics validation across all saga paths | High | v1.0 RC1 |
-| TD-004 | Kubernetes HPA tuning based on real-world load patterns | Low | Post-GA |
-| TD-005 | Bloomberg BLPAPI Node.js bindings — evaluate performance vs native Java | Medium | v1.0 |
+| ID     | Issue                                                                   | Severity | Target Resolution |
+| ------ | ----------------------------------------------------------------------- | -------- | ----------------- |
+| TD-001 | SWIFT MX (ISO 20022) full implementation (MT legacy supported in v1.0)  | Medium   | v1.1              |
+| TD-002 | FRTB Internal Models Approach (IMA) — SA only in v1.0                   | High     | v1.2              |
+| TD-003 | Kafka exactly-once semantics validation across all saga paths           | High     | v1.0 RC1          |
+| TD-004 | Kubernetes HPA tuning based on real-world load patterns                 | Low      | Post-GA           |
+| TD-005 | Bloomberg BLPAPI Node.js bindings — evaluate performance vs native Java | Medium   | v1.0              |
 
 ---
 
-*End of Solution Design Document — NexusTreasury v1.0.0*
+_End of Solution Design Document — NexusTreasury v1.0.0_
 
 ---
 
@@ -1298,6 +1301,7 @@ graph TB
 ### 12.1 New Bounded Contexts
 
 #### planning-service (Port 4012) — Sprint 11–12
+
 Owns the Financial Planning & Analysis bounded context.
 
 ```
@@ -1313,6 +1317,7 @@ planning-service/
 ```
 
 #### reporting-service (Port 4011) — Sprint 10–12
+
 Owns Regulatory Reporting + AI Analytics + Report Builder bounded contexts.
 
 ```
@@ -1330,6 +1335,7 @@ reporting-service/
 ```
 
 #### audit-service (Port 4008) — Sprint 12
+
 Owns Platform Operations bounded context (DR, secrets, FinOps, SOC2).
 
 ```
@@ -1343,12 +1349,12 @@ audit-service/
 
 ### 12.2 New Domain Events (Sprint 9–12 Additions)
 
-| Topic | Partitions | Producer | Consumer(s) |
-|---|---|---|---|
-| `nexus.market.trading-halt` | 3 | market-data-service | trade-service, risk-service |
-| `nexus.regulatory.submissions` | 3 | reporting-service | audit-service, notification-service |
-| `nexus.audit.events` | 6 | All services | audit-service |
-| `nexus.chaos.experiment-results` | 3 | chaos-runner | audit-service |
+| Topic                            | Partitions | Producer            | Consumer(s)                         |
+| -------------------------------- | ---------- | ------------------- | ----------------------------------- |
+| `nexus.market.trading-halt`      | 3          | market-data-service | trade-service, risk-service         |
+| `nexus.regulatory.submissions`   | 3          | reporting-service   | audit-service, notification-service |
+| `nexus.audit.events`             | 6          | All services        | audit-service                       |
+| `nexus.chaos.experiment-results` | 3          | chaos-runner        | audit-service                       |
 
 ### 12.3 XGBoost PD Model Architecture
 
@@ -1385,13 +1391,14 @@ Classifier note: The IRRBB regex uses `\beve\b` word boundary to prevent false m
 ### 12.5 Site Resilience Design Reference
 
 See `docs/sre/SITE-RESILIENCE-DESIGN.md` for the full 17-section SRE reference covering:
+
 - Per-service SLOs and error budgets (trade booking 99.9%, audit 99.99%)
 - Multi-region active-active topology with WAL streaming (RPO ≤ 5min, RTO ≤ 15min)
 - Circuit breaker state machines for Bloomberg B-PIPE, Anthropic API, TorchServe
 - PgBouncer connection pool configuration (25 server connections, 1000 client limit)
 - TimescaleDB hypertable partitioning (7-day chunks, 30-day compression, 2-year retention)
 - Kafka `min.insync.replicas=2`, `unclean.leader.election.enable=false`
-- Istio retry/timeout policy per service
+- Cilium Envoy traffic policy per service (CiliumEnvoyConfig: retries, timeouts, circuit breaking)
 
 ### 12.6 Chaos Engineering Architecture
 
@@ -1423,4 +1430,5 @@ Phase 10 Service map          (coloured printout: 13 app URLs + 8 infra UIs)
 ```
 
 ---
-*SDD version updated: v1.6.0 — April 2026*
+
+_SDD version updated: v1.6.0 — April 2026_

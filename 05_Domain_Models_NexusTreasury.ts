@@ -122,8 +122,12 @@ export class Money {
     return Money.of(0, currency);
   }
 
-  get amount(): number { return this._amount; }
-  get currency(): string { return this._currency; }
+  get amount(): number {
+    return this._amount;
+  }
+  get currency(): string {
+    return this._currency;
+  }
 
   /** Add two Money values — currencies must match */
   add(other: Money): Money {
@@ -143,10 +147,14 @@ export class Money {
   }
 
   /** Check if amount is positive (inflow) */
-  isPositive(): boolean { return this._amount > 0; }
+  isPositive(): boolean {
+    return this._amount > 0;
+  }
 
   /** Check if amount is negative (outflow) */
-  isNegative(): boolean { return this._amount < 0; }
+  isNegative(): boolean {
+    return this._amount < 0;
+  }
 
   /** Value object equality — same amount AND same currency */
   equals(other: Money): boolean {
@@ -195,9 +203,15 @@ export class Percentage {
     return new Percentage(bps / 10000);
   }
 
-  get value(): number { return this._value; }
-  get basisPoints(): number { return Math.round(this._value * 10000); }
-  get displayValue(): number { return this._value * 100; }
+  get value(): number {
+    return this._value;
+  }
+  get basisPoints(): number {
+    return Math.round(this._value * 10000);
+  }
+  get displayValue(): number {
+    return this._value * 100;
+  }
 
   equals(other: Percentage): boolean {
     return Math.abs(this._value - other._value) < 1e-10;
@@ -232,7 +246,9 @@ export class BusinessDate {
     return new BusinessDate(today);
   }
 
-  get value(): Date { return new Date(this._date); }
+  get value(): Date {
+    return new Date(this._date);
+  }
 
   /** ISO 8601 date string (YYYY-MM-DD) */
   get isoString(): string {
@@ -259,7 +275,9 @@ export class BusinessDate {
     return this._date.getTime() === other._date.getTime();
   }
 
-  toString(): string { return this.isoString; }
+  toString(): string {
+    return this.isoString;
+  }
 }
 
 // ============================================================================
@@ -290,8 +308,8 @@ export enum TradeDirection {
   SELL = 'SELL',
   LEND = 'LEND',
   BORROW = 'BORROW',
-  PAY = 'PAY',    // Pay fixed in an IRS
-  RECEIVE = 'RECEIVE',  // Receive fixed in an IRS
+  PAY = 'PAY', // Pay fixed in an IRS
+  RECEIVE = 'RECEIVE', // Receive fixed in an IRS
 }
 
 /**
@@ -325,14 +343,16 @@ export class PreDealCheckResult {
     public readonly reason: string | null,
   ) {}
 
-  static approved(
-    limitId: LimitId,
-    limitAmount: Money,
-    utilisedAmount: Money,
-  ): PreDealCheckResult {
+  static approved(limitId: LimitId, limitAmount: Money, utilisedAmount: Money): PreDealCheckResult {
     return new PreDealCheckResult(
-      true, limitId, null, limitAmount, utilisedAmount,
-      limitAmount.subtract(utilisedAmount), false, null,
+      true,
+      limitId,
+      null,
+      limitAmount,
+      utilisedAmount,
+      limitAmount.subtract(utilisedAmount),
+      false,
+      null,
     );
   }
 
@@ -344,8 +364,13 @@ export class PreDealCheckResult {
     overrideAllowed: boolean,
   ): PreDealCheckResult {
     return new PreDealCheckResult(
-      false, limitId, limitType, limitAmount, utilisedAmount,
-      limitAmount.subtract(utilisedAmount), overrideAllowed,
+      false,
+      limitId,
+      limitType,
+      limitAmount,
+      utilisedAmount,
+      limitAmount.subtract(utilisedAmount),
+      overrideAllowed,
       `Trade would breach ${limitType} limit`,
     );
   }
@@ -475,7 +500,7 @@ export class Trade {
       params.bookedBy,
       now,
       now,
-      1,  // Initial version = 1 (optimistic locking)
+      1, // Initial version = 1 (optimistic locking)
     );
 
     // Record the TradeCreatedEvent for async Kafka publishing
@@ -526,9 +551,7 @@ export class Trade {
     this._version++;
 
     // Record amendment event with before/after state for audit
-    this._domainEvents.push(
-      new TradeAmendedEvent(this, previousState, amendedBy, reason),
-    );
+    this._domainEvents.push(new TradeAmendedEvent(this, previousState, amendedBy, reason));
   }
 
   /**
@@ -565,16 +588,36 @@ export class Trade {
 
   // ── Getters (immutable access) ───────────────────────────────────────────
 
-  get direction(): TradeDirection { return this._direction; }
-  get notional(): Money { return this._notional; }
-  get price(): number { return this._price; }
-  get tradeDate(): BusinessDate { return this._tradeDate; }
-  get valueDate(): BusinessDate { return this._valueDate; }
-  get maturityDate(): BusinessDate | null { return this._maturityDate; }
-  get status(): TradeStatus { return this._status; }
-  get tradeTerms(): Readonly<Record<string, unknown>> { return { ...this._tradeTerms }; }
-  get version(): number { return this._version; }
-  get updatedAt(): Date { return this._updatedAt; }
+  get direction(): TradeDirection {
+    return this._direction;
+  }
+  get notional(): Money {
+    return this._notional;
+  }
+  get price(): number {
+    return this._price;
+  }
+  get tradeDate(): BusinessDate {
+    return this._tradeDate;
+  }
+  get valueDate(): BusinessDate {
+    return this._valueDate;
+  }
+  get maturityDate(): BusinessDate | null {
+    return this._maturityDate;
+  }
+  get status(): TradeStatus {
+    return this._status;
+  }
+  get tradeTerms(): Readonly<Record<string, unknown>> {
+    return { ...this._tradeTerms };
+  }
+  get version(): number {
+    return this._version;
+  }
+  get updatedAt(): Date {
+    return this._updatedAt;
+  }
 
   /** Retrieve and clear pending domain events (call after successful save) */
   get domainEvents(): ReadonlyArray<DomainEvent> {
@@ -738,11 +781,7 @@ export class Position {
   ) {}
 
   /** Create a new position from the first trade in a book */
-  static create(
-    bookId: BookId,
-    instrumentId: InstrumentId,
-    currency: string,
-  ): Position {
+  static create(bookId: BookId, instrumentId: InstrumentId, currency: string): Position {
     return new Position(
       PositionId.generate(),
       bookId,
@@ -764,8 +803,11 @@ export class Position {
    */
   applyTradeCreated(event: TradeCreatedEvent): void {
     const trade = event.trade;
-    const sign = [TradeDirection.BUY, TradeDirection.LEND, TradeDirection.RECEIVE]
-      .includes(trade.direction) ? 1 : -1;
+    const sign = [TradeDirection.BUY, TradeDirection.LEND, TradeDirection.RECEIVE].includes(
+      trade.direction,
+    )
+      ? 1
+      : -1;
 
     this._quantity += sign * trade.notional.amount;
     this._notional = this._notional.add(trade.notional.multiply(sign));
@@ -778,8 +820,11 @@ export class Position {
   /** Apply a TradeCancelled event — reverse the position change */
   applyTradeCancelled(event: TradeCancelledEvent): void {
     const trade = event.trade;
-    const sign = [TradeDirection.BUY, TradeDirection.LEND, TradeDirection.RECEIVE]
-      .includes(trade.direction) ? -1 : 1;  // Opposite of creation
+    const sign = [TradeDirection.BUY, TradeDirection.LEND, TradeDirection.RECEIVE].includes(
+      trade.direction,
+    )
+      ? -1
+      : 1; // Opposite of creation
 
     this._quantity += sign * trade.notional.amount;
     this._notional = this._notional.add(trade.notional.multiply(sign));
@@ -798,10 +843,7 @@ export class Position {
    */
   revalue(currentPrice: number, bookCostBasis: Money): void {
     // Market value = quantity × current price
-    const newMarketValue = Money.of(
-      this._quantity * currentPrice,
-      this._notional.currency,
-    );
+    const newMarketValue = Money.of(this._quantity * currentPrice, this._notional.currency);
 
     // Unrealised P&L = market value - book cost
     this._unrealisedPnL = newMarketValue.subtract(bookCostBasis);
@@ -814,22 +856,42 @@ export class Position {
 
   // ── Getters ──────────────────────────────────────────────────────────────
 
-  get quantity(): number { return this._quantity; }
-  get notional(): Money { return this._notional; }
-  get marketValue(): Money { return this._marketValue; }
-  get unrealisedPnL(): Money { return this._unrealisedPnL; }
-  get realisedPnL(): Money { return this._realisedPnL; }
-  get accruedInterest(): Money { return this._accruedInterest; }
-  get lastUpdated(): Date { return this._lastUpdated; }
-  get sequenceNumber(): number { return this._sequenceNumber; }
+  get quantity(): number {
+    return this._quantity;
+  }
+  get notional(): Money {
+    return this._notional;
+  }
+  get marketValue(): Money {
+    return this._marketValue;
+  }
+  get unrealisedPnL(): Money {
+    return this._unrealisedPnL;
+  }
+  get realisedPnL(): Money {
+    return this._realisedPnL;
+  }
+  get accruedInterest(): Money {
+    return this._accruedInterest;
+  }
+  get lastUpdated(): Date {
+    return this._lastUpdated;
+  }
+  get sequenceNumber(): number {
+    return this._sequenceNumber;
+  }
 
   /** Total P&L = realised + unrealised + accrued interest */
   get totalPnL(): Money {
     return this._realisedPnL.add(this._unrealisedPnL).add(this._accruedInterest);
   }
 
-  get domainEvents(): ReadonlyArray<DomainEvent> { return [...this._domainEvents]; }
-  clearDomainEvents(): void { this._domainEvents = []; }
+  get domainEvents(): ReadonlyArray<DomainEvent> {
+    return [...this._domainEvents];
+  }
+  clearDomainEvents(): void {
+    this._domainEvents = [];
+  }
 }
 
 /** Published when position changes due to trade or revaluation */
@@ -858,17 +920,17 @@ export class PositionRevaluedEvent extends DomainEvent {
  * Based on BCBS 238 (LCR) and BCBS 295 (NSFR) standard time buckets.
  */
 export enum LiquidityTimeBucket {
-  OVERNIGHT = 'OVERNIGHT',           // O/N (1 day)
-  TWO_TO_SEVEN_DAYS = '2-7D',        // 2-7 days
-  EIGHT_TO_FOURTEEN_DAYS = '8-14D',  // 8-14 days
-  FIFTEEN_TO_ONE_MONTH = '15D-1M',   // 15 days to 1 month
-  ONE_TO_THREE_MONTHS = '1-3M',      // 1-3 months
-  THREE_TO_SIX_MONTHS = '3-6M',      // 3-6 months
-  SIX_TO_TWELVE_MONTHS = '6-12M',    // 6-12 months
-  ONE_TO_TWO_YEARS = '1-2Y',         // 1-2 years
-  TWO_TO_FIVE_YEARS = '2-5Y',        // 2-5 years
-  FIVE_TO_TEN_YEARS = '5-10Y',       // 5-10 years
-  OVER_TEN_YEARS = '10Y+',           // Over 10 years
+  OVERNIGHT = 'OVERNIGHT', // O/N (1 day)
+  TWO_TO_SEVEN_DAYS = '2-7D', // 2-7 days
+  EIGHT_TO_FOURTEEN_DAYS = '8-14D', // 8-14 days
+  FIFTEEN_TO_ONE_MONTH = '15D-1M', // 15 days to 1 month
+  ONE_TO_THREE_MONTHS = '1-3M', // 1-3 months
+  THREE_TO_SIX_MONTHS = '3-6M', // 3-6 months
+  SIX_TO_TWELVE_MONTHS = '6-12M', // 6-12 months
+  ONE_TO_TWO_YEARS = '1-2Y', // 1-2 years
+  TWO_TO_FIVE_YEARS = '2-5Y', // 2-5 years
+  FIVE_TO_TEN_YEARS = '5-10Y', // 5-10 years
+  OVER_TEN_YEARS = '10Y+', // Over 10 years
 }
 
 /**
@@ -881,7 +943,7 @@ export enum LiquidityTimeBucket {
 export enum ALMScenario {
   CONTRACTUAL = 'CONTRACTUAL',
   BEHAVIOURAL = 'BEHAVIOURAL',
-  STRESSED_30D = 'STRESSED_30D',      // Basel III LCR stress scenario
+  STRESSED_30D = 'STRESSED_30D', // Basel III LCR stress scenario
   STRESSED_IDIOSYNCRATIC = 'STRESSED_IDIOSYNCRATIC',
   STRESSED_MARKET_WIDE = 'STRESSED_MARKET_WIDE',
   STRESSED_COMBINED = 'STRESSED_COMBINED',
@@ -950,18 +1012,12 @@ export class LiquidityGapReport {
 
   /** Total inflows across all buckets */
   get totalInflows(): Money {
-    return this.buckets.reduce(
-      (sum, b) => sum.add(b.inflows),
-      Money.zero(this.currency),
-    );
+    return this.buckets.reduce((sum, b) => sum.add(b.inflows), Money.zero(this.currency));
   }
 
   /** Total outflows across all buckets */
   get totalOutflows(): Money {
-    return this.buckets.reduce(
-      (sum, b) => sum.add(b.outflows),
-      Money.zero(this.currency),
-    );
+    return this.buckets.reduce((sum, b) => sum.add(b.outflows), Money.zero(this.currency));
   }
 
   /** Net liquidity position (positive = surplus, negative = deficit) */
@@ -976,7 +1032,7 @@ export class LiquidityGapReport {
       cumulative = cumulative.add(b.netCashFlow);
       if (cumulative.isNegative()) return b.bucket;
     }
-    return null;  // No negative gap — fully funded
+    return null; // No negative gap — fully funded
   }
 
   toJSON() {
@@ -986,7 +1042,7 @@ export class LiquidityGapReport {
       reportDate: this.reportDate.isoString,
       scenario: this.scenario,
       currency: this.currency,
-      buckets: this.buckets.map(b => {
+      buckets: this.buckets.map((b) => {
         cumulativeGap = cumulativeGap.add(b.netCashFlow);
         return {
           bucket: b.bucket,
@@ -1073,15 +1129,11 @@ export class Limit {
         this.limitType,
         this._limitAmount,
         this._utilisedAmount,
-        false,  // Override not allowed by default — configurable
+        false, // Override not allowed by default — configurable
       );
     }
 
-    return PreDealCheckResult.approved(
-      this.id,
-      this._limitAmount,
-      this._utilisedAmount,
-    );
+    return PreDealCheckResult.approved(this.id, this._limitAmount, this._utilisedAmount);
   }
 
   /** Update utilisation after trade is booked */
@@ -1100,22 +1152,33 @@ export class Limit {
     this._utilisedAmount = this._utilisedAmount.subtract(amount);
 
     // Restore ACTIVE status if breach was released
-    if (this._status === 'BREACHED' &&
-        this._utilisedAmount.amount <= this._limitAmount.amount) {
+    if (this._status === 'BREACHED' && this._utilisedAmount.amount <= this._limitAmount.amount) {
       this._status = 'ACTIVE';
       this._domainEvents.push(new LimitBreachResolvedEvent(this));
     }
   }
 
-  get limitAmount(): Money { return this._limitAmount; }
-  get utilisedAmount(): Money { return this._utilisedAmount; }
-  get headroom(): Money { return this._limitAmount.subtract(this._utilisedAmount); }
+  get limitAmount(): Money {
+    return this._limitAmount;
+  }
+  get utilisedAmount(): Money {
+    return this._utilisedAmount;
+  }
+  get headroom(): Money {
+    return this._limitAmount.subtract(this._utilisedAmount);
+  }
   get utilisationRate(): Percentage {
     return Percentage.ofDecimal(this._utilisedAmount.amount / this._limitAmount.amount);
   }
-  get status(): string { return this._status; }
-  get domainEvents(): ReadonlyArray<DomainEvent> { return [...this._domainEvents]; }
-  clearDomainEvents(): void { this._domainEvents = []; }
+  get status(): string {
+    return this._status;
+  }
+  get domainEvents(): ReadonlyArray<DomainEvent> {
+    return [...this._domainEvents];
+  }
+  clearDomainEvents(): void {
+    this._domainEvents = [];
+  }
 }
 
 export class LimitBreachedEvent extends DomainEvent {
@@ -1135,7 +1198,10 @@ export class LimitBreachResolvedEvent extends DomainEvent {
 // ============================================================================
 
 export class NexusDomainError extends Error {
-  constructor(message: string, public readonly code: string) {
+  constructor(
+    message: string,
+    public readonly code: string,
+  ) {
     super(message);
     this.name = this.constructor.name;
   }
@@ -1143,7 +1209,10 @@ export class NexusDomainError extends Error {
 
 export class InvalidCurrencyError extends NexusDomainError {
   constructor(currency: string) {
-    super(`Invalid currency code: ${currency}. Must be a 3-letter ISO 4217 code.`, 'INVALID_CURRENCY');
+    super(
+      `Invalid currency code: ${currency}. Must be a 3-letter ISO 4217 code.`,
+      'INVALID_CURRENCY',
+    );
   }
 }
 
@@ -1167,7 +1236,7 @@ export class PreDealLimitBreachError extends NexusDomainError {
   ) {
     super(
       `Trade rejected: ${limitType} limit of ${limitAmount} would be breached. ` +
-      `Current utilisation: ${utilisedAmount}`,
+        `Current utilisation: ${utilisedAmount}`,
       'PRE_DEAL_LIMIT_BREACH',
     );
   }
@@ -1350,8 +1419,8 @@ export enum IslamicInstrumentType {
 
 export interface IslamicTradeTerms {
   instrumentType: IslamicInstrumentType;
-  profitRate: Percentage;       // No interest — profit rate only
-  assetDescription: string;     // Underlying halal asset
+  profitRate: Percentage; // No interest — profit rate only
+  assetDescription: string; // Underlying halal asset
   shariahAdvisorId: string;
   profitSchedule: Array<{ date: BusinessDate; amount: Money }>;
 }
@@ -1409,9 +1478,9 @@ export interface FXHedgeRequest {
   exposureCurrency: string;
   baseCurrency: string;
   notionalAmount: number;
-  hedgeRatio: number;             // 0.0–1.0
+  hedgeRatio: number; // 0.0–1.0
   strategy: HedgeStrategy;
-  spreadLockBps: number;          // Portal deal spread lock
+  spreadLockBps: number; // Portal deal spread lock
   maturityDate: BusinessDate;
 }
 
@@ -1576,8 +1645,8 @@ export interface BudgetRequest {
   scenarioName: string;
   revenueProjections: Array<{ quarter: number; amount: number; currency: string }>;
   costProjections: Array<{ quarter: number; amount: number; category: string }>;
-  capitalAdequacyTarget: number;   // CET1 ratio %
-  liquidityTarget: number;          // LCR %
+  capitalAdequacyTarget: number; // CET1 ratio %
+  liquidityTarget: number; // LCR %
 }
 
 export interface BudgetVarianceReport {
@@ -1598,10 +1667,10 @@ export interface BudgetVarianceReport {
 export interface DisasterRecoveryConfig {
   primaryRegion: string;
   standbyRegions: string[];
-  rtoTargetMs: number;        // Recovery Time Objective — default 900000 (15min)
-  rpoTargetMs: number;        // Recovery Point Objective — default 300000 (5min)
+  rtoTargetMs: number; // Recovery Time Objective — default 900000 (15min)
+  rpoTargetMs: number; // Recovery Point Objective — default 300000 (5min)
   healthProbeIntervalMs: number;
-  failoverThreshold: number;  // Consecutive failures before auto-failover
+  failoverThreshold: number; // Consecutive failures before auto-failover
   latencyThresholdMs: number;
 }
 
@@ -1622,7 +1691,7 @@ export interface DRTestResult {
 export interface SecretRotationConfig {
   secretName: string;
   rotationIntervalDays: number;
-  dualValidationWindowMs: number;  // JWT: 30min overlap window
+  dualValidationWindowMs: number; // JWT: 30min overlap window
   vaultPath: string;
   notifySlackChannel?: string;
 }
@@ -1641,11 +1710,11 @@ export interface FinOpsCostRecord {
 }
 
 export interface SOC2Evidence {
-  controlId: string;           // e.g. CC6.1, CC7.4
+  controlId: string; // e.g. CC6.1, CC7.4
   criterionName: string;
   evidenceType: 'AUTOMATED' | 'MANUAL';
   collectedAt: Date;
-  retentionUntil: Date;        // 7 years for SOC 2
+  retentionUntil: Date; // 7 years for SOC 2
   draataControlId?: string;
   vantaControlId?: string;
   s3ObjectLockKey: string;
@@ -1676,21 +1745,21 @@ export interface RegulatorySubmission {
   submissionId: string;
   tenantId: TenantId | string;
   framework: RegulatoryFramework;
-  reportingPeriod: string;    // e.g. "2026-Q1"
+  reportingPeriod: string; // e.g. "2026-Q1"
   status: SubmissionStatus;
   submittedAt?: Date;
   acknowledgedAt?: Date;
   rejectionReason?: string;
   xbrlPayloadUrl?: string;
   apiEndpoint: string;
-  dualSubmission: boolean;    // true = both API and file upload portal
+  dualSubmission: boolean; // true = both API and file upload portal
 }
 
 // ── SWIFT ISO 20022 (Sprint 10) ───────────────────────────────────────────────
 
 export enum SWIFTMigrationMode {
   LEGACY_MT_ONLY = 'LEGACY_MT_ONLY',
-  DUAL_RUN = 'DUAL_RUN',       // Both MT and ISO 20022 MX in parallel
+  DUAL_RUN = 'DUAL_RUN', // Both MT and ISO 20022 MX in parallel
   MX_ONLY = 'MX_ONLY',
 }
 
@@ -1701,5 +1770,5 @@ export interface SWIFTISO20022Message {
   numberOfTransactions: number;
   settlementMethod: 'INDA' | 'INGA' | 'COVE' | 'CLRG';
   payload: Record<string, unknown>;
-  mtLegacyReference?: string;  // Original MT103/MT202 reference for dual-run
+  mtLegacyReference?: string; // Original MT103/MT202 reference for dual-run
 }
