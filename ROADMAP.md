@@ -189,6 +189,8 @@ Identified Functional Gaps & Localization Requirements
 - Specific tracking mechanisms for Vostro account credit/debit validations strictly based on BoG guidelines require custom business logic.
 - Local tax calculation modules (withholding taxes on interest) and Ghanaian public holiday calendars need to be parameterized.
 - Matrix Pricing Engine: While complex derivatives are priced, a specific engine suggesting lending rates based on the local Policy Rate, GRR, and customer risk grading.
+---
+
 
 ## Sprint 12 — Enterprise Hardening (6 weeks)
 
