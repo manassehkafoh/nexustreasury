@@ -177,8 +177,18 @@ Upgrade from polling to WebSocket SSE:
 - Kafka → Server-Sent Events pipeline via `notification-service`
 - React live blotter: position MTM updates every 500ms
 - Limit headroom gauge: real-time utilisation bar
-
 ---
+  
+### 11.4
+Identified Functional Gaps & Localization Requirements
+- Temenos T24 Integration: NexusTreasury relies on OpenAPI 3.1 and Kafka.
+- A dedicated translation layer or Enterprise Service Bus (ESB) connector must be configured to establish the real-time, bi-directional API link with Transact R22.
+- Ghana CSD Connectivity: The requirement for a direct API link to the Ghana Central Securities Depository for automated settlement matching is not listed as a native integration.
+- This will need a custom adapter built within the bo-service.
+- Bank of Ghana Regulatory Specifics:The "Reserve Averaging Calculator" to track the 15%, 20%, or 25% Primary Reserve Requirement.
+- Specific tracking mechanisms for Vostro account credit/debit validations strictly based on BoG guidelines require custom business logic.
+- Local tax calculation modules (withholding taxes on interest) and Ghanaian public holiday calendars need to be parameterized.
+- Matrix Pricing Engine: While complex derivatives are priced, a specific engine suggesting lending rates based on the local Policy Rate, GRR, and customer risk grading.
 
 ## Sprint 12 — Enterprise Hardening (6 weeks)
 
