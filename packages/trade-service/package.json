@@ -22,7 +22,7 @@
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
     "@opentelemetry/api": "^1.9.0",
-    "@opentelemetry/sdk-node": "^0.214.0",
+    "@opentelemetry/sdk-node": "^0.217.0",
     "@prisma/client": "^5.9.0",
     "fastify": "^5.8.4",
     "kafkajs": "^2.2.4",
@@ -38,7 +38,7 @@
   "devDependencies": {
     "@vitest/coverage-v8": "^1.0.0",
     "tsx": "^4.7.0",
-    "vitest": "^1.0.0",
+    "vitest": "^4.1.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.5.0"
   }
