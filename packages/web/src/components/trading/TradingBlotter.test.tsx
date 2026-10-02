@@ -5,11 +5,11 @@ import { TradingBlotter } from './TradingBlotter';
 describe('TradingBlotter', () => {
   it('renders the blotter header', () => {
     render(<TradingBlotter />);
-    expect(screen.getByText(/live trade blotter/i)).toBeDefined();
+    expect(screen.getByText(/Live Trading Blotter/i)).toBeDefined();
   });
 
-  it('shows LIVE indicator', () => {
+  it('shows CONNECTING indicator initially', () => {
     render(<TradingBlotter />);
-    expect(screen.getByText('LIVE')).toBeDefined();
+    expect(screen.getByText('CONNECTING')).toBeDefined();
   });
 });

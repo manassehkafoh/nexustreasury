@@ -14,25 +14,26 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@nexustreasury/domain": "workspace:*",
     "@fastify/helmet": "^13.0.2",
     "@fastify/jwt": "^9.1.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/swagger": "^9.0.0",
     "@fastify/swagger-ui": "^5.0.0",
+    "@nexustreasury/domain": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/sdk-node": "^0.214.0",
     "@prisma/client": "^5.9.0",
     "fastify": "^5.8.4",
     "fastify-plugin": "^4.5.1",
-    "kafkajs": "^2.2.4",
     "ioredis": "^5.3.2",
+    "kafkajs": "^2.2.4",
     "pino": "^8.18.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^1.0.0",
+    "@pact-foundation/pact": "^17.1.4",
     "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
     "tsx": "^4.7.0",
     "vitest": "^1.0.0"
   }

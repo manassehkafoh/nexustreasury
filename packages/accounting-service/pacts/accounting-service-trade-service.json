@@ -1,0 +1,162 @@
+{
+  "consumer": {
+    "name": "accounting-service"
+  },
+  "interactions": [
+    {
+      "description": "a nexus.trading.trades.booked Kafka message",
+      "pending": false,
+      "providerStates": [
+        {
+          "name": "a valid FX Forward trade exists"
+        }
+      ],
+      "request": {
+        "body": {
+          "content": {
+            "assetClass": "FX",
+            "currency": "EUR",
+            "direction": "BUY",
+            "instrumentType": "FORWARD",
+            "notional": 1000000
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "method": "POST",
+        "path": "/api/v1/trades"
+      },
+      "response": {
+        "body": {
+          "content": {
+            "assetClass": "FX",
+            "createdAt": "2026-04-09T09:30:00.187Z",
+            "currency": "EUR",
+            "direction": "BUY",
+            "instrumentType": "FORWARD",
+            "notional": 1000000,
+            "status": "PENDING_VALIDATION",
+            "tenantId": "bank-001",
+            "tradeDate": "2026-04-09",
+            "tradeId": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "contentType": "application/json",
+          "encoded": false
+        },
+        "headers": {
+          "Content-Type": [
+            "application/json"
+          ]
+        },
+        "matchingRules": {
+          "body": {
+            "$.assetClass": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.createdAt": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.currency": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "^[A-Z]{3}$"
+                }
+              ]
+            },
+            "$.direction": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "regex",
+                  "regex": "BUY|SELL"
+                }
+              ]
+            },
+            "$.instrumentType": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.notional": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "decimal"
+                }
+              ]
+            },
+            "$.status": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.tenantId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.tradeDate": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            },
+            "$.tradeId": {
+              "combine": "AND",
+              "matchers": [
+                {
+                  "match": "type"
+                }
+              ]
+            }
+          }
+        },
+        "status": 201
+      },
+      "type": "Synchronous/HTTP"
+    }
+  ],
+  "metadata": {
+    "pact-js": {
+      "version": "17.1.4"
+    },
+    "pactRust": {
+      "ffi": "0.5.8",
+      "models": "1.3.16"
+    },
+    "pactSpecification": {
+      "version": "4.0"
+    }
+  },
+  "provider": {
+    "name": "trade-service"
+  }
+}
