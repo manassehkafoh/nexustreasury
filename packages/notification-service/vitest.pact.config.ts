@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    include: ['../../tests/contract/limit-breach.consumer.pact.ts', '../../tests/contract/trades-booked.consumer.pact.ts'],
+    include: [
+      '../../tests/contract/limit-breach.consumer.pact.ts',
+      '../../tests/contract/trades-booked.consumer.pact.ts',
+    ],
   },
 });
