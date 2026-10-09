@@ -27,9 +27,7 @@ describe('PositionKafkaConsumer', () => {
   it('starts and subscribes to nexus.trading.trades', async () => {
     await consumer.start();
     const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.subscribe).toHaveBeenCalledWith(
+    expect((consumer as any).consumer.subscribe).toHaveBeenCalledWith(
       expect.objectContaining({ topics: ['nexus.trading.trades'] }),
     );
   });
@@ -38,9 +36,7 @@ describe('PositionKafkaConsumer', () => {
     await consumer.start();
     await consumer.stop();
     const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.disconnect).toHaveBeenCalled();
+    expect((consumer as any).consumer.disconnect).toHaveBeenCalled();
   });
 
   it('accepts onTradeBooked callback', () => {

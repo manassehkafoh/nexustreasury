@@ -47,7 +47,34 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-jwt": ">=6.2.0"
+      "fast-jwt": ">=6.3.0",
+      "@fastify/static": ">=10.1.1",
+      "postcss": ">=8.5.18",
+      "fastify": ">=5.12.2",
+      "protobufjs": ">=7.6.5",
+      "fast-xml-parser": ">=5.7.0",
+      "next": ">=15.5.27",
+      "@protobufjs/utf8": ">=1.1.1",
+      "fast-xml-builder": ">=1.1.7",
+      "ws": ">=8.21.0",
+      "@opentelemetry/sdk-node": ">=0.217.0",
+      "@opentelemetry/exporter-prometheus": ">=0.217.0",
+      "brace-expansion": ">=5.0.10",
+      "@grpc/grpc-js": ">=1.14.5",
+      "esbuild": ">=0.28.1",
+      "@babel/core": ">=7.29.6",
+      "@opentelemetry/propagator-jaeger": ">=2.9.0",
+      "fast-uri": ">=3.1.8",
+      "sharp": ">=0.35.5",
+      "find-my-way": ">=9.7.0",
+      "socket.io-parser": ">=4.2.7",
+      "nanoid": ">=3.3.12",
+      "postcss-selector-parser": ">=7.1.6",
+      "browserslist": ">=4.28.7",
+      "@opentelemetry/core": ">=2.8.0",
+      "baseline-browser-mapping": ">=2.11.0",
+      "source-map-js": ">=1.2.2",
+      "braces": ">=3.0.3"
     }
   }
 }
