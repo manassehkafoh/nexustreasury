@@ -19,6 +19,7 @@ describe('PositionKafkaConsumer', () => {
   let consumer: PositionKafkaConsumer;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     onBooked = vi.fn().mockResolvedValue(undefined);
     onCancelled = vi.fn().mockResolvedValue(undefined);
     consumer = new PositionKafkaConsumer(onBooked, onCancelled);

@@ -2,7 +2,7 @@
   "name": "nexustreasury",
   "version": "1.0.0",
   "private": true,
-  "description": "NexusTreasury \u2014 Cloud-Native Treasury Management Platform",
+  "description": "NexusTreasury — Cloud-Native Treasury Management Platform",
   "engines": {
     "node": ">=24",
     "pnpm": ">=9.0.0"
@@ -47,7 +47,31 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-jwt": ">=6.2.0"
+      "fast-jwt": ">=6.2.4",
+      "protobufjs": ">=7.5.5",
+      "esbuild": ">=0.28.1",
+      "next": ">=15.5.16",
+      "fastify": ">=5.8.5",
+      "postcss": ">=8.5.10",
+      "@fastify/static": ">=9.1.1",
+      "fast-xml-parser": ">=5.7.0",
+      "fast-xml-builder": ">=1.1.7",
+      "ws": ">=8.21.0",
+      "@opentelemetry/sdk-node": ">=0.217.0",
+      "@opentelemetry/exporter-prometheus": ">=0.217.0",
+      "brace-expansion": ">=5.0.12",
+      "@grpc/grpc-js": ">=1.14.5",
+      "@babel/core": ">=7.29.6",
+      "@opentelemetry/propagator-jaeger": ">=2.9.0",
+      "fast-uri": ">=3.1.4",
+      "socket.io-parser": ">=4.2.7",
+      "postcss-selector-parser": ">=7.1.6",
+      "browserslist": ">=4.28.7",
+      "@opentelemetry/core": ">=2.8.0",
+      "baseline-browser-mapping": ">=2.11.0",
+      "micromatch": ">=4.0.8",
+      "chokidar": ">=4.0.1",
+      "tailwindcss": ">=3.4.20"
     }
   }
 }
