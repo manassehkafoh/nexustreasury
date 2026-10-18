@@ -47,7 +47,8 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-jwt": ">=6.2.0"
+      "fast-jwt": ">=6.3.4",
+      "next": ">=15.5.27"
     }
   }
 }
