@@ -8,7 +8,7 @@ const { mockConsumer } = vi.hoisted(() => {
       subscribe: vi.fn().mockResolvedValue(undefined),
       run: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
-    }
+    },
   };
 });
 
