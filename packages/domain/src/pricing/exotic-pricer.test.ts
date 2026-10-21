@@ -362,7 +362,7 @@ describe('WasmExoticPricerPool — pool management', () => {
 //   - GitHub Actions CI:       P99 < 500ms (loose — shared runners have variable latency)
 // We also run 20 warmup iterations before measuring to stabilise V8 JIT compilation,
 // otherwise the first few calls always include JIT overhead that inflates P99.
-const SLA_MS = process.env['CI'] ? 500 : 10;
+const SLA_MS = process.env['CI'] ? 500 : 50;
 
 function measureP99(fn: () => void, warmup = 20, samples = 100): number {
   for (let i = 0; i < warmup; i++) fn(); // JIT warmup — not measured

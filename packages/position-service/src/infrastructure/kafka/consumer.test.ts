@@ -2,13 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PositionKafkaConsumer } from './consumer.js';
 
 // Mock kafkajs
+const mocks = vi.hoisted(() => ({
+  connectMock: vi.fn().mockResolvedValue(undefined),
+  subscribeMock: vi.fn().mockResolvedValue(undefined),
+  runMock: vi.fn().mockResolvedValue(undefined),
+  disconnectMock: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('kafkajs', () => ({
   Kafka: vi.fn().mockImplementation(() => ({
     consumer: vi.fn().mockReturnValue({
-      connect: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn().mockResolvedValue(undefined),
-      run: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
+      connect: mocks.connectMock,
+      subscribe: mocks.subscribeMock,
+      run: mocks.runMock,
+      disconnect: mocks.disconnectMock,
     }),
   })),
 }));
@@ -26,10 +33,7 @@ describe('PositionKafkaConsumer', () => {
 
   it('starts and subscribes to nexus.trading.trades', async () => {
     await consumer.start();
-    const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.subscribe).toHaveBeenCalledWith(
+    expect(mocks.subscribeMock).toHaveBeenCalledWith(
       expect.objectContaining({ topics: ['nexus.trading.trades'] }),
     );
   });
@@ -37,10 +41,7 @@ describe('PositionKafkaConsumer', () => {
   it('stops gracefully', async () => {
     await consumer.start();
     await consumer.stop();
-    const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.disconnect).toHaveBeenCalled();
+    expect(mocks.disconnectMock).toHaveBeenCalled();
   });
 
   it('accepts onTradeBooked callback', () => {
