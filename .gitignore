@@ -56,3 +56,4 @@ audit.json
 dev_logs.txt
 packages/web/playwright-report/
 packages/web/test-results/
+packages/*/pacts/

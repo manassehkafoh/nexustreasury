@@ -2,7 +2,7 @@
   "name": "nexustreasury",
   "version": "1.0.0",
   "private": true,
-  "description": "NexusTreasury \u2014 Cloud-Native Treasury Management Platform",
+  "description": "NexusTreasury — Cloud-Native Treasury Management Platform",
   "engines": {
     "node": ">=24",
     "pnpm": ">=9.0.0"
@@ -26,6 +26,7 @@
     "test:mutation": "stryker run"
   },
   "devDependencies": {
+    "@pact-foundation/pact": "^12.1.2",
     "@stryker-mutator/core": "^8.6.0",
     "@stryker-mutator/typescript-checker": "^8.6.0",
     "@stryker-mutator/vitest-runner": "^8.6.0",
