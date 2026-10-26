@@ -70,8 +70,8 @@ const VALID_BODY = {
   direction: 'BUY',
   counterpartyId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   instrumentId: '7a1b2c3d-4e5f-6789-abcd-ef0123456789',
-  bookId: '1234abcd-ab12-1234-1234-123412341234',
-  traderId: 'abcd1234-1234-abcd-abcd-abcd12341234',
+  bookId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  traderId: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
   notionalAmount: 1_000_000,
   notionalCurrency: 'USD',
   price: 1.0842,
@@ -105,7 +105,12 @@ describe('Trade Routes - HTTP layer', () => {
         headers: { authorization: `Bearer ${token}` },
         payload: VALID_BODY,
       });
+
+      if (res.statusCode !== 201) {
+        console.error(res.json());
+      }
       expect(res.statusCode).toBe(201);
+
       const body = res.json<{ tradeId: string; reference: string }>();
       expect(body.tradeId).toBeDefined();
       expect(body.reference).toMatch(/^FX-/);
