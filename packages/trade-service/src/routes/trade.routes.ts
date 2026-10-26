@@ -61,7 +61,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
       if (!parsed.success) {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
-          message: parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          message: parsed.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
           statusCode: 400,
         });
       }
@@ -128,8 +128,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
       if (!parsedAmend.success) {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
-          message: parsedAmend.error.errors
-            .map((e) => `${e.path.join('.')}: ${e.message}`)
+          message: parsedAmend.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`)
             .join('; '),
           statusCode: 400,
         });
@@ -166,8 +165,7 @@ export async function tradeRoutes(app: FastifyInstance): Promise<void> {
       if (!parsedCancel.success) {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
-          message: parsedCancel.error.errors
-            .map((e) => `${e.path.join('.')}: ${e.message}`)
+          message: parsedCancel.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`)
             .join('; '),
           statusCode: 400,
         });
