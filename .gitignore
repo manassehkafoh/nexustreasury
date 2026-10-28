@@ -52,3 +52,5 @@ infra/helm/**/*-values-prod.yaml
 # TypeScript build info (generated, not source)
 **/*.tsbuildinfo
 packages/web/next-env.d.ts
+packages/web/playwright-report/
+packages/web/test-results/
