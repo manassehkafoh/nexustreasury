@@ -47,7 +47,25 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-jwt": ">=6.2.0"
+      "fast-jwt": ">=6.3.4",
+      "fastify": ">=5.12.5",
+      "@babel/core": ">=7.29.6",
+      "@grpc/grpc-js": ">=1.14.5",
+      "fast-uri": ">=3.1.9",
+      "protobufjs": ">=7.6.5",
+      "@fastify/static": ">=10.1.2",
+      "@opentelemetry/core": ">=2.8.0",
+      "baseline-browser-mapping": ">=2.11.0",
+      "@opentelemetry/api": ">=1.10.0",
+      "@opentelemetry/sdk-node": ">=0.217.0",
+      "zod": ">=4.6.6",
+      "ws": ">=8.20.1",
+      "fast-xml-parser": ">=5.7.0",
+      "socket.io-parser": ">=4.2.7",
+      "browserslist": ">=4.28.7",
+      "source-map-js": ">=1.2.2",
+      "minimatch": "^9.0.5",
+      "test-exclude": ">=7.0.1"
     }
   }
 }
