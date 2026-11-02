@@ -85,7 +85,9 @@ export async function boRoutes(app: FastifyInstance): Promise<void> {
     if (!parsed.success) {
       return reply.status(400).send({
         error: 'VALIDATION_ERROR',
-        message: parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+        message: parsed.error.issues
+          .map((e: any) => `${e.path.join('.')}: ${e.message}`)
+          .join('; '),
       });
     }
 
