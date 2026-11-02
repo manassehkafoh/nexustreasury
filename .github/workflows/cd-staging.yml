@@ -72,14 +72,16 @@ jobs:
       - name: Update Helm values with new image tags
         run: |
           SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          for svc in trade-service position-service risk-service alm-service bo-service market-data-service web; do
-            sed -i "s|tag: .*|tag: $SHORT_SHA|g" infra/helm/nexustreasury/values-staging.yaml
-          done
+          sed -i "s|^  imageTag: .*|  imageTag: $SHORT_SHA|" infra/helm/nexustreasury/values-staging.yaml
       - name: Commit & push GitOps update
         run: |
           git config user.name "nexustreasury-bot"
           git config user.email "bot@nexustreasury.com"
           git add infra/helm/nexustreasury/values-staging.yaml
+          if git diff --cached --quiet; then
+            echo "Staging image tag is already up to date; skipping GitOps commit."
+            exit 0
+          fi
           git commit -m "chore(gitops): deploy ${{ github.sha }} to staging [skip ci]"
           git push
       - name: Wait for ArgoCD sync
