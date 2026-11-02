@@ -94,7 +94,7 @@ jobs:
 
   # ── Unit Tests ────────────────────────────────────────────
   test:
-    name: Unit & Integration Tests
+    name: Unit Tests
     needs: setup
     runs-on: ubuntu-latest
     services:
@@ -271,7 +271,7 @@ jobs:
         run: pnpm exec prisma generate --schema=prisma/schema.prisma
       - run: pnpm build
       - name: Run E2E integration tests
-        run: pnpm --filter @nexustreasury/e2e exec vitest run --reporter=verbose
+        run: cd tests/e2e && pnpm test
       - name: Upload E2E results
         if: always()
         uses: actions/upload-artifact@v4

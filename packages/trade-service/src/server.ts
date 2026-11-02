@@ -100,7 +100,7 @@ export async function buildServer(): Promise<ReturnType<typeof Fastify>> {
       if (error instanceof ZodError) {
         return reply.status(400).send({
           error: 'VALIDATION_ERROR',
-          message: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; '),
+          message: error.issues.map((e: any) => `${e.path.join('.')}: ${e.message}`).join('; '),
           statusCode: 400,
         });
       }
