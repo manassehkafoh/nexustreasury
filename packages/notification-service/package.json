@@ -18,9 +18,8 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
-    "@pact-foundation/pact": "17.1.4",
-    "@types/node": "^20.0.0",
     "@vitest/coverage-v8": "^1.0.0",
+    "@types/node": "^20.0.0",
     "tsx": "^4.7.0",
     "vitest": "^1.0.0"
   }
