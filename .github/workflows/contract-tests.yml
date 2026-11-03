@@ -64,7 +64,7 @@ jobs:
       - name: Run Pact consumer tests (notification-service)
         run: pnpm --filter @nexustreasury/notification-service exec vitest run --config vitest.pact.config.ts
         env:
-          PACT_OUTPUT_DIR: ./pacts
+          PACT_OUTPUT_DIR: ${{ github.workspace }}/pacts
       - name: Publish pacts to Pact Broker
         if: github.ref == 'refs/heads/main'
         run: |
