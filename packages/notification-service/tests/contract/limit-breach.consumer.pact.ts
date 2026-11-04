@@ -22,6 +22,7 @@ const pact = new PactV3({
   consumer: 'notification-service',
   provider: 'risk-service',
   spec: SpecificationVersion.SPECIFICATION_VERSION_V4,
+  dir: process.env.PACT_OUTPUT_DIR ?? 'pacts',
 });
 
 describe('Contract: notification-service ← risk-service (nexus.risk.limit-breach)', () => {
