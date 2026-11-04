@@ -12,19 +12,19 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@nexustreasury/domain": "workspace:*",
-    "fastify": "^5.8.4",
-    "kafkajs": "^2.2.4",
-    "@prisma/client": "^5.9.0",
-    "pino": "^8.18.0",
-    "zod": "^3.22.0",
+    "@fastify/helmet": "^13.2.0",
     "@fastify/jwt": "^9.1.0",
-    "@fastify/helmet": "^13.0.2"
+    "@nexustreasury/domain": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "fastify": "^5.12.8",
+    "kafkajs": "^2.2.4",
+    "pino": "^8.21.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
-    "tsx": "^4.7.0",
-    "vitest": "^1.0.0",
-    "@types/node": "^20.0.0",
-    "@vitest/coverage-v8": "^1.0.0"
+    "@types/node": "^20.19.43",
+    "@vitest/coverage-v8": "^1.6.1",
+    "tsx": "^4.23.15",
+    "vitest": "^1.6.1"
   }
 }

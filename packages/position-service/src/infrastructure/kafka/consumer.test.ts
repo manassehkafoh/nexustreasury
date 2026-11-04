@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PositionKafkaConsumer } from './consumer.js';
 
+const mockConnect = vi.fn().mockResolvedValue(undefined);
+const mockSubscribe = vi.fn().mockResolvedValue(undefined);
+const mockRun = vi.fn().mockResolvedValue(undefined);
+const mockDisconnect = vi.fn().mockResolvedValue(undefined);
+const mockConsumer = {
+  connect: mockConnect,
+  subscribe: mockSubscribe,
+  run: mockRun,
+  disconnect: mockDisconnect,
+};
+
 // Mock kafkajs
 vi.mock('kafkajs', () => ({
   Kafka: vi.fn().mockImplementation(() => ({
-    consumer: vi.fn().mockReturnValue({
-      connect: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn().mockResolvedValue(undefined),
-      run: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-    }),
+    consumer: vi.fn().mockReturnValue(mockConsumer),
   })),
 }));
 
@@ -19,6 +25,7 @@ describe('PositionKafkaConsumer', () => {
   let consumer: PositionKafkaConsumer;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     onBooked = vi.fn().mockResolvedValue(undefined);
     onCancelled = vi.fn().mockResolvedValue(undefined);
     consumer = new PositionKafkaConsumer(onBooked, onCancelled);
@@ -26,10 +33,7 @@ describe('PositionKafkaConsumer', () => {
 
   it('starts and subscribes to nexus.trading.trades', async () => {
     await consumer.start();
-    const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.subscribe).toHaveBeenCalledWith(
+    expect(mockSubscribe).toHaveBeenCalledWith(
       expect.objectContaining({ topics: ['nexus.trading.trades'] }),
     );
   });
@@ -37,10 +41,7 @@ describe('PositionKafkaConsumer', () => {
   it('stops gracefully', async () => {
     await consumer.start();
     await consumer.stop();
-    const { Kafka } = await import('kafkajs');
-    const kafkaInstance = (Kafka as ReturnType<typeof vi.fn>).mock.results[0]?.value;
-    const consumerInstance = kafkaInstance?.consumer?.();
-    expect(consumerInstance?.disconnect).toHaveBeenCalled();
+    expect(mockDisconnect).toHaveBeenCalled();
   });
 
   it('accepts onTradeBooked callback', () => {
