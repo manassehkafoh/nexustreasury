@@ -2,7 +2,7 @@
   "name": "nexustreasury",
   "version": "1.0.0",
   "private": true,
-  "description": "NexusTreasury \u2014 Cloud-Native Treasury Management Platform",
+  "description": "NexusTreasury — Cloud-Native Treasury Management Platform",
   "engines": {
     "node": ">=24",
     "pnpm": ">=9.0.0"
@@ -47,7 +47,9 @@
   },
   "pnpm": {
     "overrides": {
-      "fast-jwt": ">=6.2.0"
+      "fast-jwt": ">=6.3.0",
+      "next": ">=15.5.28",
+      "protobufjs": ">=7.5.5"
     }
   }
 }
