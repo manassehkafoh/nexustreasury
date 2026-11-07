@@ -2,7 +2,7 @@
   "name": "nexustreasury",
   "version": "1.0.0",
   "private": true,
-  "description": "NexusTreasury \u2014 Cloud-Native Treasury Management Platform",
+  "description": "NexusTreasury — Cloud-Native Treasury Management Platform",
   "engines": {
     "node": ">=24",
     "pnpm": ">=9.0.0"
@@ -26,17 +26,19 @@
     "test:mutation": "stryker run"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^8.6.0",
+    "@stryker-mutator/typescript-checker": "^8.6.0",
+    "@stryker-mutator/vitest-runner": "^8.6.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "1.6.1",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "prettier": "^3.2.0",
+    "prisma": "^5.9.0",
     "turbo": "^2.0.0",
     "typescript": "^5.4.0",
-    "prisma": "^5.9.0",
-    "@stryker-mutator/core": "^8.6.0",
-    "@stryker-mutator/vitest-runner": "^8.6.0",
-    "@stryker-mutator/typescript-checker": "^8.6.0"
+    "vitest": "1.6.1"
   },
   "packageManager": "pnpm@9.0.0",
   "dependencies": {
@@ -47,6 +49,7 @@
   },
   "pnpm": {
     "overrides": {
+      "test-exclude": "^8.0.0",
       "fast-jwt": ">=6.3.4",
       "@babel/core": ">=7.29.6",
       "@fastify/static": ">=10.1.2",
