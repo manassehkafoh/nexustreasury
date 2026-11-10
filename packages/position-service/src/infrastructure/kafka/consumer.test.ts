@@ -2,14 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PositionKafkaConsumer } from './consumer.js';
 
 // Mock kafkajs
+const mockConsumer = vi.hoisted(() => ({
+  connect: vi.fn().mockResolvedValue(undefined),
+  subscribe: vi.fn().mockResolvedValue(undefined),
+  run: vi.fn().mockResolvedValue(undefined),
+  disconnect: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('kafkajs', () => ({
   Kafka: vi.fn().mockImplementation(() => ({
-    consumer: vi.fn().mockReturnValue({
-      connect: vi.fn().mockResolvedValue(undefined),
-      subscribe: vi.fn().mockResolvedValue(undefined),
-      run: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-    }),
+    consumer: vi.fn().mockReturnValue(mockConsumer),
   })),
 }));
 
